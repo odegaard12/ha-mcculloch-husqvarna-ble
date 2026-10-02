@@ -1,0 +1,95 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "McCulloch ROB",
+        "description": "Robots detectados: {count}. Si no sale, escribe la MAC (la ves en los logs del proxy ESPHome).",
+        "data": {
+          "address": "Robot (MAC)"
+        }
+      },
+      "pair": {
+        "title": "Emparejar {address}",
+        "description": "Apaga y enciende el robot y envía esto en los 3 primeros minutos (modo emparejamiento). El PIN es el del teclado del robot; déjalo vacío si no tiene.",
+        "data": {
+          "pin": "PIN"
+        }
+      }
+    },
+    "error": {
+      "invalid_pin": "El PIN debe ser numérico (máx. 65535).",
+      "invalid_auth": "PIN incorrecto.",
+      "cannot_connect": "No empareja. Reinicia el robot y reintenta; a veces necesita 2-3 intentos.",
+      "not_found": "Ningún receptor Bluetooth ve el robot ahora mismo."
+    },
+    "abort": {
+      "already_configured": "Este robot ya está añadido.",
+      "reauth_successful": "Hecho."
+    }
+  },
+  "services": {
+    "send_command": {
+      "name": "Enviar comando",
+      "description": "Envía cualquier comando del protocolo (ingeniería inversa) y devuelve la respuesta.",
+      "fields": {
+        "command": {
+          "name": "Comando",
+          "description": "Nombre en protocol.json, p.ej. GetAllStatistics."
+        },
+        "params": {
+          "name": "Parámetros",
+          "description": "Diccionario de parámetros del comando."
+        },
+        "config_entry_id": {
+          "name": "Robot",
+          "description": "Si hay varios."
+        }
+      }
+    },
+    "probe": {
+      "name": "Sondear comandos",
+      "description": "Prueba todas las lecturas conocidas y crea las entidades que respondan (recarga la integración después).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Robot",
+          "description": "Si hay varios."
+        }
+      }
+    },
+    "set_schedule": {
+      "name": "Programación semanal",
+      "description": "Sustituye todas las tareas de corte del robot.",
+      "fields": {
+        "tasks": {
+          "name": "Tareas",
+          "description": "Lista de turnos, cada uno con start y end (HH:MM) y days (días en inglés)."
+        },
+        "config_entry_id": {
+          "name": "Robot",
+          "description": "Si hay varios."
+        }
+      }
+    },
+    "mow_for": {
+      "name": "Cortar durante",
+      "description": "Corta ahora durante esas horas.",
+      "fields": {
+        "hours": {
+          "name": "Horas",
+          "description": "0,5 a 24 h"
+        }
+      }
+    },
+    "park_for": {
+      "name": "Aparcar durante",
+      "description": "Aparca en la base esas horas.",
+      "fields": {
+        "hours": {
+          "name": "Horas",
+          "description": "0,5 a 168 h"
+        }
+      }
+    }
+  }
+}

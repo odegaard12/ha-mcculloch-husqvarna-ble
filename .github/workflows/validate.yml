@@ -1,0 +1,41 @@
+name: Validar
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 4 * * 1"
+
+jobs:
+  hassfest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: home-assistant/actions/hassfest@master
+
+  hacs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: hacs/action@main
+        with:
+          category: integration
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Instalar Home Assistant de pruebas
+        run: |
+          pip install pytest-homeassistant-custom-component
+          python - > req.txt <<'EOF'
+          import json, os, homeassistant
+          base = os.path.dirname(homeassistant.__file__) + "/components/"
+          for comp in ("bluetooth", "usb", "bluetooth_adapters", "diagnostics", "http"):
+              for req in json.load(open(base + comp + "/manifest.json")).get("requirements", []):
+                  print(req)
+          EOF
+          pip install -r req.txt
+      - run: python -m pytest -q tests
