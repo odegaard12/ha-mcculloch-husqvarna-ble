@@ -48,12 +48,15 @@ Luego: *Ajustes → Dispositivos y servicios → Añadir integración → McCull
 ```yaml
 type: custom:mcculloch-rob-card
 entity: lawn_mower.robot_cortacesped
-name: Robot      # opcional
+name: Robot               # opcional
+image: /local/robot.webp  # opcional: tu propia foto
 ```
 
 Muestra el estado animado, la batería, el próximo corte y los botones Cortar / Pausa / A la base, más "1 h", "3 h", "aparcar hasta el próximo turno" y "volver al horario".
 
-**Tu propia foto:** pon una imagen PNG o WebP con fondo transparente, con el morro mirando a la izquierda, en `custom_components/mcculloch_rob/www/robot.webp`. Si no hay foto, la tarjeta usa un dibujo.
+**Tu propia foto:** guarda una imagen PNG o WebP con fondo transparente, con el morro mirando a la izquierda, en `/config/www/robot.webp`, y añade `image: /local/robot.webp` a la tarjeta. Así no se pierde al actualizar. Si no hay foto, la tarjeta usa un dibujo.
+
+**Actualizaciones:** si la instalas desde HACS, HA te avisa en *Ajustes → Actualizaciones* cuando sale una versión nueva.
 
 ### 3. Panel web (opcional): elige una opción
 

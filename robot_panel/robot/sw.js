@@ -1,6 +1,6 @@
 // Service worker de «Mi robot»: guarda la carcasa de la app para que abra al instante y
 // sin red; los datos (/api/) van siempre a la red y nunca se sirven de caché.
-const CACHE = 'mi-robot-v8';
+const CACHE = 'mi-robot-v9';
 const SHELL = ['./', 'static/manifest.webmanifest', 'static/icon-192.png?v=6', 'static/icon-512.png?v=6', 'static/robot.webp?v=6'];
 
 self.addEventListener('install', e => {
