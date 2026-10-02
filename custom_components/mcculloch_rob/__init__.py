@@ -12,7 +12,7 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ADDRESS, CONF_CLIENT_ID, CONF_PIN, Platform
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
-from homeassistant.core import CoreState, HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
+from homeassistant.core import CoreState, Event, HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
@@ -135,7 +135,7 @@ async def _register_resource(hass: HomeAssistant) -> None:
                 return
         await resources.async_create_item({"res_type": "module", "url": CARD_JS})
     except Exception:  # noqa: BLE001 - la tarjeta sigue cargando por add_extra_js_url
-        _LOGGER.debug("No se pudo registrar el recurso de la tarjeta", exc_info=True)
+        _LOGGER.warning("No se pudo registrar el recurso de la tarjeta; añádelo a mano: %s", CARD_JS, exc_info=True)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -144,7 +144,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         if hass.state is CoreState.running:
             await _register_resource(hass)
         else:
-            hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, lambda _: hass.async_create_task(_register_resource(hass)))
+            # función async: una lambda normal la ejecuta HA en otro hilo y ahí no se pueden crear tareas
+            async def _on_started(_event: Event) -> None:
+                await _register_resource(hass)
+
+            hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _on_started)
 
     async def send_command(call: ServiceCall) -> ServiceResponse:
         """Envia cualquier comando del protocolo y devuelve la respuesta cruda."""
