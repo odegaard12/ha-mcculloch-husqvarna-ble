@@ -404,14 +404,18 @@ const ago = iso => { const s = (Date.now() - new Date(iso)) / 1000; return s < 9
 function toast(m){ const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 3200); }
 
 /* ---------- PIN ---------- */
-let pinBuf = '', locked = false;
+let pinBuf = '', locked = false, pinLen = 4;  // el servidor dice cuántas cifras tiene el PIN
 async function api(url, opts){
   const r = await fetch(url, opts);
   if (r.status === 401) { showLock(); throw new Error('bloqueado'); }
   return r;
 }
 function showLock(){ if (locked) return; locked = true; pinBuf = ''; drawPins(); $('#lock').hidden = false; }
-function drawPins(){ document.querySelectorAll('#pins i').forEach((d, i) => d.classList.toggle('f', i < pinBuf.length)); }
+function drawPins(){
+  const box = $('#pins');
+  if (box.children.length !== pinLen) box.innerHTML = '<i></i>'.repeat(pinLen);
+  box.querySelectorAll('i').forEach((d, i) => d.classList.toggle('f', i < pinBuf.length));
+}
 async function tryPin(){
   const r = await fetch('api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({pin: pinBuf})});
   if (r.ok) { locked = false; $('#lock').hidden = true; $('#msgpin').textContent = ''; poll(); loadHistory(); return; }
@@ -422,9 +426,9 @@ async function tryPin(){
 }
 function pinKey(k){
   if (k === 'del') pinBuf = pinBuf.slice(0, -1);
-  else if (/^\d$/.test(k) && pinBuf.length < 8) pinBuf += k;
+  else if (/^\d$/.test(k) && pinBuf.length < pinLen) pinBuf += k;
   drawPins();
-  if (pinBuf.length === 4) tryPin();
+  if (pinBuf.length === pinLen) tryPin();
 }
 $('#pad').onclick = e => { const b = e.target.closest('button'); if (b) pinKey(b.dataset.k || b.textContent); };
 addEventListener('keydown', e => { if (!locked) return; if (/^\d$/.test(e.key)) pinKey(e.key); if (e.key === 'Backspace') pinKey('del'); if (e.key === 'Enter' && pinBuf) tryPin(); });
@@ -696,7 +700,7 @@ $('#logout').onclick = async () => { await fetch('api/logout', {method:'POST'});
 
 (async () => {
   try { const v = localStorage.getItem('vista'); if (v && $('#v-' + v)) show(v); } catch(e) {}
-  try { const s = await (await fetch('api/sesion', {cache:'no-store'})).json(); $('#logout').hidden = !s.pin; if (s.pin && !s.ok) { showLock(); return; } } catch(e) {}
+  try { const s = await (await fetch('api/sesion', {cache:'no-store'})).json(); $('#logout').hidden = !s.pin; if (s.pin_len > 0 && s.pin_len <= 12) pinLen = s.pin_len; if (s.pin && !s.ok) { showLock(); return; } } catch(e) {}
   poll(); loadHistory();
 })();
 addEventListener('robot3d-ready', () => { if (Object.keys(states).length) render(); });

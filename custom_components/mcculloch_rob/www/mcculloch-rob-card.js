@@ -119,8 +119,18 @@ const HTML = `
 class McCullochRobCard extends HTMLElement {
   setConfig(config) {
     if (!config || !config.entity || !config.entity.startsWith('lawn_mower.')) throw new Error('entity: lawn_mower.xxx');
+    const imageChanged = this._config && this._config.image !== config.image;
     this._config = config;
     this._ids = null;
+    if (imageChanged && this.shadowRoot) this._setImage();  // el editor cambia la foto sin recargar
+  }
+
+  // foto: la de la opción `image` (sobrevive a las actualizaciones), si no robot.webp junto a la tarjeta, y si no el dibujo
+  _setImage() {
+    const img = this.shadowRoot.querySelector('img');
+    const srcs = [this._config.image, BASE + 'robot.webp', BASE + 'robot.svg'].filter(Boolean);
+    img.onerror = () => { srcs.shift(); if (srcs.length) img.src = srcs[0]; else img.onerror = null; };
+    img.src = srcs[0];
   }
 
   static getConfigElement() { return document.createElement('mcculloch-rob-card-editor'); }
@@ -145,11 +155,7 @@ class McCullochRobCard extends HTMLElement {
   _build() {
     const root = this.attachShadow({mode: 'open'});
     root.innerHTML = `<style>${CSS}</style>${HTML}`;
-    // foto: la de la opción `image` (sobrevive a las actualizaciones), si no robot.webp junto a la tarjeta, y si no el dibujo
-    const img = root.querySelector('img');
-    const srcs = [this._config.image, BASE + 'robot.webp', BASE + 'robot.svg'].filter(Boolean);
-    img.onerror = () => { srcs.shift(); if (srcs.length) img.src = srcs[0]; else img.onerror = null; };
-    img.src = srcs[0];
+    this._setImage();
     const fx = root.getElementById('fx');
     for (let i = 0; i < 14; i++) {
       const b = document.createElement('b');
@@ -195,7 +201,8 @@ class McCullochRobCard extends HTMLElement {
 
   _update() {
     const c = this._config, h = this._hass, r = this.shadowRoot;
-    if (!this._ids || !Object.keys(this._ids).length) this._resolve();
+    // solo se vuelve a buscar cuando cambia el registro de entidades (HA lo sustituye entero), no en cada estado
+    if (!this._ids || h.entities !== this._entsRef) { this._resolve(); this._entsRef = h.entities; }
     const mower = h.states[c.entity];
     r.getElementById('name').textContent = c.name || (mower && mower.attributes.friendly_name) || this._t('noEntity');
     const act = this._st('activity')?.state, state = this._st('state')?.state;
@@ -227,14 +234,24 @@ class McCullochRobCard extends HTMLElement {
     const nx = this._st('next_start');
     let nextTxt = this._t('none');
     if (nx && !['unknown', 'unavailable', ''].includes(nx.state)) {
-      const d = new Date(nx.state), now = new Date(), tm = d.toLocaleTimeString(h.locale?.language, {hour: '2-digit', minute: '2-digit'});
-      const dd = Math.round((new Date(d.toDateString()) - new Date(now.toDateString())) / 864e5);
-      nextTxt = this._t('next') + ' · ' + (dd === 0 ? this._t('today') : dd === 1 ? this._t('tomorrow') : d.toLocaleDateString(h.locale?.language, {weekday: 'short', day: 'numeric'})) + ' ' + tm;
+      // en la zona horaria que use el perfil de HA (la del servidor salvo que el usuario pida la local)
+      const tz = h.locale?.time_zone === 'local' ? undefined : h.config?.time_zone;
+      const lang = h.locale?.language, d = new Date(nx.state);
+      const day = x => new Date(x.toLocaleDateString('en-CA', {timeZone: tz}) + 'T00:00:00Z');
+      const dd = Math.round((day(d) - day(new Date())) / 864e5);
+      const tm = d.toLocaleTimeString(lang, {hour: '2-digit', minute: '2-digit', timeZone: tz});
+      nextTxt = this._t('next') + ' · ' + (dd === 0 ? this._t('today') : dd === 1 ? this._t('tomorrow')
+        : d.toLocaleDateString(lang, {weekday: 'short', day: 'numeric', timeZone: tz})) + ' ' + tm;
     }
     r.getElementById('next').textContent = nextTxt;
-    const al = offline ? `<div class="alert warn">${this._t('offlineMsg')}</div>`
-      : (upside || lifted || error) ? `<div class="alert">${label}</div>` : '';
-    const alEl = r.getElementById('alert'); if (alEl.innerHTML !== al) alEl.innerHTML = al;
+    // el texto viene de un sensor: siempre como texto, nunca como HTML
+    const [alCls, alTxt] = offline ? ['alert warn', this._t('offlineMsg')] : (upside || lifted || error) ? ['alert', label] : ['', ''];
+    const alEl = r.getElementById('alert');
+    if (alEl.dataset.k !== alCls + alTxt) {
+      alEl.dataset.k = alCls + alTxt;
+      alEl.replaceChildren();
+      if (alTxt) { const div = document.createElement('div'); div.className = alCls; div.textContent = alTxt; alEl.appendChild(div); }
+    }
     r.querySelectorAll('.acts button').forEach(b => {
       b.lastChild.textContent = this._t(b.dataset.a);
       b.disabled = offline;
