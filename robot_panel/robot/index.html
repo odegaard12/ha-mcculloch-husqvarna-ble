@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16181a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mi robot">
+<link rel="manifest" href="static/manifest.webmanifest">
+<link rel="icon" href="static/icon-192.png?v=6">
+<link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=6">
+<title>Mi robot</title>
+<style>
+:root{
+  --bg:#f2f3f1; --card:#fff; --ink:#17191a; --muted:#646a66; --line:#e3e5e2;
+  --brand:#ffc20e; --brand-ink:#17191a; --brand-soft:#fff4cc;
+  --ok:#2e8b3a; --ok-soft:#e2f2e3; --warn:#a86200; --warn-soft:#fff0d2; --bad:#c0362c; --bad-soft:#fde2de; --info:#1767c2; --info-soft:#e0ecfb;
+  --shadow:0 1px 2px rgba(0,0,0,.05),0 10px 30px rgba(0,0,0,.06);
+  --hero:#1b1d1f; --hero2:#2b2e31; --nav:rgba(255,255,255,.92);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e0f10; --card:#17191b; --ink:#eceeec; --muted:#9aa19d; --line:#26292b;
+  --brand-soft:#2e2709; --ok:#6fd277; --ok-soft:#163020; --warn:#f2b44f; --warn-soft:#3a2c11;
+  --bad:#ff8a7f; --bad-soft:#3c1915; --info:#7bb8ff; --info-soft:#13284a; --shadow:none;
+  --hero:#16181a; --hero2:#24272a; --nav:rgba(23,25,27,.94);
+}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior-y:contain}
+button,input{font:inherit;color:inherit}
+.app{max-width:1120px;margin:0 auto;padding:max(12px,env(safe-area-inset-top)) 16px calc(96px + env(safe-area-inset-bottom))}
+header.top{display:flex;align-items:center;gap:10px;margin:2px 2px 12px}
+header.top img{width:34px;height:34px;border-radius:10px}
+header.top h1{font-size:18px;margin:0;font-weight:750;flex:1}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:5px 10px;border-radius:99px;background:var(--ok-soft);color:var(--ok);font-weight:650}
+.live i{width:7px;height:7px;border-radius:50%;background:currentColor}
+.live.off{background:var(--warn-soft);color:var(--warn)}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;justify-content:center;background:var(--nav);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
+nav.tabs .in{display:grid;grid-template-columns:repeat(4,1fr);width:100%;max-width:520px;gap:4px}
+nav.tabs button{border:0;background:none;border-radius:14px;padding:6px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;color:var(--muted);cursor:pointer}
+nav.tabs button svg{width:24px;height:24px}
+nav.tabs button.on{color:var(--brand-ink);background:var(--brand);font-weight:700}
+@media (min-width:900px){
+  nav.tabs{position:sticky;top:0;bottom:auto;border:0;border-bottom:1px solid var(--line);background:var(--bg);padding:6px 0 10px;margin-bottom:12px}
+  nav.tabs .in{max-width:none;display:flex;gap:8px}
+  nav.tabs button{flex-direction:row;gap:8px;font-size:14px;padding:9px 16px}
+  nav.tabs button svg{width:20px;height:20px}
+  .app{padding-bottom:40px}
+}
+.view{display:none}.view.on{display:block;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.cols{display:grid;gap:14px}
+@media (min-width:900px){.cols{grid-template-columns:1.1fr 1fr;align-items:start}}
+.stack > * + *{margin-top:14px}
+.hero{border-radius:26px;color:#fff;background:radial-gradient(120% 90% at 50% 10%,var(--hero2),var(--hero));box-shadow:var(--shadow);overflow:hidden;position:relative}
+.scene{position:relative;height:250px}
+@media (min-width:900px){.scene{height:320px}}
+.scene canvas{display:block;width:100%!important;height:100%!important;touch-action:pan-y}
+.scene .fallback{position:absolute;inset:0;display:grid;place-items:center}
+.scene .fallback svg{width:60%;max-width:260px}
+.sstate{position:absolute;left:12px;top:10px;display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;padding:6px 12px;border-radius:99px;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:#fff}
+.sstate{z-index:5;border-left:3px solid var(--c,#ffc20e)}
+.sstate svg{width:16px;height:16px;fill:none;stroke:var(--c,#ffc20e);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+@keyframes beat{70%{box-shadow:0 0 0 8px transparent}}
+.scene .hint{position:absolute;right:12px;top:10px;font-size:11px;opacity:.75;background:rgba(255,255,255,.1);padding:3px 8px;border-radius:99px}
+.hero .body{padding:2px 18px 16px;display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center}
+.ring{position:relative;width:92px;height:92px}
+.ring svg{transform:rotate(-90deg)}
+.ring .n{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+.ring b{font-size:23px;line-height:1}.ring small{display:block;font-size:11px;opacity:.8}
+.status b{display:block;font-size:21px;line-height:1.2}
+.status span{opacity:.8;font-size:13.5px}
+.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 18px 18px}
+.actions button{border:0;border-radius:18px;padding:12px 6px;background:rgba(255,255,255,.1);color:#fff;font-weight:650;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;min-height:76px}
+.actions button svg{width:26px;height:26px}
+.actions button:hover{background:rgba(255,255,255,.18)}
+.actions button:active{transform:scale(.97)}
+.actions button.main{background:var(--brand);color:var(--brand-ink)}
+button:disabled{opacity:.5;cursor:wait}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:16px;box-shadow:var(--shadow)}
+.card h2{margin:0 0 12px;font-size:12.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:750;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.card h3{margin:14px 0 8px;font-size:13px;color:var(--muted);font-weight:650}
+.card h3:first-of-type{margin-top:0}
+.alert{border-radius:16px;padding:12px 14px;font-weight:560;background:var(--bad-soft);color:var(--bad);display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.alert + .alert{margin-top:10px}
+.alert.warn{background:var(--warn-soft);color:var(--warn)}.alert.info{background:var(--info-soft);color:var(--info)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:9px 14px;cursor:pointer;min-height:42px;display:inline-flex;align-items:center;gap:8px}
+.chip:hover{background:var(--brand-soft)}
+.btn{border:0;border-radius:14px;padding:11px 16px;background:var(--brand);color:var(--brand-ink);font-weight:700;cursor:pointer;min-height:44px}
+.btn.ghost{background:var(--bg);color:var(--ink);border:1px solid var(--line);font-weight:600}
+.next .big{font-size:26px;font-weight:780;letter-spacing:-.01em}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--bg);border-radius:16px;padding:12px}
+.stat b{display:block;font-size:21px}.stat small{color:var(--muted)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:9px 14px;margin:0}
+.kv dt{color:var(--muted)}.kv dd{margin:0;text-align:right;font-weight:560;overflow-wrap:anywhere}
+.spark{width:100%;height:90px;display:block}
+.muted{color:var(--muted)}
+.week{display:grid;grid-template-columns:26px 1fr;gap:8px 10px;align-items:center;font-size:13px}
+.week .bar{position:relative;height:18px;border-radius:9px;background:var(--line)}
+.week .bar b{position:absolute;top:0;bottom:0;border-radius:9px;background:var(--brand)}
+.week .now{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--bad);border-radius:2px}
+.hours{grid-column:2;display:flex;justify-content:space-between;color:var(--muted);font-size:11px}
+.task{border:1px solid var(--line);border-radius:18px;padding:12px;margin-top:10px;background:var(--bg)}
+.task .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.task input[type=time]{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:8px 10px;min-height:42px;font-size:16px}
+.task .dur{color:var(--muted);font-size:13px;margin-left:auto}
+.days{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.days button{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--card);cursor:pointer;font-weight:700}
+.days button.on{background:var(--brand);color:var(--brand-ink);border-color:transparent}
+.del{border:0;background:none;color:var(--bad);cursor:pointer;padding:6px;border-radius:10px}
+.del:hover{background:var(--bad-soft)}
+.err{color:var(--bad);font-size:13px;margin-top:6px}
+.bar-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center}
+.dirty{font-size:12px;padding:3px 9px;border-radius:99px;background:var(--warn-soft);color:var(--warn);letter-spacing:0;text-transform:none}
+.msg{display:flex;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
+.msg:first-child{border-top:0;padding-top:0}
+.dot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex:none;background:var(--warn)}
+.dot.s2{background:var(--bad)}.dot.s0{background:var(--muted)}
+.msg small{color:var(--muted)}
+.toggle{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
+.toggle:first-child{border-top:0;padding-top:0}
+.toggle small{color:var(--muted)}
+.sw{position:relative;width:50px;height:30px;flex:none}
+.sw input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:1}
+.sw span{position:absolute;inset:0;background:var(--line);border-radius:99px;transition:.15s}
+.sw span::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:.15s}
+.sw input:checked+span{background:var(--ok)}.sw input:checked+span::after{transform:translateX(20px)}
+details.all summary{cursor:pointer;font-weight:650;list-style:none;display:flex;justify-content:space-between}
+details.all summary::after{content:"▾";color:var(--muted)} details.all[open] summary::after{content:"▴"}
+details.all table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13.5px}
+details.all td{padding:7px 4px;border-top:1px solid var(--line);vertical-align:top}
+details.all td:last-child{text-align:right;font-weight:560;overflow-wrap:anywhere}
+.toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(16px);background:var(--ink);color:var(--bg);padding:11px 16px;border-radius:14px;opacity:0;transition:.2s;pointer-events:none;max-width:90vw;z-index:30}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.empty{color:var(--muted)}
+.tl{display:flex;height:22px;border-radius:11px;overflow:hidden;background:var(--line)}
+.tl b{height:100%}
+.tlh{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-top:4px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:13px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 18px 14px}
+.facts div{background:rgba(255,255,255,.07);border-radius:14px;padding:8px 10px}
+.facts b{display:block;font-size:15px}.facts small{opacity:.7;font-size:11.5px}
+/* escena con la foto oficial: cada estado es una clase en .stage */
+.stage{position:absolute;inset:0;overflow:hidden;perspective:900px;background:radial-gradient(90% 75% at 50% 30%,#3a3d40 0%,#232527 55%,#17191a 100%)}
+/* césped en perspectiva: franjas de corte + grano de hierba; al cortar se desplaza bajo el robot */
+.ground{position:absolute;left:-40%;right:-40%;bottom:-6%;height:64%;perspective:380px;perspective-origin:50% -30%;-webkit-mask:linear-gradient(to bottom,transparent 0,#000 38%);mask:linear-gradient(to bottom,transparent 0,#000 38%);transition:filter .5s}
+.plane{position:absolute;inset:-40% 0 0;transform:rotateX(64deg);transform-origin:50% 100%;
+  background:
+    radial-gradient(circle at 30% 40%,rgba(200,245,150,.13) 0 .8px,transparent 1.3px) 0 0/5px 7px,
+    radial-gradient(circle at 70% 60%,rgba(0,0,0,.22) 0 .9px,transparent 1.5px) 0 0/4px 5px,
+    linear-gradient(90deg,#2b5126 0%,#376630 25%,#2b5126 50%,#376630 75%,#2b5126 100%) 0 0/360px 100%;
+  animation:roll 1.6s linear infinite;animation-play-state:paused}
+.stage.mowing .plane,.stage.homing .plane{animation-play-state:running}
+.stage.leaving .plane{animation-play-state:running;animation-direction:reverse}
+@keyframes roll{to{background-position:20px 0,20px 0,360px 0}}
+.ground::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgba(23,25,26,.9) 0,rgba(23,25,26,0) 55%),radial-gradient(70% 90% at 50% 100%,transparent 50%,rgba(10,12,12,.55))}
+.trail{position:absolute;left:50%;right:-5%;bottom:11%;height:15%;border-radius:40% 0 0 40%;opacity:0;transform-origin:0 50%;transform:scaleX(.2);transition:opacity .6s,transform 1.2s ease-out;
+  background:linear-gradient(90deg,rgba(170,230,120,.38),rgba(170,230,120,.12) 60%,transparent);filter:blur(3px)}
+.stage.mowing .trail{opacity:1;transform:none}
+.blades{position:absolute;left:0;right:0;bottom:0;height:20%;pointer-events:none;z-index:4}
+.blades svg{width:100%;height:100%;display:block}
+.blades path{transform-box:fill-box;transform-origin:50% 100%;animation:sway var(--d,3s) ease-in-out infinite alternate}
+@keyframes sway{from{transform:rotate(-4deg)}to{transform:rotate(5deg)}}
+.stage.mowing .blades path{animation-duration:calc(var(--d,3s) / 2.5)}
+.dock{position:absolute;width:96%;left:2%;bottom:3%;opacity:0;transform:translateY(10px);transition:.5s}
+.bot{position:absolute;left:50%;bottom:12%;width:min(64%,330px);transform:translateX(-50%);transition:left .9s ease,bottom .6s ease,filter .4s,opacity .4s}
+.tilt{position:relative;transform-style:preserve-3d;transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .25s ease-out;will-change:transform}
+.bot img{display:block;width:100%;height:auto;position:relative;z-index:1;filter:drop-shadow(0 14px 16px rgba(0,0,0,.45));user-select:none;-webkit-user-drag:none}
+.shine{position:absolute;inset:0;z-index:2;pointer-events:none;-webkit-mask:url(static/robot.webp?v=6) center/100% 100% no-repeat;mask:url(static/robot.webp?v=6) center/100% 100% no-repeat;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.28) 50%,transparent 65%);background-size:250% 100%;background-position:var(--sx,60%) 0;mix-blend-mode:screen}
+.bot .shadow{position:absolute;left:4%;right:0;bottom:-1%;height:16%;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.75),rgba(0,0,0,.35) 60%,transparent);filter:blur(4px);transition:.5s}
+.bot .glow{position:absolute;inset:-6% -6% 0;border-radius:50%;opacity:0;z-index:0;transition:opacity .4s}
+.caption{position:absolute;left:50%;bottom:14px;transform:translate(-50%,8px);display:flex;align-items:center;gap:10px;padding:10px 18px;border-radius:16px;background:rgba(10,11,12,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#fff;font-weight:750;font-size:15px;white-space:nowrap;opacity:0;transition:.4s;z-index:3;border:1px solid rgba(255,255,255,.08)}
+.caption .ic{font-size:18px}
+.stage.cap .caption{opacity:1;transform:translate(-50%,0)}
+.stage.homing .ic{animation:nudge 1.2s ease-in-out infinite}.stage.leaving .ic{animation:nudge 1.2s ease-in-out infinite reverse}
+@keyframes nudge{50%{transform:translateX(5px)}}
+.stage.charging .ic{animation:blink 1.4s infinite}
+.fx{position:absolute;inset:0;pointer-events:none}
+.charge{position:absolute;left:50%;top:14px;transform:translateX(-50%);width:120px;height:8px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden;opacity:0;transition:.4s}
+.charge b{display:block;height:100%;width:var(--lvl,50%);background:linear-gradient(90deg,#3fa9ff,#7cc8ff);position:relative}
+.charge b::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.7),transparent);animation:sweep 1.6s linear infinite}
+@keyframes sweep{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.stage.charging .charge{opacity:1}
+.fx{z-index:3}
+.fx b{position:absolute;bottom:16%;width:3px;height:8px;border-radius:2px;background:#8fdc6f;opacity:0;animation:clip 1s linear infinite}
+.fx b:nth-child(3n){background:#5fae4b;height:6px}
+@keyframes clip{0%{opacity:0;transform:translate(0,0) rotate(0)}12%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy,-60px)) rotate(260deg)}}
+/* estados */
+.stage.docked .bot{left:50%;bottom:20%}
+/* cortando: el robot avanza hacia su morro (izquierda) y el césped corre por debajo */
+.stage.mowing .bot{animation:mow 6s ease-in-out infinite}
+.stage.mowing .bot img,.stage.homing .bot img,.stage.leaving .bot img{animation:bump .3s ease-in-out infinite}
+.stage.mowing .bot,.stage.homing .bot,.stage.leaving .bot{width:min(58%,300px)}
+@keyframes mow{0%,100%{left:47%;bottom:12%}50%{left:53%;bottom:13.5%}}
+@keyframes bump{50%{transform:translateY(-1.5px) rotate(-.5deg)}}
+.stage.homing .bot{animation:home 5s ease-in-out infinite}
+@keyframes home{0%{left:64%}100%{left:40%}}
+.stage.leaving .bot{animation:leave 5s ease-in-out infinite}
+@keyframes leave{0%{left:40%}100%{left:64%}}
+.stage.charging .glow{opacity:1;background:radial-gradient(closest-side,rgba(63,169,255,.55),transparent);animation:breathe 2.4s ease-in-out infinite}
+.stage.charging .badge{display:none}
+.stage.charging .dockled{animation:blink 1.2s infinite}
+@keyframes breathe{50%{opacity:.35;transform:scale(1.05)}}
+@keyframes blink{50%{opacity:.2}}
+.stage.error .glow{opacity:1;background:radial-gradient(closest-side,rgba(255,59,48,.6),transparent);animation:breathe 1s ease-in-out infinite}
+.stage.lifted .bot{bottom:30%;animation:float 2.4s ease-in-out infinite}
+.stage.lifted .bot .shadow{transform:translateY(46px) scale(.6);opacity:.4}
+@keyframes float{50%{transform:translateX(-50%) translateY(-8px) rotate(2deg)}}
+.stage.upside .bot img{transform:rotate(180deg) translateY(-6%)}
+.stage.upside .glow{opacity:1;background:radial-gradient(closest-side,rgba(255,59,48,.55),transparent)}
+.stage.hit .bot{animation:shake .12s linear 10}
+@keyframes shake{25%{transform:translateX(calc(-50% - 4px))}75%{transform:translateX(calc(-50% + 4px))}}
+.stage.offline .bot{filter:grayscale(1) brightness(.75);opacity:.55}
+.stage.offline .ground,.stage.offline .blades{filter:grayscale(.9) brightness(.6)}
+@media (prefers-reduced-motion:reduce){.stage *{animation:none!important}}
+footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
+/* PIN */
+.lock{position:fixed;inset:0;z-index:50;background:radial-gradient(120% 80% at 50% 0%,#2b2e31,#0f1011);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px}
+.lock[hidden]{display:none}
+.lock img{width:72px;height:72px;border-radius:20px}
+.lock h2{margin:0;font-size:20px}
+.pins{display:flex;gap:12px}
+.pins i{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.6)}
+.pins i.f{background:var(--brand);border-color:var(--brand)}
+.pins.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.pad{display:grid;grid-template-columns:repeat(3,72px);gap:14px}
+.pad button{width:72px;height:72px;border-radius:50%;border:0;background:rgba(255,255,255,.1);color:#fff;font-size:26px;font-weight:600;cursor:pointer}
+.pad button:active{background:var(--brand);color:#111}
+.lock .msgpin{min-height:20px;color:#ffb4a8;font-size:14px}
+</style>
+</head>
+<body>
+<div class="lock" id="lock" hidden>
+  <img src="static/icon-192.png?v=6" alt="">
+  <h2>Introduce el PIN</h2>
+  <div class="pins" id="pins"><i></i><i></i><i></i><i></i></div>
+  <div class="msgpin" id="msgpin"></div>
+  <div class="pad" id="pad">
+    <button>1</button><button>2</button><button>3</button><button>4</button><button>5</button><button>6</button><button>7</button><button>8</button><button>9</button>
+    <span></span><button>0</button><button data-k="del" aria-label="Borrar">⌫</button>
+  </div>
+</div>
+
+<div class="app">
+  <header class="top">
+    <img src="static/icon-192.png?v=6" alt="">
+    <h1>Mi robot</h1>
+    <span class="live off" id="live"><i></i><span>conectando</span></span>
+  </header>
+
+  <nav class="tabs" aria-label="Secciones"><div class="in">
+    <button data-v="inicio" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Inicio</button>
+    <button data-v="horario"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Horario</button>
+    <button data-v="datos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Datos</button>
+    <button data-v="robot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>Ajustes</button>
+  </div></nav>
+
+  <!-- INICIO: estado y órdenes, en el orden en que se usan -->
+  <section class="view on" id="v-inicio">
+    <div class="cols">
+      <div class="stack">
+        <div class="hero">
+          <div class="scene" id="scene">
+            <div class="stage" id="stage">
+              <div class="ground"><div class="plane"></div></div>
+              <div class="trail"></div>
+              <div class="caption" id="caption"><span class="ic" id="capic"></span><span id="captxt"></span></div>
+              <div class="bot">
+                <div class="shadow"></div>
+                <div class="tilt" id="tilt"><img src="static/robot.webp?v=6" onerror="this.onerror=null;this.src='static/robot.svg'" alt="Robot cortacésped" draggable="false"><span class="shine"></span></div>
+                <span class="glow"></span>
+              </div>
+              <div class="fx" id="fx"></div>
+              <div class="charge" id="charge"><b></b></div>
+              <div class="blades" id="blades"></div>
+            </div>
+            <span class="sstate" id="sstate"><svg viewBox="0 0 24 24" aria-hidden="true"></svg><span>—</span></span>
+          </div>
+          <div class="body">
+            <div class="ring">
+              <svg viewBox="0 0 120 120" width="92" height="92" aria-hidden="true"><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="11"/><circle id="ringfg" cx="60" cy="60" r="52" fill="none" stroke="#ffc20e" stroke-width="11" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7" style="transition:stroke-dashoffset .7s"/></svg>
+              <div class="n"><div><b id="bat">–</b><small id="batsub">batería</small></div></div>
+            </div>
+            <div class="status"><b id="state">—</b><span id="detail">—</span></div>
+          </div>
+          <div class="facts" id="facts"></div>
+          <div class="actions">
+            <button class="main" data-act="start"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Cortar</button>
+            <button data-act="pause"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>Pausa</button>
+            <button data-act="dock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>A la base</button>
+          </div>
+        </div>
+        <div id="alerts"></div>
+      </div>
+      <div class="stack">
+        <div class="card next">
+          <h2>Próximo corte</h2>
+          <div class="big" id="nextbig">—</div><div class="muted" id="nextsub"></div>
+        </div>
+        <div class="card">
+          <h2>Más órdenes</h2>
+          <h3>Cortar ahora durante…</h3>
+          <div class="chips"><button class="chip" data-mow="1">1 h</button><button class="chip" data-mow="2">2 h</button><button class="chip" data-mow="3">3 h</button><button class="chip" data-mow="5">5 h</button><button class="chip" data-mow="8">8 h</button></div>
+          <h3>Aparcar en la base…</h3>
+          <div class="chips"><button class="chip" data-btn="aparcar_hasta_el_proximo_turno">Hasta el próximo turno</button><button class="chip" data-park="3">3 h</button><button class="chip" data-park="12">12 h</button><button class="chip" data-park="24">24 h</button><button class="chip" data-btn="aparcar_hasta_nuevo_aviso">Hasta nuevo aviso</button></div>
+          <h3>Programación</h3>
+          <div class="chips"><button class="chip" data-btn="volver_a_la_programacion">Volver a la programación</button><button class="chip" data-go="horario">Editar horario</button></div>
+        </div>
+        <div class="card">
+          <h2>Actividad · últimas 24 h</h2>
+          <div class="tl" id="tl"></div><div class="tlh"><span>-24 h</span><span>-18</span><span>-12</span><span>-6</span><span>ahora</span></div>
+          <div class="legend" id="legend"></div>
+        </div>
+        <div class="card">
+          <h2>Batería · últimas 24 h <span class="muted" id="sparkinfo"></span></h2>
+          <svg class="spark" id="spark" viewBox="0 0 300 90" preserveAspectRatio="none"></svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HORARIO -->
+  <section class="view" id="v-horario">
+    <div class="cols">
+      <div class="card">
+        <h2>Semana <span class="muted" id="weekhours"></span></h2>
+        <div id="week"></div>
+      </div>
+      <div class="card">
+        <h2>Editar horario <span class="dirty" id="dirty" hidden>sin guardar</span></h2>
+        <h3>Plantillas</h3>
+        <div class="chips" id="templates"></div>
+        <h3>Franjas</h3>
+        <div id="tasks"></div>
+        <div class="bar-actions">
+          <button class="btn ghost" id="add">+ Añadir franja</button>
+          <span style="flex:1"></span>
+          <button class="btn ghost" id="discard" hidden>Descartar</button>
+          <button class="btn" id="save" disabled>Guardar en el robot</button>
+        </div>
+        <p class="muted" style="font-size:13px;margin:12px 0 0">Guardar sustituye toda la programación del robot. Hasta 15 franjas; sale de la base al empezar cada una y vuelve al terminar.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- DATOS -->
+  <section class="view" id="v-datos">
+    <div class="cols">
+      <div class="stack">
+        <div class="card"><h2>Ahora mismo</h2><dl class="kv" id="sensors"></dl></div>
+        <div class="card"><h2>Uso acumulado</h2><div class="grid2" id="stats"></div></div>
+      </div>
+      <div class="stack">
+        <div class="card"><h2>Avisos <span class="muted" id="msgcount"></span></h2><div id="msgs"></div></div>
+        <div class="card"><details class="all"><summary>Todos los datos del robot <span class="muted" id="allcount"></span></summary><table id="all"></table></details></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AJUSTES -->
+  <section class="view" id="v-robot">
+    <div class="cols">
+      <div class="stack">
+        <div class="card"><h2>Ajustes del robot</h2><div id="toggles"></div></div>
+        <div class="card"><h2>Mantenimiento</h2><div class="chips"><button class="chip" data-btn="poner_en_hora">Poner el reloj en hora</button></div></div>
+        <div class="card" id="installcard">
+          <h2>App</h2>
+          <p class="muted" id="installtxt" style="margin:0 0 12px">Añádela a la pantalla de inicio para abrirla como una app.</p>
+          <div class="chips"><button class="btn" id="install" hidden>Instalar «Mi robot»</button><button class="chip" id="logout" hidden>Bloquear con PIN</button></div>
+        </div>
+      </div>
+      <div class="card"><h2>Ficha del robot</h2><dl class="kv" id="info"></dl></div>
+    </div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const P = 'robot_cortacesped';
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const STATE = {off:'Apagado',wait_for_safetypin:'Esperando PIN',stopped:'Parado',fatal_error:'Error grave',pending_start:'Arrancando',paused:'En pausa',in_operation:'Trabajando',restricted:'En espera',error:'Error'};
+const ACTIVITY = {none:'Sin actividad',charging:'Cargando',going_out:'Saliendo de la base',mowing:'Cortando el césped',going_home:'Volviendo a la base',parked:'Aparcado en la base',stopped_in_garden:'Parado en el jardín'};
+const MODE = {auto:'automático',manual:'manual',home:'aparcado siempre',demo:'demo',poi:'punto de interés'};
+const ERR = {no_loop_signal:'Sin señal del cable',outside_working_area:'Fuera de la zona de trabajo',wrong_loop_signal:'Señal del cable incorrecta',trapped:'Atrapado',lifted:'Levantado',upside_down:'Volcado',low_battery:'Batería baja',empty_battery:'Batería vacía',stuck_in_charging_station:'Atascado en la base',collision_sensor_problem_front:'Sensor de choque delantero',collision_sensor_problem_rear:'Sensor de choque trasero',wheel_motor_blocked_left:'Rueda izquierda bloqueada',wheel_motor_blocked_right:'Rueda derecha bloqueada',cutting_system_blocked:'Cuchillas bloqueadas',mower_tilted:'Robot inclinado',no_drive:'No avanza',temporary_battery_problem:'Problema temporal de batería',alarm_mower_lifted:'Alarma: robot levantado',alarm_mower_switched_off:'Alarma: robot apagado',guide_1_not_found:'No encuentra el cable guía',charging_station_blocked:'Base bloqueada',ninguno:'Sin avisos'};
+const errText = c => c ? (ERR[c] || c.replaceAll('_',' ').replace(/^./, x => x.toUpperCase())) : '—';
+const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'], DN = ['L','M','X','J','V','S','D'], DLONG = ['lunes','martes','miércoles','jueves','viernes','sábado','domingo'];
+const hm = m => { m = Math.round(m); return String(Math.floor(m / 60)).padStart(2,'0') + ':' + String(m % 60).padStart(2,'0'); };
+const toMin = s => { const [h, m] = String(s || '0:0').split(':').map(Number); return h * 60 + m; };
+const fmtH = h => h == null || isNaN(h) ? '–' : Math.round(Number(h)).toLocaleString('es-ES') + ' h';
+const fmtDate = iso => { if (!iso || iso === 'unknown' || iso === 'unavailable') return '—'; const d = new Date(iso); return isNaN(d) ? '—' : d.toLocaleString('es-ES',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}); };
+const ago = iso => { const s = (Date.now() - new Date(iso)) / 1000; return s < 90 ? 'ahora' : s < 3600 ? `hace ${Math.round(s/60)} min` : `hace ${Math.round(s/3600)} h`; };
+function toast(m){ const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 3200); }
+
+/* ---------- PIN ---------- */
+let pinBuf = '', locked = false;
+async function api(url, opts){
+  const r = await fetch(url, opts);
+  if (r.status === 401) { showLock(); throw new Error('bloqueado'); }
+  return r;
+}
+function showLock(){ if (locked) return; locked = true; pinBuf = ''; drawPins(); $('#lock').hidden = false; }
+function drawPins(){ document.querySelectorAll('#pins i').forEach((d, i) => d.classList.toggle('f', i < pinBuf.length)); }
+async function tryPin(){
+  const r = await fetch('api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({pin: pinBuf})});
+  if (r.ok) { locked = false; $('#lock').hidden = true; $('#msgpin').textContent = ''; poll(); loadHistory(); return; }
+  const j = await r.json().catch(() => ({}));
+  $('#msgpin').textContent = j.error || 'PIN incorrecto';
+  $('#pins').classList.add('shake'); setTimeout(() => $('#pins').classList.remove('shake'), 400);
+  pinBuf = ''; drawPins();
+}
+function pinKey(k){
+  if (k === 'del') pinBuf = pinBuf.slice(0, -1);
+  else if (/^\d$/.test(k) && pinBuf.length < 8) pinBuf += k;
+  drawPins();
+  if (pinBuf.length === 4) tryPin();
+}
+$('#pad').onclick = e => { const b = e.target.closest('button'); if (b) pinKey(b.dataset.k || b.textContent); };
+addEventListener('keydown', e => { if (!locked) return; if (/^\d$/.test(e.key)) pinKey(e.key); if (e.key === 'Backspace') pinKey('del'); if (e.key === 'Enter' && pinBuf) tryPin(); });
+
+/* ---------- datos ---------- */
+let states = {};
+const st = (dom, key) => states[`${dom}.${P}${key ? '_' + key : ''}`];
+const val = (dom, key) => { const s = st(dom, key); return s && !['unknown','unavailable'].includes(s.state) ? s.state : null; };
+const on = (dom, key) => val(dom, key) === 'on';
+function setLive(ok, txt){ const l = $('#live'); l.classList.toggle('off', !ok); l.lastChild.textContent = txt || (ok ? 'en directo' : 'sin conexión'); }
+async function poll(){
+  if (locked) return;
+  try {
+    const r = await api('api/estado', {cache:'no-store'});
+    const j = await r.json();
+    if (!r.ok) { setLive(false, 'sin datos'); $('#alerts').innerHTML = `<div class="alert warn">${esc(j.error || 'Home Assistant no responde')}</div>`; return; }
+    states = {}; for (const x of j) states[x.entity_id] = x;
+    const lm = st('lawn_mower');
+    setLive(lm && lm.state !== 'unavailable', lm && lm.state === 'unavailable' ? 'fuera de alcance' : null);
+    render();
+  } catch(e) { if (!locked) setLive(false); }
+}
+async function svc(domain, service, entity_id, label){
+  document.querySelectorAll('.actions button,.chip,.sw input').forEach(b => b.disabled = true);
+  toast('Hablando con el robot…');
+  try {
+    const r = await api('api/servicio', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({domain, service, entity_id})});
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
+    toast(label + ' ✓'); setTimeout(poll, 2500);
+  } catch(e) { if (!locked) toast('No se pudo: ' + e.message); }
+  finally { document.querySelectorAll('.actions button,.chip,.sw input').forEach(b => b.disabled = false); }
+}
+
+/* ---------- navegación ---------- */
+function show(v){
+  document.querySelectorAll('nav.tabs button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + v));
+  try { localStorage.setItem('vista', v); } catch(e) {}
+  if (v === 'inicio') dispatchEvent(new Event('resize'));
+  scrollTo({top: 0});
+}
+$('nav.tabs').onclick = e => { const b = e.target.closest('button'); if (b) show(b.dataset.v); };
+
+/* ---------- órdenes ---------- */
+const LM = `lawn_mower.${P}`;
+async function durante(accion, horas){
+  document.querySelectorAll('.chip').forEach(b => b.disabled = true);
+  toast('Hablando con el robot…');
+  try {
+    const r = await api('api/durante', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({accion, horas})});
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
+    toast((accion === 'cortar' ? 'Cortando ' : 'Aparcado ') + horas + ' h ✓'); setTimeout(poll, 2500);
+  } catch(e) { if (!locked) toast('No se pudo: ' + e.message); }
+  finally { document.querySelectorAll('.chip').forEach(b => b.disabled = false); }
+}
+document.querySelector('.actions').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  ({start: () => svc('lawn_mower','start_mowing',LM,'Cortando'), pause: () => svc('lawn_mower','pause',LM,'En pausa'), dock: () => svc('lawn_mower','dock',LM,'Volviendo a la base')})[b.dataset.act]();
+};
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-btn]'); if (b) svc('button','press',`button.${P}_${b.dataset.btn}`, b.textContent);
+  const g = e.target.closest('[data-go]'); if (g) show(g.dataset.go);
+  const mw = e.target.closest('[data-mow]'); if (mw) durante('cortar', Number(mw.dataset.mow));
+  const pk = e.target.closest('[data-park]'); if (pk) durante('aparcar', Number(pk.dataset.park));
+});
+
+function nextRun(tasks){
+  const now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes(), today = (now.getDay() + 6) % 7;
+  for (let k = 0; k < 8; k++) {
+    const d = (today + k) % 7;
+    const c = tasks.filter(t => t['on_' + DAYS[d]]).map(t => t.start_time_in_minutes).filter(m => k > 0 || m > nowMin).sort((a, b) => a - b);
+    if (c.length) return {k, d, m: c[0]};
+  }
+  return null;
+}
+function runningNow(tasks){
+  const now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes(), today = (now.getDay() + 6) % 7;
+  return tasks.find(t => t['on_' + DAYS[today]] && nowMin >= t.start_time_in_minutes && nowMin < t.start_time_in_minutes + t.duration_in_minutes);
+}
+
+function render(){
+  const bat = Number(val('sensor','bateria')), charging = on('binary_sensor','cargando');
+  $('#bat').textContent = isNaN(bat) ? '–' : bat + '%';
+  $('#batsub').textContent = charging ? 'cargando' : 'batería';
+  $('#ringfg').style.strokeDashoffset = 326.7 * (1 - (isNaN(bat) ? 0 : bat) / 100);
+  $('#ringfg').style.stroke = bat < 20 ? '#ff6b5b' : '#ffc20e';
+  const s = val('sensor','estado'), a = val('sensor','actividad'), m = val('sensor','modo');
+  $('#state').textContent = a && a !== 'none' ? (ACTIVITY[a] || a) : (STATE[s] || s || '—');
+  $('#detail').textContent = [a && a !== 'none' && STATE[s] ? STATE[s] : null, MODE[m] ? 'modo ' + MODE[m] : null].filter(Boolean).join(' · ') || '—';
+  const offline = !st('lawn_mower') || st('lawn_mower').state === 'unavailable';
+  const flags = {battery: bat, activity: a, state: s, charging, offline,
+    lifted: on('binary_sensor','levantado'), upsideDown: on('binary_sensor','volcado'), collision: on('binary_sensor','choque'),
+    error: on('binary_sensor','averia') || s === 'error' || s === 'fatal_error', inBase: on('binary_sensor','en_la_base')};
+  flags.errorText = errText(val('sensor','error'));
+  window.robot3d && window.robot3d.update(flags);
+
+  const al = [];
+  if (st('lawn_mower') && st('lawn_mower').state === 'unavailable') al.push(`<div class="alert warn">El robot no está al alcance del Bluetooth. Se reconecta solo al volver cerca del receptor.</div>`);
+  if (on('binary_sensor','averia')) al.push(`<div class="alert">⚠ ${esc(errText(val('sensor','error')))}</div>`);
+  if (on('binary_sensor','levantado')) al.push(`<div class="alert warn">El robot está levantado.</div>`);
+  if (on('binary_sensor','volcado')) al.push(`<div class="alert">El robot está volcado.</div>`);
+  const clock = val('sensor','reloj_del_robot');
+  if (clock) { const readAt = new Date(st('sensor','reloj_del_robot').last_updated); const dm = (readAt - new Date(clock)) / 60000; if (Math.abs(dm) > 5) al.push(`<div class="alert info"><span>El reloj del robot va ${Math.abs(Math.round(dm))} min ${dm > 0 ? 'atrasado' : 'adelantado'}.</span><button class="chip" data-btn="poner_en_hora">Ponerlo en hora</button></div>`); }
+  $('#alerts').innerHTML = al.join('');
+
+  const tasks = st('sensor','programacion_tareas')?.attributes?.tareas || [];
+  const run = runningNow(tasks), nx = nextRun(tasks);
+  if (run) { $('#nextbig').textContent = 'Ahora, en su franja'; $('#nextsub').textContent = `de ${hm(run.start_time_in_minutes)} a ${hm(run.start_time_in_minutes + run.duration_in_minutes)}`; }
+  else if (nx) { $('#nextbig').textContent = (nx.k === 0 ? 'Hoy' : nx.k === 1 ? 'Mañana' : DLONG[nx.d][0].toUpperCase() + DLONG[nx.d].slice(1)) + ' a las ' + hm(nx.m); $('#nextsub').textContent = 'según la programación del robot'; }
+  else { $('#nextbig').textContent = 'Sin programar'; $('#nextsub').textContent = 'Crea un horario en la pestaña Horario'; }
+
+  const temp = val('sensor','temperatura_interna_crudo'), sig = val('sensor','calidad_senal_del_cable');
+  const week = tasks.reduce((acc, t) => acc + t.duration_in_minutes * DAYS.filter(d => t['on_' + d]).length, 0);
+  $('#facts').innerHTML = `<div><b>${sig != null ? sig + ' %' : '–'}</b><small>señal del cable</small></div><div><b>${temp != null ? (temp / 10).toFixed(0) + ' °C' : '–'}</b><small>temperatura</small></div><div><b>${tasks.length ? Math.round(week / 60) + ' h' : '–'}</b><small>programadas/semana</small></div>`;
+  renderWeek(tasks);
+  if (!editing) loadEditor(tasks);
+  renderDatos(); renderRobot();
+  const upd = st('sensor','bateria')?.last_updated;
+  $('#foot').textContent = 'Bluetooth → ESP32 → Home Assistant' + (upd ? ' · última lectura ' + ago(upd) : '');
+}
+
+/* ---------- horario ---------- */
+function renderWeek(tasks){
+  const now = new Date(), today = (now.getDay() + 6) % 7, nowPct = (now.getHours() * 60 + now.getMinutes()) / 14.4;
+  const total = tasks.reduce((acc, t) => acc + t.duration_in_minutes * DAYS.filter(d => t['on_' + d]).length, 0);
+  $('#weekhours').textContent = tasks.length ? Math.round(total / 60) + ' h/semana' : '';
+  $('#week').innerHTML = tasks.length ? `<div class="week">${DAYS.map((d, i) => `<span${i === today ? ' style="font-weight:800"' : ''}>${DN[i]}</span><div class="bar">${tasks.filter(t => t['on_' + d]).map(t => { const a = t.start_time_in_minutes / 14.4, w = Math.min(t.duration_in_minutes / 14.4, 100 - a); return `<b style="left:${a}%;width:${w}%" title="${hm(t.start_time_in_minutes)}–${hm(t.start_time_in_minutes + t.duration_in_minutes)}"></b>`; }).join('')}${i === today ? `<span class="now" style="left:${nowPct}%"></span>` : ''}</div>`).join('')}<div class="hours"><span>0h</span><span>6</span><span>12</span><span>18</span><span>24</span></div></div>` : '<div class="empty">El robot no tiene programación: solo corta cuando se lo mandas.</div>';
+}
+let editing = false, draft = [], original = '';
+const TEMPLATES = [
+  ['L–V 9:00–19:00', [{start:'09:00', end:'19:00', days:DAYS.slice(0,5)}]],
+  ['Todos los días 8:00–20:00', [{start:'08:00', end:'20:00', days:[...DAYS]}]],
+  ['Mañanas 9:00–13:00', [{start:'09:00', end:'13:00', days:[...DAYS]}]],
+  ['Fines de semana 10:00–18:00', [{start:'10:00', end:'18:00', days:DAYS.slice(5)}]],
+];
+$('#templates').innerHTML = TEMPLATES.map(([t], i) => `<button class="chip" data-tpl="${i}">${t}</button>`).join('');
+$('#templates').onclick = e => { const b = e.target.closest('[data-tpl]'); if (!b) return; draft = JSON.parse(JSON.stringify(TEMPLATES[b.dataset.tpl][1])); editing = true; drawEditor(); };
+function loadEditor(tasks){
+  draft = tasks.map(t => ({start: hm(t.start_time_in_minutes), end: hm(t.start_time_in_minutes + t.duration_in_minutes), days: DAYS.filter(d => t['on_' + d])}));
+  original = JSON.stringify(draft); drawEditor();
+}
+const endMin = s => s === '00:00' || s === '24:00' ? 1440 : toMin(s);
+function validate(t){
+  if (!t.start || !t.end) return 'Pon las dos horas';
+  if (endMin(t.end) <= toMin(t.start)) return 'La hora de fin tiene que ser después del inicio';
+  if (!t.days.length) return 'Elige al menos un día';
+  return '';
+}
+function drawEditor(){
+  const dirty = JSON.stringify(draft) !== original;
+  $('#dirty').hidden = !dirty; $('#discard').hidden = !dirty;
+  const errs = draft.map(validate);
+  $('#save').disabled = !dirty || errs.some(Boolean) || draft.length > 15;
+  $('#add').disabled = draft.length >= 15;
+  $('#tasks').innerHTML = draft.length ? draft.map((t, i) => {
+    const d = endMin(t.end) - toMin(t.start);
+    return `<div class="task" data-i="${i}">
+      <div class="row">
+        <input type="time" value="${t.start}" data-k="start" aria-label="Inicio">
+        <span class="muted">a</span>
+        <input type="time" value="${t.end === '24:00' ? '00:00' : t.end}" data-k="end" aria-label="Fin">
+        <span class="dur">${d > 0 ? Math.floor(d / 60) + ' h' + (d % 60 ? ' ' + d % 60 + ' min' : '') : ''}</span>
+        <button class="del" data-del aria-label="Quitar franja"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>
+      </div>
+      <div class="days">${DAYS.map((dd, j) => `<button class="${t.days.includes(dd) ? 'on' : ''}" data-day="${dd}" aria-label="${DLONG[j]}">${DN[j]}</button>`).join('')}</div>
+      ${errs[i] ? `<div class="err">${errs[i]}</div>` : ''}
+    </div>`;
+  }).join('') : '<p class="empty" style="margin:0">Sin franjas: el robot solo cortará cuando se lo mandes.</p>';
+}
+$('#tasks').addEventListener('change', e => { const box = e.target.closest('.task'); if (!box || !e.target.dataset.k) return; draft[box.dataset.i][e.target.dataset.k] = e.target.value; editing = true; drawEditor(); });
+$('#tasks').addEventListener('click', e => {
+  const box = e.target.closest('.task'); if (!box) return; const i = Number(box.dataset.i);
+  const day = e.target.closest('[data-day]');
+  if (day) { const t = draft[i]; t.days = t.days.includes(day.dataset.day) ? t.days.filter(x => x !== day.dataset.day) : DAYS.filter(x => t.days.includes(x) || x === day.dataset.day); editing = true; drawEditor(); }
+  if (e.target.closest('[data-del]')) { draft.splice(i, 1); editing = true; drawEditor(); }
+});
+$('#add').onclick = () => { draft.push({start:'09:00', end:'18:00', days:DAYS.slice(0,5)}); editing = true; drawEditor(); };
+$('#discard').onclick = () => { editing = false; loadEditor(st('sensor','programacion_tareas')?.attributes?.tareas || []); };
+$('#save').onclick = async () => {
+  $('#save').disabled = true; toast('Grabando el horario en el robot…');
+  try {
+    const r = await api('api/programacion', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({tasks: draft.map(t => ({...t, end: endMin(t.end) === 1440 ? '24:00' : t.end}))})});
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || r.statusText);
+    toast('Horario guardado en el robot ✓'); editing = false;
+    await poll();
+    if (j.tasks) loadEditor(j.tasks);
+  } catch(e) { if (!locked) toast('No se pudo guardar: ' + e.message); drawEditor(); }
+};
+
+/* ---------- datos ---------- */
+function renderDatos(){
+  const yn = k => st('binary_sensor', k) ? (on('binary_sensor', k) ? 'sí' : 'no') : null;
+  const row = (k, v) => v != null && v !== '' ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : '';
+  const temp = val('sensor','temperatura_interna_crudo');
+  $('#sensors').innerHTML = row('Estado', STATE[val('sensor','estado')] || val('sensor','estado'))
+    + row('Actividad', ACTIVITY[val('sensor','actividad')] || val('sensor','actividad'))
+    + row('Avería', on('binary_sensor','averia') ? errText(val('sensor','error')) : 'ninguna')
+    + row('En la base', yn('en_la_base')) + row('Cargando', yn('cargando'))
+    + row('Carga restante', val('sensor','carga_restante') != null ? Math.round(Number(val('sensor','carga_restante'))) + ' min' : null)
+    + row('Señal del cable', val('sensor','calidad_senal_del_cable') != null ? val('sensor','calidad_senal_del_cable') + ' %' : null)
+    + row('Temperatura interna', temp != null ? (Number(temp) / 10).toFixed(1) + ' °C (estimada)' : null)
+    + row('Levantado', yn('levantado')) + row('Choque ahora', yn('choque')) + row('Volcado', yn('volcado'))
+    + row('Orden manual', val('sensor','orden_manual'));
+  const stat = (v, l) => `<div class="stat"><b>${v}</b><small>${l}</small></div>`;
+  const num = k => Number(val('sensor', k) || 0).toLocaleString('es-ES');
+  const cut = Number(val('sensor','tiempo_total_cortando')), cycles = Number(val('sensor','ciclos_de_carga'));
+  $('#stats').innerHTML = stat(fmtH(val('sensor','tiempo_total_cortando')),'cortando') + stat(fmtH(val('sensor','tiempo_total_en_marcha')),'en marcha')
+    + stat(fmtH(val('sensor','tiempo_total_cargando')),'cargando') + stat(fmtH(val('sensor','tiempo_total_buscando_la_base')),'buscando la base')
+    + stat(num('choques'),'choques') + stat(num('ciclos_de_carga'),'ciclos de carga')
+    + stat(fmtH(val('sensor','uso_de_las_cuchillas')),'cuchillas desde el último cambio')
+    + stat(cut && cycles ? Math.round(cut * 60 / cycles) + ' min' : '–', 'de corte por carga');
+  const msgs = st('sensor','ultimo_aviso')?.attributes?.avisos || [];
+  const total = st('sensor','ultimo_aviso')?.attributes?.total;
+  $('#msgcount').textContent = total ? total + ' en la memoria' : '';
+  $('#msgs').innerHTML = msgs.length ? msgs.map(x => `<div class="msg"><span class="dot s${x.gravedad}"></span><div><b>${esc(errText(x.texto))}</b><br><small>${fmtDate(x.fecha)} · código ${x.codigo}</small></div></div>`).join('') : '<div class="empty">Sin avisos.</div>';
+  const all = Object.values(states).filter(x => !x.entity_id.startsWith('button.')).sort((a, b) => (a.attributes.friendly_name || '').localeCompare(b.attributes.friendly_name || '', 'es'));
+  $('#allcount').textContent = all.length + ' datos';
+  $('#all').innerHTML = all.map(x => `<tr><td>${esc((x.attributes.friendly_name || x.entity_id).replace(/^Robot cortacésped\s*/i, ''))}</td><td>${esc(x.state)}${x.attributes.unit_of_measurement ? ' ' + esc(x.attributes.unit_of_measurement) : ''}</td></tr>`).join('');
+}
+
+/* ---------- ajustes ---------- */
+const TOGGLES = [['modo_eco','Modo ECO','Gasta menos batería con el motor de corte más suave'],['sensorcontrol_ritmo_segun_crecimiento','SensorControl','Corta más o menos según lo que crezca el césped'],['modo_garaje','Modo garaje','Entra en la base como si fuera un garaje']];
+$('#toggles').onchange = e => { const k = e.target.dataset.tg; if (k) svc('switch', e.target.checked ? 'turn_on' : 'turn_off', `switch.${P}_${k}`, 'Ajuste guardado'); };
+function renderRobot(){
+  $('#toggles').innerHTML = TOGGLES.filter(([k]) => st('switch', k)).map(([k, t, d]) => `<label class="toggle"><span><b>${t}</b><br><small>${d}</small></span><span class="sw"><input type="checkbox" data-tg="${k}" ${on('switch', k) ? 'checked' : ''}><span></span></span></label>`).join('') || '<div class="empty">Sin ajustes disponibles.</div>';
+  const row = (k, v) => v ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : '';
+  $('#info').innerHTML = row('Modelo', 'McCulloch ROB S800') + row('Nº de serie', val('sensor','numero_de_serie')) + row('Software', val('sensor','version_software'))
+    + row('Firmware', val('sensor','firmware_aplicacion')) + row('Reloj del robot', val('sensor','reloj_del_robot') ? fmtDate(val('sensor','reloj_del_robot')) : null)
+    + row('Pasar el cable', val('sensor','pasar_el_cable_cm') ? val('sensor','pasar_el_cable_cm') + ' cm' : null)
+    + row('Marcha atrás al salir', val('sensor','marcha_atras_al_salir_cm') ? val('sensor','marcha_atras_al_salir_cm') + ' cm' : null)
+    + row('Sensibilidad SensorControl', val('sensor','sensibilidad_sensorcontrol'));
+}
+
+const ACOL = {mowing:'#47d35a', going_out:'#9be27c', going_home:'#ffd257', charging:'#3fa9ff', parked:'#8a8f92', stopped_in_garden:'#ff9f0a', none:'#5b6064'};
+async function loadActivity(){
+  if (locked) return;
+  try {
+    const pts = (await (await api('api/historial?e=actividad')).json()).map(p => ({t: new Date(p.t).getTime(), v: p.v})).filter(p => p.v && p.v !== 'unknown');
+    const t0 = Date.now() - 864e5;
+    if (!pts.length) { $('#tl').innerHTML = ''; $('#legend').textContent = 'Aún no hay historial.'; return; }
+    const segs = pts.map((p, i) => ({v: p.v, a: Math.max(p.t, t0), b: i + 1 < pts.length ? pts[i + 1].t : Date.now()})).filter(x => x.b > t0);
+    $('#tl').innerHTML = segs.map(x => `<b style="width:${(x.b - x.a) / 864e5 * 100}%;background:${ACOL[x.v] || '#5b6064'}" title="${ACTIVITY[x.v] || x.v}"></b>`).join('');
+    const tot = {}; segs.forEach(x => tot[x.v] = (tot[x.v] || 0) + (x.b - x.a));
+    $('#legend').innerHTML = Object.entries(tot).sort((a, b) => b[1] - a[1]).map(([k, ms]) => `<span><i style="background:${ACOL[k] || '#5b6064'}"></i>${ACTIVITY[k] || k} ${(ms / 36e5).toFixed(1)} h</span>`).join('');
+  } catch(e) {}
+}
+async function loadHistory(){
+  loadActivity();
+  if (locked) return;
+  try {
+    const pts = (await (await api('api/historial')).json()).map(p => ({t: new Date(p.t).getTime(), v: Number(p.v)})).filter(p => !isNaN(p.v));
+    if (pts.length < 2) { $('#spark').innerHTML = '<text x="150" y="48" text-anchor="middle" fill="currentColor" opacity=".5" font-size="11">Aún no hay historial</text>'; return; }
+    const t0 = Date.now() - 864e5, x = t => Math.max(0, (t - t0) / 864e5 * 300), y = v => 84 - v * 0.78;
+    const d = pts.map((p, i) => `${i ? 'L' : 'M'}${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ') + ` L300,${y(pts.at(-1).v).toFixed(1)}`;
+    $('#spark').innerHTML = `<path d="${d} L300,88 L${x(pts[0].t).toFixed(1)},88Z" fill="var(--brand-soft)"/><path d="${d}" fill="none" stroke="var(--brand)" stroke-width="2.4" vector-effect="non-scaling-stroke"/>`;
+    const vs = pts.map(p => p.v); $('#sparkinfo').textContent = `${Math.min(...vs)}–${Math.max(...vs)} %`;
+  } catch(e) {}
+}
+
+/* ---------- app ---------- */
+let deferred;
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred = e; $('#install').hidden = false; $('#installtxt').textContent = 'Ábrela como una app, sin barra del navegador.'; });
+$('#install').onclick = async () => { if (!deferred) return; deferred.prompt(); await deferred.userChoice; deferred = null; $('#install').hidden = true; };
+if (!isSecureContext) $('#installtxt').innerHTML = 'Para instalarla como app de verdad hay que abrirla por <b>https</b> (por ejemplo, con tu dominio o un túnel de Cloudflare). Desde aquí: menú del navegador → «Añadir a pantalla de inicio».';
+else if (/iphone|ipad/i.test(navigator.userAgent)) $('#installtxt').textContent = 'En iPhone: botón Compartir → «Añadir a pantalla de inicio».';
+if ('serviceWorker' in navigator && isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
+$('#logout').onclick = async () => { await fetch('api/logout', {method:'POST'}); showLock(); };
+
+(async () => {
+  try { const v = localStorage.getItem('vista'); if (v && $('#v-' + v)) show(v); } catch(e) {}
+  try { const s = await (await fetch('api/sesion', {cache:'no-store'})).json(); $('#logout').hidden = !s.pin; if (s.pin && !s.ok) { showLock(); return; } } catch(e) {}
+  poll(); loadHistory();
+})();
+addEventListener('robot3d-ready', () => { if (Object.keys(states).length) render(); });
+setInterval(() => { if (!document.hidden) poll(); }, 5000);
+setInterval(loadHistory, 10 * 60 * 1000);
+</script>
+
+<script>
+// Escena con la foto oficial: traduce el estado del robot a clases CSS de .stage
+(() => {
+  const stage = document.getElementById('stage'), fx = document.getElementById('fx'), pill = document.getElementById('sstate');
+  // recortes de hierba: salen por detrás del robot (a la derecha, el morro mira a la izquierda)
+  for (let i = 0; i < 18; i++) { const b = document.createElement('b'); b.style.left = (54 + Math.random() * 16) + '%'; b.style.setProperty('--dx', (20 + Math.random() * 70) + 'px'); b.style.setProperty('--dy', -(30 + Math.random() * 60) + 'px'); b.style.animationDelay = (Math.random() * 1) + 's'; fx.appendChild(b); }
+  // hierba en primer plano para dar profundidad
+  let blades = '';
+  for (let i = 0; i < 70; i++) {
+    const x = i * 1000 / 70 + Math.random() * 10, h = 40 + Math.random() * 60, w = 4 + Math.random() * 5, c = ['#1d3a19', '#24461f', '#2c5326'][i % 3];
+    blades += `<path d="M${x - w} 100 Q${x - w / 3} ${100 - h * .6} ${x + w * .6} ${100 - h} Q${x + w / 4} ${100 - h * .5} ${x + w} 100Z" fill="${c}" style="--d:${(2.4 + Math.random() * 2).toFixed(2)}s;animation-delay:-${(Math.random() * 3).toFixed(2)}s"/>`;
+  }
+  document.getElementById('blades').innerHTML = `<svg viewBox="0 0 1000 100" preserveAspectRatio="none">${blades}</svg>`;
+  const ICON = {
+    mow: '<path d="M3 20h18"/><path d="M6 20c0-4 1-7 3-9M12 20c0-5 0-8 1-11M18 20c0-4-1-6-3-8"/>',
+    bolt: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>', home: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>',
+    out: '<path d="M5 12h14M13 6l6 6-6 6"/>', pause: '<path d="M8 5v14M16 5v14"/>', warn: '<path d="M12 3 2 21h20z"/><path d="M12 10v5M12 18v.5"/>',
+    up: '<path d="M12 20V5M6 11l6-6 6 6"/>', off: '<path d="M2 2l20 20"/><path d="M8.5 16.5a5 5 0 0 1 7 0M5 12.6a10 10 0 0 1 5-2.5M19 12.6a10 10 0 0 0-2.4-1.7M12 20h.01"/>',
+    idle: '<rect x="6" y="6" width="12" height="12" rx="2"/>',
+  };
+  let wasHit = false;
+  window.robot3d = { update(s){
+    const moving = ['mowing', 'going_out', 'going_home'].includes(s.activity);
+    const cls = {
+      offline: s.offline,
+      upside: !s.offline && s.upsideDown,
+      lifted: !s.offline && !s.upsideDown && s.lifted,
+      error: !s.offline && s.error && !s.upsideDown,
+      charging: !s.offline && s.charging,
+      docked: !s.offline && !moving && (s.inBase || s.charging || s.activity === 'parked' || s.activity === 'charging'),
+      mowing: !s.offline && s.activity === 'mowing' && !s.lifted && !s.upsideDown,
+      homing: !s.offline && s.activity === 'going_home',
+      leaving: !s.offline && s.activity === 'going_out',
+      paused: !s.offline && !moving && !s.charging && !s.error && !s.lifted && !s.upsideDown && s.state === 'paused',
+    };
+    for (const [k, v] of Object.entries(cls)) stage.classList.toggle(k, !!v);
+    fx.style.display = cls.mowing ? '' : 'none';
+    if (s.collision && !wasHit) { stage.classList.remove('hit'); void stage.offsetWidth; stage.classList.add('hit'); }
+    wasHit = s.collision;
+    document.getElementById('charge').style.setProperty('--lvl', (isNaN(s.battery) ? 50 : s.battery) + '%');
+    const cap = cls.charging ? ['⚡', 'Cargando en la base' + (isNaN(s.battery) ? '' : ' · ' + s.battery + '%')]
+      : cls.homing ? ['⌂', 'Volviendo a la base'] : cls.leaving ? ['➜', 'Saliendo de la base']
+      : cls.docked ? ['⌂', 'Aparcado en la base'] : null;
+    stage.classList.toggle('cap', !!cap);
+    if (cap) { document.getElementById('capic').textContent = cap[0]; document.getElementById('captxt').textContent = cap[1]; }
+    // la etiqueta sale de las mismas clases que la escena: nunca dicen cosas distintas
+    const [lbl, col, ic] = cls.offline ? ['Fuera de línea', '#8a8f92', 'off'] : cls.upside ? ['Volcado', '#ff3b30', 'warn']
+      : cls.lifted ? ['Levantado', '#ff9f0a', 'up'] : cls.error ? ['Avería' + (s.errorText ? ': ' + s.errorText : ''), '#ff3b30', 'warn']
+      : cls.charging ? ['Cargando', '#3fa9ff', 'bolt'] : cls.mowing ? ['Cortando', '#47d35a', 'mow']
+      : cls.homing ? ['Volviendo a la base', '#47d35a', 'home'] : cls.leaving ? ['Saliendo de la base', '#47d35a', 'out']
+      : cls.docked ? ['En la base', '#ffc20e', 'home'] : cls.paused ? ['En pausa', '#ffc20e', 'pause'] : ['Parado', '#ffc20e', 'idle'];
+    pill.lastChild.textContent = lbl; pill.style.setProperty('--c', col); pill.firstChild.innerHTML = ICON[ic];
+  }};
+  // profundidad: sigue al dedo/ratón o al giroscopio; si no, oscila suave
+  const tilt = document.getElementById('tilt'), scene = document.getElementById('scene');
+  let target = null, t0 = performance.now(), lastInput = 0;
+  const set = (rx, ry) => { tilt.style.setProperty('--rx', rx.toFixed(2) + 'deg'); tilt.style.setProperty('--ry', ry.toFixed(2) + 'deg'); tilt.querySelector('.shine').style.setProperty('--sx', (50 - ry * 2.2).toFixed(1) + '%'); };
+  const fromPoint = (x, y) => { const r = scene.getBoundingClientRect(); target = [((y - r.top) / r.height - .5) * -16, ((x - r.left) / r.width - .5) * 50]; lastInput = performance.now(); };
+  scene.addEventListener('pointermove', e => fromPoint(e.clientX, e.clientY));
+  scene.addEventListener('pointerleave', () => { target = null; });
+  addEventListener('deviceorientation', e => { if (e.gamma == null) return; target = [Math.max(-12, Math.min(12, (e.beta - 40) * -.4)), Math.max(-28, Math.min(28, e.gamma * 1.1))]; lastInput = performance.now(); });
+  (function loop(){
+    if (!document.hidden) {
+      if (!target || performance.now() - lastInput > 4000) { const k = (performance.now() - t0) / 1000; set(Math.sin(k * .7) * 3, Math.sin(k * .45) * 16); }
+      else set(target[0], target[1]);
+    }
+    requestAnimationFrame(loop);
+  })();
+  dispatchEvent(new Event('robot3d-ready'));
+})();
+</script>
+</body>
+</html>

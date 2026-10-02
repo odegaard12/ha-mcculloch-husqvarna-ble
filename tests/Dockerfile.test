@@ -1,0 +1,2 @@
+FROM python:3.14
+RUN pip install -q uv && uv pip install --system -q pytest-homeassistant-custom-component

@@ -1,0 +1,95 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "McCulloch ROB",
+        "description": "Mowers found: {count}. If it is missing, type the MAC address.",
+        "data": {
+          "address": "Robot (MAC)"
+        }
+      },
+      "pair": {
+        "title": "Emparejar {address}",
+        "description": "Power-cycle the mower and submit within 3 minutes (pairing mode). Leave PIN empty if none.",
+        "data": {
+          "pin": "PIN"
+        }
+      }
+    },
+    "error": {
+      "invalid_pin": "PIN must be numeric.",
+      "invalid_auth": "Wrong PIN.",
+      "cannot_connect": "Pairing failed, reboot the mower and retry.",
+      "not_found": "No Bluetooth adapter can see the mower."
+    },
+    "abort": {
+      "already_configured": "Already configured.",
+      "reauth_successful": "Done."
+    }
+  },
+  "services": {
+    "send_command": {
+      "name": "Send command",
+      "description": "Send any protocol command and return the raw response.",
+      "fields": {
+        "command": {
+          "name": "Comando",
+          "description": "Nombre en protocol.json, p.ej. GetAllStatistics."
+        },
+        "params": {
+          "name": "Parámetros",
+          "description": "Diccionario de parámetros del comando."
+        },
+        "config_entry_id": {
+          "name": "Robot",
+          "description": "Si hay varios."
+        }
+      }
+    },
+    "probe": {
+      "name": "Probe commands",
+      "description": "Try all known read commands.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Robot",
+          "description": "Si hay varios."
+        }
+      }
+    },
+    "set_schedule": {
+      "name": "Set weekly schedule",
+      "description": "Replace all mowing tasks.",
+      "fields": {
+        "tasks": {
+          "name": "Tareas",
+          "description": "List of tasks, each with start, end (HH:MM) and days (in English)."
+        },
+        "config_entry_id": {
+          "name": "Robot",
+          "description": "If several."
+        }
+      }
+    },
+    "mow_for": {
+      "name": "Mow for",
+      "description": "Mow now for that many hours.",
+      "fields": {
+        "hours": {
+          "name": "Hours",
+          "description": "0.5 to 24 h"
+        }
+      }
+    },
+    "park_for": {
+      "name": "Park for",
+      "description": "Park in the station for that many hours.",
+      "fields": {
+        "hours": {
+          "name": "Hours",
+          "description": "0.5 to 168 h"
+        }
+      }
+    }
+  }
+}

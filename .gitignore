@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv*/
+robot_panel/robot_app.env
+robot_panel/.app_secret
+# foto propia del robot: cada uno pone la suya
+robot.webp

@@ -1,0 +1,11 @@
+# Panel en una Raspberry (o cualquier equipo con Docker), fuera de Home Assistant.
+# 1. cp robot_app.env.example robot_app.env  y rellénalo
+# 2. docker compose up -d --build
+# 3. abre http://<ip-del-equipo>:8106
+services:
+  robot-panel:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8106:8106"
+    env_file: robot_app.env
