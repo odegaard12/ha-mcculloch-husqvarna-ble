@@ -11,6 +11,7 @@ const T = {
     next: 'Próximo corte', today: 'hoy', tomorrow: 'mañana', none: 'sin programación', battery: 'Batería',
     offlineMsg: 'El robot no está al alcance del Bluetooth. Se reconecta solo al volver cerca del receptor.',
     pick: 'Elige el robot (entidad lawn_mower)', name: 'Nombre (opcional)', noEntity: 'No encuentro la entidad',
+    image: 'Foto propia (opcional): URL de un PNG/WebP transparente, p. ej. /local/robot.webp',
   },
   en: {
     mowing: 'Mowing', homing: 'Going home', leaving: 'Leaving the dock', charging: 'Charging',
@@ -20,6 +21,7 @@ const T = {
     next: 'Next run', today: 'today', tomorrow: 'tomorrow', none: 'no schedule', battery: 'Battery',
     offlineMsg: 'The mower is out of Bluetooth range. It reconnects by itself when it comes back near the receiver.',
     pick: 'Pick the mower (lawn_mower entity)', name: 'Name (optional)', noEntity: 'Entity not found',
+    image: 'Own photo (optional): URL of a transparent PNG/WebP, e.g. /local/robot.webp',
   },
 };
 
@@ -143,10 +145,11 @@ class McCullochRobCard extends HTMLElement {
   _build() {
     const root = this.attachShadow({mode: 'open'});
     root.innerHTML = `<style>${CSS}</style>${HTML}`;
-    // robot.webp = foto propia (opcional); si no está, el dibujo
+    // foto: la de la opción `image` (sobrevive a las actualizaciones), si no robot.webp junto a la tarjeta, y si no el dibujo
     const img = root.querySelector('img');
-    img.onerror = () => { img.onerror = null; img.src = BASE + 'robot.svg'; };
-    img.src = BASE + 'robot.webp';
+    const srcs = [this._config.image, BASE + 'robot.webp', BASE + 'robot.svg'].filter(Boolean);
+    img.onerror = () => { srcs.shift(); if (srcs.length) img.src = srcs[0]; else img.onerror = null; };
+    img.src = srcs[0];
     const fx = root.getElementById('fx');
     for (let i = 0; i < 14; i++) {
       const b = document.createElement('b');
@@ -254,11 +257,12 @@ class McCullochRobCardEditor extends HTMLElement {
       this._form = document.createElement('ha-form');
       this._form.computeLabel = s => {
         const l = (this._hass.locale?.language || 'en').slice(0, 2), t = T[l] || T.en;
-        return s.name === 'entity' ? t.pick : t.name;
+        return s.name === 'entity' ? t.pick : s.name === 'image' ? t.image : t.name;
       };
       this._form.schema = [
         {name: 'entity', required: true, selector: {entity: {domain: 'lawn_mower'}}},
         {name: 'name', selector: {text: {}}},
+        {name: 'image', selector: {text: {}}},
       ];
       this._form.addEventListener('value-changed', e => {
         this.dispatchEvent(new CustomEvent('config-changed', {detail: {config: e.detail.value}, bubbles: true, composed: true}));

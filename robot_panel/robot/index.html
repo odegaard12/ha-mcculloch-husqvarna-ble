@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#16181a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -27,6 +27,10 @@
 }}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0}
+/* como una app: sin zoom por doble toque ni al escribir (iOS amplía campos de menos de 16px) */
+html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+input,select,textarea{font-size:max(16px,1em)!important}
+button,.chip,.pad button,nav.tabs button{touch-action:manipulation;user-select:none;-webkit-user-select:none}
 body{background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior-y:contain}
 button,input{font:inherit;color:inherit}
 .app{max-width:1120px;margin:0 auto;padding:max(12px,env(safe-area-inset-top)) 16px calc(96px + env(safe-area-inset-bottom))}
@@ -698,6 +702,8 @@ $('#logout').onclick = async () => { await fetch('api/logout', {method:'POST'});
 addEventListener('robot3d-ready', () => { if (Object.keys(states).length) render(); });
 setInterval(() => { if (!document.hidden) poll(); }, 5000);
 setInterval(loadHistory, 10 * 60 * 1000);
+// iOS no respeta user-scalable=no: el pellizco se corta aquí (el doble toque ya lo quita touch-action)
+['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), {passive: false}));
 </script>
 
 <script>
