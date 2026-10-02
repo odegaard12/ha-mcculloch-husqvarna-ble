@@ -1,0 +1,5 @@
+{
+  "name": "McCulloch / Husqvarna robot (Bluetooth)",
+  "render_readme": true,
+  "homeassistant": "2025.1.0"
+}

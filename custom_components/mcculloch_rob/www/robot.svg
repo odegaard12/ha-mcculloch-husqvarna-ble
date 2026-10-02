@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250">
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4a4e52"/><stop offset=".55" stop-color="#2c2f32"/><stop offset="1" stop-color="#1b1d1f"/>
+    </linearGradient>
+    <linearGradient id="top" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5a5f63"/><stop offset="1" stop-color="#34383b"/>
+    </linearGradient>
+    <radialGradient id="hub" cx=".4" cy=".35" r=".7">
+      <stop offset="0" stop-color="#ffd54a"/><stop offset="1" stop-color="#e0a800"/>
+    </radialGradient>
+  </defs>
+  <!-- carrocería: morro a la izquierda -->
+  <path d="M28 168 C30 120 70 78 140 66 C200 56 280 58 330 82 C362 98 378 128 376 168 L372 186 C370 196 362 200 350 200 L48 200 C36 200 28 192 28 182 Z" fill="url(#body)"/>
+  <path d="M70 112 C96 84 140 72 196 70 C252 68 304 76 334 98 C300 92 250 90 196 92 C142 94 100 102 70 112 Z" fill="url(#top)" opacity=".9"/>
+  <!-- franja amarilla y panel -->
+  <path d="M120 100 C170 86 240 84 300 96 L306 108 C246 98 176 100 126 114 Z" fill="#ffc20e"/>
+  <rect x="196" y="74" width="54" height="16" rx="8" fill="#16181a"/>
+  <circle cx="240" cy="82" r="3.5" fill="#47d35a"/>
+  <path d="M34 170 L372 170" stroke="#ffc20e" stroke-width="5" stroke-linecap="round"/>
+  <!-- rueda trasera grande -->
+  <circle cx="292" cy="196" r="46" fill="#121314"/>
+  <circle cx="292" cy="196" r="34" fill="#1e2022" stroke="#2a2d30" stroke-width="4" stroke-dasharray="7 5"/>
+  <circle cx="292" cy="196" r="15" fill="url(#hub)"/>
+  <!-- rueda delantera -->
+  <circle cx="92" cy="208" r="26" fill="#121314"/>
+  <circle cx="92" cy="208" r="11" fill="#2a2d30"/>
+</svg>

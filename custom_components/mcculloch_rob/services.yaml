@@ -1,0 +1,54 @@
+send_command:
+  fields:
+    command:
+      required: true
+      example: GetAllStatistics
+      selector:
+        text:
+    params:
+      example: '{"messageId": 0}'
+      selector:
+        object:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: mcculloch_rob
+probe:
+  fields:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: mcculloch_rob
+set_schedule:
+  fields:
+    tasks:
+      required: true
+      example: '[{"start": "08:00", "end": "20:00", "days": ["monday", "tuesday"]}]'
+      selector:
+        object:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: mcculloch_rob
+mow_for:
+  fields:
+    hours:
+      required: true
+      example: 2
+      selector:
+        number:
+          min: 0.5
+          max: 24
+          step: 0.5
+          unit_of_measurement: h
+park_for:
+  fields:
+    hours:
+      required: true
+      example: 12
+      selector:
+        number:
+          min: 0.5
+          max: 168
+          step: 0.5
+          unit_of_measurement: h

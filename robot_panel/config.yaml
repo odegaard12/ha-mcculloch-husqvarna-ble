@@ -1,0 +1,19 @@
+name: Robot cortacésped (panel)
+version: "0.2.0"
+slug: robot_panel
+description: Panel estilo app para robots McCulloch / Husqvarna / Gardena / Flymo por Bluetooth (integración mcculloch_rob)
+url: https://github.com/odegaard12/ha-mcculloch-husqvarna-ble
+arch:
+  - aarch64
+  - amd64
+  - armv7
+init: false
+ingress: true
+ingress_port: 8106
+panel_icon: mdi:robot-mower
+panel_title: Robot
+homeassistant_api: true
+options:
+  robot_prefix: robot_cortacesped
+schema:
+  robot_prefix: str
