@@ -1,10 +1,15 @@
 // Service worker de «Mi robot»: guarda la carcasa de la app para que abra al instante y
-// sin red; los datos (/api/) van siempre a la red y nunca se sirven de caché.
-const CACHE = 'mi-robot-v9';
-const SHELL = ['./', 'static/manifest.webmanifest', 'static/icon-192.png?v=6', 'static/icon-512.png?v=6', 'static/robot.webp?v=6'];
+// sin red; los datos (api/) van siempre a la red y nunca se sirven de caché.
+// Rutas relativas al ámbito del worker: funciona en la raíz (Pi) y bajo el ingress de HA.
+const CACHE = 'mi-robot-v10';
+const SHELL = ['./', 'static/manifest.webmanifest', 'static/icon-192.png?v=6', 'static/icon-512.png?v=6',
+               'static/robot.svg', 'static/robot.webp?v=6'];
+const SCOPE = new URL(self.registration.scope).pathname;
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // de uno en uno: si falta alguno (p. ej. la foto, que no va en el repo) el resto se guarda igual
+  e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(u).catch(() => {}))))
+    .then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
@@ -14,12 +19,13 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  if (e.request.method !== 'GET' || url.pathname.includes('/api/')) return;
+  const rel = url.pathname.startsWith(SCOPE) ? url.pathname.slice(SCOPE.length) : url.pathname;
+  if (e.request.method !== 'GET' || url.origin !== location.origin || rel.startsWith('api/')) return;
   // Red primero (para recibir siempre la última versión) y caché si no hay red.
   e.respondWith(
     fetch(e.request).then(r => {
-      if (r.ok && url.origin === location.origin) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
+      if (r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
       return r;
-    }).catch(() => caches.match(e.request).then(r => r || caches.match('/')))
+    }).catch(() => caches.match(e.request).then(r => r || caches.match(SCOPE)))
   );
 });

@@ -1,0 +1,69 @@
+"""Pruebas del servidor del panel: lista blanca de órdenes, PIN y sesiones. Ejecutar: python ha_app/test_server.py"""
+import asyncio
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+from aiohttp.test_utils import TestClient, TestServer
+
+os.environ.update({"APP_PIN": "4321", "HA_TOKEN": "x", "HA_URL": "http://127.0.0.1:9", "ROBOT_PREFIX": "robot_cortacesped"})
+sys.path.insert(0, str(Path(__file__).parent))
+import server  # noqa: E402
+
+server.HERE = Path(tempfile.mkdtemp())  # .app_secret de usar y tirar
+(server.HERE / "robot").mkdir()
+
+
+async def main():
+    async with TestClient(TestServer(server.make_app())) as c:
+        r = await c.post("/api/servicio", json={})
+        assert r.status == 401, "sin sesión no se entra"
+        # login
+        r = await c.post("/api/login", json={"pin": "0000"})
+        assert r.status == 403
+        r = await c.post("/api/login", data="no es json")
+        assert r.status == 403
+        r = await c.post("/api/login", json={"pin": "4321"})
+        assert r.status == 200
+        s = await (await c.get("/api/sesion")).json()
+        assert s == {"pin": True, "pin_len": 4, "ok": True}, s
+        # lista blanca
+        bad = [
+            {"domain": "switch", "service": "turn_on", "entity_id": "switch.robot_cortacesped,switch.garaje"},
+            {"domain": "switch", "service": "turn_on", "entity_id": "switch.garaje"},
+            {"domain": "switch", "service": "turn_on", "entity_id": ["switch.robot_cortacesped_eco"]},
+            {"domain": "switch", "service": "turn_on", "entity_id": "button.robot_cortacesped_cortar_1_hora"},
+            {"domain": "light", "service": "turn_on", "entity_id": "light.robot_cortacesped"},
+            {"domain": "switch", "service": "turn_on", "entity_id": "switch.robot_cortacesped_eco x"},
+        ]
+        for b in bad:
+            r = await c.post("/api/servicio", json=b)
+            assert r.status == 403, (b, r.status)
+        r = await c.post("/api/servicio", data="[1,2]")
+        assert r.status == 403
+        # orden válida: pasa el filtro y falla al llegar a HA (no hay HA en el puerto 9) con 502 en JSON
+        r = await c.post("/api/servicio", json={"domain": "switch", "service": "turn_on", "entity_id": "switch.robot_cortacesped_eco"})
+        assert r.status == 502 and "error" in await r.json(), r.status
+        for path, body in (("/api/durante", {"accion": "cortar", "horas": 1}), ("/api/programacion", {"tasks": []})):
+            r = await c.post(path, json=body)
+            assert r.status == 502 and "error" in await r.json(), (path, r.status)
+        r = await c.get("/api/historial")
+        assert r.status == 502
+        cookie = c.session.cookie_jar.filter_cookies(c.make_url("/")).get(server.COOKIE).value
+    # un PIN nuevo invalida las sesiones viejas
+    os.environ["APP_PIN"] = "9999"
+    async with TestClient(TestServer(server.make_app())) as c2:
+        c2.session.cookie_jar.update_cookies({server.COOKIE: cookie})
+        assert not (await (await c2.get("/api/sesion")).json())["ok"]
+    # límite global: 20 fallos desde IPs distintas bloquean a todos
+    os.environ["APP_PIN"] = "4321"
+    async with TestClient(TestServer(server.make_app())) as c3:
+        codes = [(await c3.post("/api/login", json={"pin": "0"}, headers={"CF-Connecting-IP": f"10.0.0.{i}"})).status for i in range(21)]
+        assert codes[:20] == [403] * 20 and codes[20] == 429, codes
+        r = await c3.post("/api/login", json={"pin": "4321"}, headers={"CF-Connecting-IP": "10.9.9.9"})
+        assert r.status == 429
+    print("servidor: todo OK")
+
+
+asyncio.run(main())

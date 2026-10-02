@@ -18,6 +18,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import os
+import re
 import secrets
 import time
 from datetime import UTC, datetime, timedelta
@@ -26,7 +27,9 @@ from pathlib import Path
 from aiohttp import ClientError, ClientSession, ClientTimeout, web
 
 HERE = Path(__file__).resolve().parent
-PREFIX = os.environ.get("ROBOT_PREFIX", "robot_cortacesped")
+PREFIX = os.environ.get("ROBOT_PREFIX", "").strip() or "robot_cortacesped"
+# una sola entidad del robot, nunca una lista separada por comas (HA la trocearía)
+ENTITY_RE = re.compile(rf"(lawn_mower|button|switch)\.{re.escape(PREFIX)}(_[a-z0-9_]+)?")
 ALLOWED = {
     ("lawn_mower", "start_mowing"), ("lawn_mower", "pause"), ("lawn_mower", "dock"),
     ("button", "press"), ("switch", "turn_on"), ("switch", "turn_off"),
@@ -46,6 +49,7 @@ def load_env() -> None:
 COOKIE = "rob_sesion"
 SESSION_DAYS = 180
 MAX_FAILS, FAIL_WINDOW = 5, 300  # 5 PIN fallidos en 5 min bloquean esa IP 5 min
+GLOBAL_MAX_FAILS, GLOBAL_WINDOW = 20, 3600  # y 20 fallos en una hora, vengan de donde vengan, bloquean a todos
 
 
 def load_secret() -> bytes:
@@ -63,9 +67,12 @@ def make_app() -> web.Application:
     pin = os.environ.get("APP_PIN", "")
     secret = load_secret()
     fails: dict[str, list[float]] = {}
+    all_fails: list[float] = []
+    # la firma incluye el PIN: al cambiarlo, todas las sesiones anteriores dejan de valer
+    pin_tag = hashlib.sha256(pin.encode()).hexdigest()[:16]
 
     def sign(exp: int) -> str:
-        return hmac.new(secret, str(exp).encode(), hashlib.sha256).hexdigest()
+        return hmac.new(secret, f"{exp}.{pin_tag}".encode(), hashlib.sha256).hexdigest()
 
     def session_ok(req) -> bool:
         if not pin:
@@ -83,17 +90,26 @@ def make_app() -> web.Application:
         return await handler(req)
 
     async def sesion(req):
-        return web.json_response({"pin": bool(pin), "ok": session_ok(req)})
+        return web.json_response({"pin": bool(pin), "pin_len": len(pin), "ok": session_ok(req)})
 
     async def login(req):
+        # CF-Connecting-IP se puede falsear si alguien llega directo al puerto: por eso hay
+        # además un límite global que no depende de la IP (frena probar los 10 000 PIN).
         ip = req.headers.get("CF-Connecting-IP") or req.remote or "?"
         now = time.time()
+        for k in [k for k, v in fails.items() if not v or now - v[-1] > FAIL_WINDOW]:
+            del fails[k]
+        all_fails[:] = [t for t in all_fails if now - t < GLOBAL_WINDOW]
         recent = [t for t in fails.get(ip, []) if now - t < FAIL_WINDOW]
-        if len(recent) >= MAX_FAILS:
+        if len(recent) >= MAX_FAILS or len(all_fails) >= GLOBAL_MAX_FAILS:
             return web.json_response({"error": "Demasiados intentos. Espera unos minutos."}, status=429)
-        body = await req.json()
+        try:
+            body = await req.json()
+        except ValueError:
+            body = {}
         if not pin or not hmac.compare_digest(str(body.get("pin", "")), pin):
             fails[ip] = recent + [now]
+            all_fails.append(now)
             return web.json_response({"error": "PIN incorrecto"}, status=403)
         fails.pop(ip, None)
         exp = int(now) + SESSION_DAYS * 86400
@@ -130,24 +146,38 @@ def make_app() -> web.Application:
                     return web.json_response({"error": f"HA respondió {r.status}"}, status=502)
                 data = await r.json()
         except (ClientError, TimeoutError) as e:
-            return web.json_response({"error": f"No llego a Home Assistant ({ha}): {type(e).__name__}"}, status=502)
-        return web.json_response([s for s in data if PREFIX in s["entity_id"]])
+            return unreachable(e)
+        return web.json_response([s for s in data if s["entity_id"].split(".", 1)[1].startswith(PREFIX)])
+
+    def unreachable(e: Exception):
+        return web.json_response({"error": f"No llego a Home Assistant: {type(e).__name__}"}, status=502)
+
+    async def body_of(req) -> dict:
+        try:
+            body = await req.json()
+        except ValueError:
+            return {}
+        return body if isinstance(body, dict) else {}
 
     async def servicio(req):
         if not token:
             return no_token()
-        body = await req.json()
-        domain, service, entity = body.get("domain"), body.get("service"), body.get("entity_id", "")
-        if (domain, service) not in ALLOWED or not entity.startswith(f"{domain}.{PREFIX}"):
+        body = await body_of(req)
+        domain, service, entity = body.get("domain"), body.get("service"), body.get("entity_id")
+        if ((domain, service) not in ALLOWED or not isinstance(entity, str)
+                or not ENTITY_RE.fullmatch(entity) or not entity.startswith(f"{domain}.")):
             return web.json_response({"error": "orden no permitida"}, status=403)
-        async with req.app["http"].post(f"{ha}/api/services/{domain}/{service}", json={"entity_id": entity}) as r:
-            return web.json_response({"ok": r.status == 200}, status=200 if r.status == 200 else 502)
+        try:
+            async with req.app["http"].post(f"{ha}/api/services/{domain}/{service}", json={"entity_id": entity}) as r:
+                return web.json_response({"ok": r.status == 200}, status=200 if r.status == 200 else 502)
+        except (ClientError, TimeoutError) as e:
+            return unreachable(e)
 
     async def programacion(req):
         """Valida lo basico y pide a HA que grabe la programacion en el robot."""
         if not token:
             return no_token()
-        body = await req.json()
+        body = await body_of(req)
         tasks = body.get("tasks")
         if not isinstance(tasks, list) or len(tasks) > 15:
             return web.json_response({"error": "programacion no valida"}, status=400)
@@ -155,21 +185,26 @@ def make_app() -> web.Application:
         for t in tasks:
             if not isinstance(t, dict):
                 return web.json_response({"error": "tarea no valida"}, status=400)
+            days = t.get("days", [])
             clean.append({"start": str(t.get("start", "")), "end": str(t.get("end", "")),
-                          "days": [str(d) for d in t.get("days", [])]})
+                          "days": [str(d) for d in days] if isinstance(days, list) else []})
         url = f"{ha}/api/services/mcculloch_rob/set_schedule?return_response"
-        async with req.app["http"].post(url, json={"tasks": clean}) as r:
-            data = await r.json(content_type=None) if r.content_length != 0 else {}
-            if r.status != 200:
-                msg = data.get("message") if isinstance(data, dict) else None
-                return web.json_response({"error": msg or f"HA respondio {r.status}"}, status=400 if r.status == 400 else 502)
-        return web.json_response({"ok": True, "tasks": (data.get("service_response") or {}).get("tasks")})
+        try:
+            # grabar 15 turnos por Bluetooth puede pasar de 20 s: este pide más margen
+            async with req.app["http"].post(url, json={"tasks": clean}, timeout=ClientTimeout(total=90)) as r:
+                data = await r.json(content_type=None) if r.content_length != 0 else {}
+                if r.status != 200:
+                    msg = data.get("message") if isinstance(data, dict) else None
+                    return web.json_response({"error": msg or f"HA respondio {r.status}"}, status=400 if r.status == 400 else 502)
+        except (ClientError, TimeoutError) as e:
+            return unreachable(e)
+        return web.json_response({"ok": True, "tasks": ((data or {}).get("service_response") or {}).get("tasks")})
 
     async def durante(req):
         """Cortar o aparcar durante N horas (servicios propios de la integracion)."""
         if not token:
             return no_token()
-        body = await req.json()
+        body = await body_of(req)
         service = {"cortar": "mow_for", "aparcar": "park_for"}.get(body.get("accion"))
         try:
             hours = float(body.get("horas"))
@@ -177,10 +212,15 @@ def make_app() -> web.Application:
             hours = 0
         if not service or not 0.5 <= hours <= (24 if service == "mow_for" else 168):
             return web.json_response({"error": "orden no valida"}, status=400)
-        async with req.app["http"].post(f"{ha}/api/services/mcculloch_rob/{service}", json={"hours": hours}) as r:
-            if r.status != 200:
-                data = await r.json(content_type=None)
-                return web.json_response({"error": (data or {}).get("message") or f"HA respondio {r.status}"}, status=502)
+        try:
+            async with req.app["http"].post(f"{ha}/api/services/mcculloch_rob/{service}", json={"hours": hours},
+                                            timeout=ClientTimeout(total=60)) as r:
+                if r.status != 200:
+                    data = await r.json(content_type=None) if r.content_length != 0 else {}
+                    msg = data.get("message") if isinstance(data, dict) else None
+                    return web.json_response({"error": msg or f"HA respondio {r.status}"}, status=502)
+        except (ClientError, TimeoutError) as e:
+            return unreachable(e)
         return web.json_response({"ok": True})
 
     async def historial(req):
@@ -190,8 +230,11 @@ def make_app() -> web.Application:
         entity = f"sensor.{PREFIX}_" + ("actividad" if req.query.get("e") == "actividad" else "bateria")
         url = f"{ha}/api/history/period/{start}"
         params = {"filter_entity_id": entity, "minimal_response": "", "no_attributes": ""}
-        async with req.app["http"].get(url, params=params) as r:
-            data = await r.json() if r.status == 200 else []
+        try:
+            async with req.app["http"].get(url, params=params) as r:
+                data = await r.json() if r.status == 200 else []
+        except (ClientError, TimeoutError) as e:
+            return unreachable(e)
         pts = [{"t": p["last_changed"], "v": p["state"]} for serie in data for p in serie]
         return web.json_response(pts)
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+import logging
 from datetime import UTC, datetime
 from typing import Any
 
@@ -28,17 +29,22 @@ from .automower_ble.error_codes import ErrorCodes
 from .automower_ble.protocol import ModeOfOperation, MowerActivity, MowerState, OverrideAction
 from .entity import RobEntity
 
+LOGGER = logging.getLogger(__name__)
 DIAG = EntityCategory.DIAGNOSTIC
 TOTAL = SensorStateClass.TOTAL_INCREASING
 MEAS = SensorStateClass.MEASUREMENT
 
 
-def _enum(enum: type, value: int | None) -> str | None:
+def _enum(enum: type, value: int | None, strict: bool = True) -> str | None:
+    """strict: para sensores ENUM, que solo admiten sus opciones; un código nuevo sale como desconocido."""
     if value is None:
         return None
     try:
         return enum(value).name.lower()
     except ValueError:
+        if strict:
+            LOGGER.debug("Valor %s desconocido para %s", value, enum.__name__)
+            return None
         return f"desconocido_{value}"
 
 
@@ -110,13 +116,13 @@ SENSORS: tuple[RobSensorDescription, ...] = (
     _d("GetMode", "mode", "Modo", device_class=SensorDeviceClass.ENUM, options=MODES,
        value_fn=lambda d: _enum(ModeOfOperation, d.get("GetMode"))),
     _d("GetError", "error", "Error",
-       value_fn=lambda d: "ninguno" if not d.get("GetError") else _enum(ErrorCodes, d.get("GetError")),
+       value_fn=lambda d: "ninguno" if not d.get("GetError") else _enum(ErrorCodes, d.get("GetError"), strict=False),
        attrs_fn=lambda d: {"codigo": d.get("GetError")}),
     _d("GetRestrictionReason", "restriction", "Motivo de restricción", entity_category=DIAG),
     _d("GetNextStartTime", "next_start", "Próximo arranque", device_class=SensorDeviceClass.TIMESTAMP,
        value_fn=lambda d: _local_ts(d.get("GetNextStartTime"))),
     _d("GetOverride", "override", "Orden manual",
-       value_fn=lambda d: _enum(OverrideAction, _field("GetOverride", "action")(d)),
+       value_fn=lambda d: _enum(OverrideAction, _field("GetOverride", "action")(d), strict=False),
        attrs_fn=lambda d: {
            "inicio": _local_ts(_field("GetOverride", "startTime")(d)),
            "duracion_s": _field("GetOverride", "duration")(d),
@@ -169,12 +175,12 @@ SENSORS: tuple[RobSensorDescription, ...] = (
        value_fn=lambda d: _local_ts(d.get("GetTime"))),
     # Historial y programacion
     _d("GetNumberOfMessages", "last_message", "Último aviso",
-       value_fn=lambda d: _enum(ErrorCodes, d["messages"][0]["code"]) if d.get("messages") else "ninguno",
+       value_fn=lambda d: _enum(ErrorCodes, d["messages"][0]["code"], strict=False) if d.get("messages") else "ninguno",
        attrs_fn=lambda d: {
            "total": d.get("GetNumberOfMessages"),
            "avisos": [
                {"fecha": _local_ts(m["time"]), "codigo": m["code"],
-                "texto": _enum(ErrorCodes, m["code"]), "gravedad": m["severity"]}
+                "texto": _enum(ErrorCodes, m["code"], strict=False), "gravedad": m["severity"]}
                for m in d.get("messages", [])
            ],
        }),
