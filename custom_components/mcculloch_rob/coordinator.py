@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime
 from time import monotonic
 from typing import TYPE_CHECKING, Any
 
@@ -14,6 +15,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 
 from .automower_ble.mower import Mower
 from .automower_ble.protocol import ResponseResult, TaskInformation
@@ -60,6 +62,8 @@ class RobCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._last_slow: float | None = None
         # Las escrituras de varios pasos (programacion) no se mezclan con el sondeo periodico.
         self.op_lock = asyncio.Lock()
+        # Último contacto con el robot: se guarda en disco para que «lleva X días sin conexión» sobreviva a reinicios.
+        self.last_seen: datetime | None = None
 
     async def async_load(self) -> None:
         """Carga el resultado del ultimo sondeo para crear entidades aunque falle la conexion."""
@@ -67,8 +71,20 @@ class RobCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.supported = set(stored.get("supported", []))
         self.probe_report = stored.get("report", {})
         self.model = stored.get("model")
+        if stored.get("last_seen"):
+            self.last_seen = dt_util.parse_datetime(stored["last_seen"])
+        # últimos datos leídos: con el robot lejos (o tras reiniciar HA) los sensores muestran esto
+        if isinstance(stored.get("data"), dict):
+            self.data = stored["data"]
+
+    def _stored(self) -> dict[str, Any]:
+        return {"supported": sorted(self.supported), "report": self.probe_report, "model": self.model,
+                "last_seen": self.last_seen.isoformat() if self.last_seen else None, "data": self.data}
 
     async def async_shutdown(self) -> None:
+        # al recargar o parar: guardar ya los últimos datos (el guardado normal va con 5 min de retraso)
+        if self.data is not None:
+            await self._store.async_save(self._stored())
         await super().async_shutdown()
         if self.mower.is_connected():
             await self.mower.disconnect()
@@ -128,9 +144,7 @@ class RobCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             n for n, r in report.items()
             if r["result"] == "OK" and r["value"] is not None and "[" not in n
         }
-        await self._store.async_save(
-            {"supported": sorted(self.supported), "report": report, "model": self.model}
-        )
+        await self._store.async_save(self._stored())
         LOGGER.info(
             "Sondeo: %d de %d lecturas responden", len(self.supported), len(report)
         )
@@ -201,4 +215,6 @@ class RobCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         except (BleakError, TimeoutError, AttributeError) as err:
             await close_stale_connections_by_address(self.address)
             raise UpdateFailed(f"Error BLE: {err or type(err).__name__}") from err
+        self.last_seen = dt_util.utcnow()
+        self._store.async_delay_save(self._stored, 300)  # a disco como mucho cada 5 min
         return data

@@ -88,6 +88,16 @@ cd robot_panel && cp robot_app.env.example robot_app.env && python3 server.py
 
 El servidor guarda el token de HA y nunca lo envía al navegador. Además solo permite órdenes del robot, de una lista cerrada.
 
+## Avisos al móvil
+
+**Desde la web app** (recomendado): en *Ajustes → Avisos en este móvil → Activar avisos*. El panel avisa por notificación push de avería, vuelco, robot levantado, parado en el jardín y 1 o 3 días sin conexión. No consulta nada periódicamente: se suscribe a los cambios de Home Assistant. Cada aviso sale como mucho una vez cada 6 h y nunca más de 6 al día. En iPhone hace falta iOS 16.4 o posterior y abrir la app desde el icono de la pantalla de inicio. Las claves VAPID se crean con `py_vapid` en `vapid_private.pem`, junto a `server.py`.
+
+**Desde Home Assistant** (alternativa), con la plantilla de automatización lista para importar: avisa en la app de Home Assistant cuando el robot tiene una **avería**, se **vuelca**, se queda **levantado**, se **para en el jardín** esperando ayuda o lleva **días sin conexión** Bluetooth.
+
+[![Importar plantilla](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fodegaard12%2Fha-mcculloch-husqvarna-ble%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fmcculloch_rob%2Favisos_robot.yaml)
+
+El plazo de "sin conexión" se cuenta con el sensor **Última conexión**, que la integración guarda en disco: no se reinicia aunque reinicies Home Assistant, y sigue disponible aunque el robot no responda.
+
 ## Servicios
 
 | Servicio | Qué hace |

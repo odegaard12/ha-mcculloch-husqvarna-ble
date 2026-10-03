@@ -15,7 +15,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from . import RobConfigEntry
 from .automower_ble.protocol import ResponseResult
 from .coordinator import RobCoordinator
-from .entity import RobEntity
+from .entity import LiveEntity
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -60,7 +60,7 @@ async def async_setup_entry(
     async_add_entities(RobButton(entry.runtime_data, d) for d in BUTTONS)
 
 
-class RobButton(RobEntity, ButtonEntity):
+class RobButton(LiveEntity, ButtonEntity):
     entity_description: RobButtonDescription
 
     def __init__(self, coordinator, description: RobButtonDescription) -> None:

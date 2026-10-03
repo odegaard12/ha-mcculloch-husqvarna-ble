@@ -1,0 +1,108 @@
+blueprint:
+  name: Avisos del robot cortacésped (McCulloch / Husqvarna BLE)
+  description: >
+    Manda un aviso al móvil cuando el robot tiene una avería, se vuelca, se queda levantado,
+    se para en el jardín esperando ayuda o lleva días sin conexión Bluetooth.
+    Usa las entidades de la integración mcculloch_rob.
+  domain: automation
+  source_url: https://github.com/odegaard12/ha-mcculloch-husqvarna-ble/blob/main/blueprints/automation/mcculloch_rob/avisos_robot.yaml
+  input:
+    movil:
+      name: Móvil
+      description: Dispositivo con la app de Home Assistant que recibe los avisos.
+      selector:
+        device:
+          integration: mobile_app
+    averia:
+      name: Sensor de avería
+      selector:
+        entity:
+          domain: binary_sensor
+          integration: mcculloch_rob
+    volcado:
+      name: Sensor de volcado
+      selector:
+        entity:
+          domain: binary_sensor
+          integration: mcculloch_rob
+    levantado:
+      name: Sensor de levantado
+      selector:
+        entity:
+          domain: binary_sensor
+          integration: mcculloch_rob
+    actividad:
+      name: Sensor de actividad
+      selector:
+        entity:
+          domain: sensor
+          integration: mcculloch_rob
+    error:
+      name: Sensor de error (texto)
+      selector:
+        entity:
+          domain: sensor
+          integration: mcculloch_rob
+    ultima_conexion:
+      name: Sensor «Última conexión»
+      selector:
+        entity:
+          domain: sensor
+          integration: mcculloch_rob
+          device_class: timestamp
+    dias:
+      name: Días sin conexión para avisar
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 14
+          unit_of_measurement: días
+
+mode: queued
+max_exceeded: silent
+
+variables:
+  ultima: !input ultima_conexion
+  dias: !input dias
+  error_ent: !input error
+
+trigger:
+  - platform: state
+    entity_id: !input averia
+    to: "on"
+    for: "00:01:00"
+    id: averia
+  - platform: state
+    entity_id: !input volcado
+    to: "on"
+    for: "00:00:30"
+    id: volcado
+  - platform: state
+    entity_id: !input levantado
+    to: "on"
+    for: "00:02:00"
+    id: levantado
+  - platform: state
+    entity_id: !input actividad
+    to: stopped_in_garden
+    for: "00:10:00"
+    id: parado
+  # «Última conexión» se guarda en disco: el plazo no se reinicia al reiniciar Home Assistant
+  - platform: template
+    value_template: >
+      {% set t = as_datetime(states(ultima)) %}
+      {{ t is not none and now() - t > timedelta(days=dias | int) }}
+    id: sin_conexion
+
+action:
+  - device_id: !input movil
+    domain: mobile_app
+    type: notify
+    title: Robot cortacésped
+    message: >
+      {% if trigger.id == 'averia' %}⚠️ Avería: {{ states(error_ent) | replace('_', ' ') }}. Revisa el robot y confírmalo en su teclado.
+      {% elif trigger.id == 'volcado' %}⚠️ El robot está volcado. Dale la vuelta y confirma en el robot.
+      {% elif trigger.id == 'levantado' %}El robot lleva un rato levantado. Déjalo en el césped para que siga.
+      {% elif trigger.id == 'parado' %}El robot se ha parado en el jardín y espera que alguien lo atienda.
+      {% else %}📡 El robot lleva más de {{ dias | int }} día(s) sin conexión Bluetooth (último contacto: {{ as_timestamp(states(ultima)) | timestamp_custom('%d/%m %H:%M') }}). ¿Está lejos del receptor o sin batería?{% endif %}

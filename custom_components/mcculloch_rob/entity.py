@@ -30,6 +30,16 @@ class RobEntity(CoordinatorEntity[RobCoordinator]):
             hw_version=str(data["GetHardwareRevision"]) if "GetHardwareRevision" in data else None,
         )
 
+    # Datos (sensores): con el robot lejos se queda el último valor conocido, no «no disponible».
+    # Lo que actúa (cortacésped, botones, interruptores) sí necesita el robot: ver LiveEntity.
     @property
     def available(self) -> bool:
-        return super().available and self.coordinator.mower.is_connected()
+        return self.coordinator.data is not None
+
+
+class LiveEntity(RobEntity):
+    """Entidades que mandan órdenes: solo disponibles con el robot conectado."""
+
+    @property
+    def available(self) -> bool:
+        return self.coordinator.last_update_success and self.coordinator.mower.is_connected()

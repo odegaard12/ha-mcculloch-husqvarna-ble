@@ -8,7 +8,7 @@ const T = {
     docked: 'En la base', paused: 'En pausa', idle: 'Parado', offline: 'Fuera de alcance', error: 'Avería',
     lifted: 'Levantado', upside: 'Volcado', start: 'Cortar', pause: 'Pausa', dock: 'A la base',
     mow1: 'Cortar 1 h', mow3: 'Cortar 3 h', parkNext: 'Aparcar hasta el próximo turno', resume: 'Volver al horario',
-    next: 'Próximo corte', today: 'hoy', tomorrow: 'mañana', none: 'sin programación', battery: 'Batería', lastData: 'último dato',
+    next: 'Próximo corte', today: 'hoy', tomorrow: 'mañana', none: 'sin programación', battery: 'Batería', lastData: 'último dato', lastSeen: 'Última conexión',
     offlineMsg: 'El robot no está al alcance del Bluetooth. Se reconecta solo al volver cerca del receptor.',
     pick: 'Elige el robot (entidad lawn_mower)', name: 'Nombre (opcional)', noEntity: 'No encuentro la entidad',
     image: 'Foto propia (opcional): URL de un PNG/WebP transparente, p. ej. /local/robot.webp',
@@ -18,7 +18,7 @@ const T = {
     docked: 'Docked', paused: 'Paused', idle: 'Stopped', offline: 'Out of range', error: 'Error',
     lifted: 'Lifted', upside: 'Upside down', start: 'Mow', pause: 'Pause', dock: 'Dock',
     mow1: 'Mow 1 h', mow3: 'Mow 3 h', parkNext: 'Park until next run', resume: 'Resume schedule',
-    next: 'Next run', today: 'today', tomorrow: 'tomorrow', none: 'no schedule', battery: 'Battery', lastData: 'last known',
+    next: 'Next run', today: 'today', tomorrow: 'tomorrow', none: 'no schedule', battery: 'Battery', lastData: 'last known', lastSeen: 'Last seen',
     offlineMsg: 'The mower is out of Bluetooth range. It reconnects by itself when it comes back near the receiver.',
     pick: 'Pick the mower (lawn_mower entity)', name: 'Name (optional)', noEntity: 'Entity not found',
     image: 'Own photo (optional): URL of a transparent PNG/WebP, e.g. /local/robot.webp',
@@ -323,9 +323,11 @@ class McCullochRobCard extends HTMLElement {
       else { tasks = JSON.parse(localStorage.getItem(key) || 'null'); stale = Array.isArray(tasks); }
     } catch (e) { /* almacenamiento bloqueado: sin respaldo */ }
     const fromSchedule = Array.isArray(tasks) ? this._nextFromTasks(tasks) : null;
-    if ((!nx || ['unknown', 'unavailable', ''].includes(nx.state)) && fromSchedule) {
-      nextTxt = this._t('next') + ' · ' + fromSchedule + (stale ? ' · ' + this._t('lastData') : '');
-    } else if (nx && !['unknown', 'unavailable', ''].includes(nx.state)) {
+    // el sensor guarda el último valor: si ya pasó (robot lejos), vale más el horario
+    const nxOk = nx && !['unknown', 'unavailable', ''].includes(nx.state) && new Date(nx.state) > Date.now() - 6e4;
+    if (!nxOk && fromSchedule) {
+      nextTxt = this._t('next') + ' · ' + fromSchedule + (stale || offline ? ' · ' + this._t('lastData') : '');
+    } else if (nxOk) {
       // en la zona horaria que use el perfil de HA (la del servidor salvo que el usuario pida la local)
       const tz = h.locale?.time_zone === 'local' ? undefined : h.config?.time_zone;
       const lang = h.locale?.language, d = new Date(nx.state);
@@ -337,7 +339,16 @@ class McCullochRobCard extends HTMLElement {
     }
     r.getElementById('next').textContent = nextTxt;
     // el texto viene de un sensor: siempre como texto, nunca como HTML
-    const [alCls, alTxt] = offline ? ['alert warn', this._t('offlineMsg')] : (upside || lifted || error) ? ['alert', label] : ['', ''];
+    // fuera de alcance: cuándo se supo de él por última vez (sensor «Última conexión», siempre disponible)
+    let offTxt = this._t('offlineMsg');
+    const seen = new Date(this._st('last_seen')?.state);
+    if (offline && !isNaN(seen)) {
+      const mins = (seen - Date.now()) / 6e4;
+      const rtf = new Intl.RelativeTimeFormat(h.locale?.language || 'es', {numeric: 'auto'});
+      const rel = Math.abs(mins) < 120 ? rtf.format(Math.round(mins), 'minute') : Math.abs(mins) < 2880 ? rtf.format(Math.round(mins / 60), 'hour') : rtf.format(Math.round(mins / 1440), 'day');
+      offTxt = `${this._t('lastSeen')}: ${rel}. ${offTxt}`;
+    }
+    const [alCls, alTxt] = offline ? ['alert warn', offTxt] : (upside || lifted || error) ? ['alert', label] : ['', ''];
     const alEl = r.getElementById('alert');
     if (alEl.dataset.k !== alCls + alTxt) {
       alEl.dataset.k = alCls + alTxt;

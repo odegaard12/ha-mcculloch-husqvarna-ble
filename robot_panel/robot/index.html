@@ -379,7 +379,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
       <div class="card">
         <h2>Semana <span class="muted" id="weekhours"></span></h2>
         <div id="week"></div>
-        <div class="chips" style="margin-top:14px"><button class="chip wide" data-btn="volver_a_la_programacion">Volver a la programación (si lo aparcaste o mandaste cortar)</button></div>
+        <div class="chips" style="margin-top:14px"><button class="chip wide" data-btn="volver_a_la_programacion">Volver a la programación</button></div>
       </div>
       <div class="card">
         <h2>Editar horario <span class="dirty" id="dirty" hidden>sin guardar</span></h2>
@@ -430,6 +430,12 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
     <div class="cols">
       <div class="stack">
         <div class="card"><h2>Ajustes del robot</h2><div id="toggles"></div></div>
+        <div class="card">
+          <h2>Avisos en este móvil</h2>
+          <p class="muted" style="margin:0 0 12px;font-size:14px">Te avisa si el robot tiene una avería, se vuelca, se queda levantado o parado, o lleva días sin conexión.</p>
+          <div id="pushbox" class="chips"></div>
+          <div id="pushmsg" class="muted" style="font-size:13px;margin-top:10px"></div>
+        </div>
         <div class="card"><h2>Mantenimiento</h2><div class="chips"><button class="chip" data-btn="poner_en_hora">Poner el reloj en hora</button></div></div>
         <div class="card" id="installcard">
           <h2>App</h2>
@@ -459,7 +465,62 @@ const hm = m => { m = Math.round(m); return String(Math.floor(m / 60)).padStart(
 const toMin = s => { const [h, m] = String(s || '0:0').split(':').map(Number); return h * 60 + m; };
 const fmtH = h => h == null || isNaN(h) ? '–' : Math.round(Number(h)).toLocaleString('es-ES') + ' h';
 const fmtDate = iso => { if (!iso || iso === 'unknown' || iso === 'unavailable') return '—'; const d = new Date(iso); return isNaN(d) ? '—' : d.toLocaleString('es-ES',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}); };
-const ago = iso => { const s = (Date.now() - new Date(iso)) / 1000; return s < 90 ? 'ahora' : s < 3600 ? `hace ${Math.round(s/60)} min` : `hace ${Math.round(s/3600)} h`; };
+const ago = iso => { const s = (Date.now() - new Date(iso)) / 1000; return s < 90 ? 'ahora' : s < 3600 ? `hace ${Math.round(s/60)} min` : s < 172800 ? `hace ${Math.round(s/3600)} h` : `hace ${Math.round(s/86400)} días`; };
+/* ---------- avisos push de la web app ---------- */
+const b64u8 = s => Uint8Array.from(atob((s + '==='.slice((s.length + 3) % 4)).replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+async function pushRender(){
+  const box = $('#pushbox'), msg = $('#pushmsg');
+  if (!box) return;
+  const ios = /iPhone|iPad/.test(navigator.userAgent), standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+    box.innerHTML = '';
+    msg.textContent = ios && !standalone
+      ? 'En iPhone: botón Compartir → «Añadir a pantalla de inicio», abre la app desde ese icono y vuelve aquí (iOS 16.4 o posterior).'
+      : 'Este navegador no admite avisos.';
+    return;
+  }
+  const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription();
+  if (sub) {
+    box.innerHTML = '<button class="chip" id="ptest">Enviar prueba</button><button class="chip" id="poff">Desactivar</button>';
+    msg.textContent = 'Avisos activados en este móvil.';
+    $('#ptest').onclick = async () => { const r = await api('api/push/test', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({endpoint: sub.endpoint})}); toast(r.ok ? 'Aviso de prueba enviado' : 'No se pudo enviar'); };
+    $('#poff').onclick = async () => { await api('api/push/unsubscribe', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({endpoint: sub.endpoint})}); await sub.unsubscribe(); pushRender(); };
+  } else {
+    box.innerHTML = '<button class="chip" id="pon" style="background:var(--brand);color:#17191a;border-color:var(--brand);font-weight:700">Activar avisos</button>';
+    msg.textContent = Notification.permission === 'denied' ? 'Los avisos están bloqueados para esta app en los ajustes del móvil.' : '';
+    $('#pon').onclick = async () => {
+      try {
+        if (await Notification.requestPermission() !== 'granted') { msg.textContent = 'Sin permiso no se pueden mandar avisos.'; return; }
+        const {key} = await (await api('api/push/key')).json();
+        if (!key) { msg.textContent = 'El servidor aún no tiene los avisos configurados.'; return; }
+        const s = await reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: b64u8(key)});
+        const r = await api('api/push/subscribe', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({subscription: s.toJSON()})});
+        toast(r.ok ? 'Avisos activados' : 'No se pudo activar');
+      } catch (e) { msg.textContent = 'No se pudo activar: ' + e.message; }
+      pushRender();
+    };
+  }
+}
+
+/* ---------- siempre la última versión: si el servidor cambió, la app se recarga sola ---------- */
+let appVer = null;
+async function checkVersion(){
+  try {
+    const v = (await (await fetch('api/version', {cache: 'no-store'})).json()).v;
+    if (appVer && v !== appVer && !editing) {
+      const reg = await navigator.serviceWorker?.getRegistration();
+      await reg?.update();
+      location.reload();
+      return;
+    }
+    appVer = v;
+  } catch (e) { /* sin red: se reintenta luego */ }
+}
+setInterval(checkVersion, 5 * 60 * 1000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkVersion(); });
+
+// una cifra decimal con coma, como se escribe en español
+const h1 = v => Number(v).toLocaleString('es-ES', {minimumFractionDigits: 1, maximumFractionDigits: 1});
 function toast(m){ const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 3200); }
 
 /* ---------- PIN ---------- */
@@ -477,7 +538,7 @@ function drawPins(){
 }
 async function tryPin(){
   const r = await fetch('api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({pin: pinBuf})});
-  if (r.ok) { locked = false; $('#lock').hidden = true; $('#msgpin').textContent = ''; poll(); loadHistory(); return; }
+  if (r.ok) { locked = false; $('#lock').hidden = true; $('#msgpin').textContent = ''; poll(); loadHistory(); pushRender().catch(() => {}); return; }
   const j = await r.json().catch(() => ({}));
   $('#msgpin').textContent = j.error || 'PIN incorrecto';
   $('#pins').classList.add('shake'); setTimeout(() => $('#pins').classList.remove('shake'), 400);
@@ -598,6 +659,8 @@ function render(){
   flags.next = nx ? (nx.k === 0 ? 'hoy' : nx.k === 1 ? 'mañana' : 'el ' + DLONG[nx.d]) + ' a las ' + hm(nx.m) : null;
   const cmin = Number(val('sensor','carga_restante'));
   flags.chargeMin = cmin > 0 ? Math.round(cmin) : null;
+  const seen = val('sensor','ultima_conexion');
+  flags.lastSeen = seen && !isNaN(new Date(seen)) ? ago(seen) : null;  // «Última conexión»: sigue disponible sin robot
   window.robot3d && window.robot3d.update(flags);
   const mowingNow = ['mowing', 'going_out'].includes(a);
   if (mowingNow && run) { $('#statelbl').textContent = 'cortando'; $('#state').textContent = 'Hasta las ' + hm(run.start_time_in_minutes + run.duration_in_minutes); }
@@ -619,7 +682,7 @@ let mowed24 = null, weekMin = 0;
 function renderFacts(){
   const blades = Number(val('sensor','uso_de_las_cuchillas'));
   const f = [
-    mowed24 != null ? [(mowed24 / 36e5).toFixed(1) + ' h', 'cortado 24 h'] : null,
+    mowed24 != null ? [h1(mowed24 / 36e5) + ' h', 'cortado 24 h'] : null,
     weekMin ? [Math.round(weekMin / 60) + ' h', 'por semana'] : null,
     !isNaN(blades) && val('sensor','uso_de_las_cuchillas') != null ? [Math.round(blades) + ' h', 'cuchillas'] : null,
   ].filter(Boolean);
@@ -706,7 +769,7 @@ function renderDatos(){
     + row('En la base', yn('en_la_base')) + row('Cargando', yn('cargando'))
     + row('Carga restante', val('sensor','carga_restante') != null ? Math.round(Number(val('sensor','carga_restante'))) + ' min' : null)
     + row('Señal del cable', val('sensor','calidad_senal_del_cable') != null ? val('sensor','calidad_senal_del_cable') + ' %' : null)
-    + row('Temperatura interna', temp != null ? (Number(temp) / 10).toFixed(1) + ' °C (estimada)' : null)
+    + row('Temperatura interna', temp != null ? h1(Number(temp) / 10) + ' °C (estimada)' : null)
     + row('Levantado', yn('levantado')) + row('Choque ahora', yn('choque')) + row('Volcado', yn('volcado'))
     + row('Orden manual', val('sensor','orden_manual'));
   // casillas sin dato (el robot no lo da) no se pintan
@@ -750,7 +813,7 @@ async function loadActivity(){
     const segs = pts.map((p, i) => ({v: p.v, a: Math.max(p.t, t0), b: i + 1 < pts.length ? pts[i + 1].t : Date.now()})).filter(x => x.b > t0);
     $('#tl').innerHTML = segs.map(x => `<b style="width:${(x.b - x.a) / 864e5 * 100}%;background:${ACOL[x.v] || '#5b6064'}" title="${esc(ACTIVITY[x.v] || x.v)}"></b>`).join('');
     const tot = {}; segs.forEach(x => tot[x.v] = (tot[x.v] || 0) + (x.b - x.a));
-    $('#legend').innerHTML = Object.entries(tot).sort((a, b) => b[1] - a[1]).map(([k, ms]) => `<span><i style="background:${ACOL[k] || '#5b6064'}"></i>${esc(ACTIVITY[k] || k)} ${(ms / 36e5).toFixed(1)} h</span>`).join('');
+    $('#legend').innerHTML = Object.entries(tot).sort((a, b) => b[1] - a[1]).map(([k, ms]) => `<span><i style="background:${ACOL[k] || '#5b6064'}"></i>${esc(ACTIVITY[k] || k)} ${h1(ms / 36e5)} h</span>`).join('');
     mowed24 = tot.mowing || 0; renderFacts();
   } catch(e) {}
 }
@@ -767,8 +830,8 @@ async function loadWeekMow(){
       days.forEach(d => { d.ms += Math.max(0, Math.min(b, d.b) - Math.max(a, d.a)); });
     });
     const max = Math.max(36e5, ...days.map(d => d.ms)), tot = days.reduce((s, d) => s + d.ms, 0);
-    $('#wbars').innerHTML = days.map(d => `<div class="${d.today ? 'today' : ''}" title="${(d.ms / 36e5).toFixed(1)} h"><b>${d.ms >= 6e5 ? (d.ms / 36e5).toFixed(1) : ''}</b><i style="height:${Math.round(d.ms / max * 110)}px"></i><span>${d.today ? 'hoy' : 'LMXJVSD'[d.dow]}</span></div>`).join('');
-    $('#weekmowtot').textContent = (tot / 36e5).toFixed(1) + ' h en total';
+    $('#wbars').innerHTML = days.map(d => `<div class="${d.today ? 'today' : ''}" title="${h1(d.ms / 36e5)} h"><b>${d.ms >= 6e5 ? h1(d.ms / 36e5) : ''}</b><i style="height:${Math.round(d.ms / max * 110)}px"></i><span>${d.today ? 'hoy' : 'LMXJVSD'[d.dow]}</span></div>`).join('');
+    $('#weekmowtot').textContent = h1(tot / 36e5) + ' h en total';
   } catch(e) {}
 }
 async function loadHistory(){
@@ -795,8 +858,9 @@ $('#logout').onclick = async () => { await fetch('api/logout', {method:'POST'});
 
 (async () => {
   try { const v = localStorage.getItem('vista'); if (v && $('#v-' + v)) show(v); } catch(e) {}
+  checkVersion();
   try { const s = await (await fetch('api/sesion', {cache:'no-store'})).json(); $('#logout').hidden = !s.pin; if (s.pin_len > 0 && s.pin_len <= 12) pinLen = s.pin_len; if (s.pin && !s.ok) { showLock(); return; } } catch(e) {}
-  poll(); loadHistory();
+  poll(); loadHistory(); pushRender().catch(() => {});
 })();
 addEventListener('robot3d-ready', () => { if (Object.keys(states).length) render(); });
 setInterval(() => { if (!document.hidden) poll(); }, 5000);
@@ -848,7 +912,7 @@ setInterval(loadHistory, 10 * 60 * 1000);
     document.getElementById('charge').style.setProperty('--lvl', (isNaN(s.battery) ? 50 : s.battery) + '%');
     // indicación de abajo: qué está haciendo y qué viene (la etiqueta de arriba ya dice el estado)
     const pct = isNaN(s.battery) ? '' : ` · ${s.battery} %`;
-    const cap = cls.offline ? ['off', 'Se reconecta solo al acercarse al receptor']
+    const cap = cls.offline ? ['off', s.lastSeen ? `Sin conexión desde ${s.lastSeen} · se reconecta solo` : 'Se reconecta solo al acercarse al receptor']
       : cls.upside ? ['warn', 'Dale la vuelta y confirma en el robot']
       : cls.lifted ? ['up', 'Déjalo en el césped para que siga']
       : cls.error ? ['warn', 'Revisa el robot y confírmalo en su teclado']
