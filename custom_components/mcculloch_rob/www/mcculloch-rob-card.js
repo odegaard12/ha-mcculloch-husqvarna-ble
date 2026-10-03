@@ -56,7 +56,9 @@ ha-card{overflow:hidden}
 .r3d.s-mowing .b3d{animation:none}            /* con renders el giro lo hacen los fotogramas */
 .b3d.back .fx{transform:scaleX(-1)}           /* de espaldas: recortes al otro lado */
 .r3d .bot img{filter:drop-shadow(0 10px 12px rgba(0,0,0,.35))}
-.r3d .bot{width:min(66%,320px)}.r3d .bot .sh{display:none}  /* el render deja aire alrededor y trae su sombra */
+/* tamaño por la altura de la escena (190 px), no por el ancho: en tarjetas anchas no se sale por arriba */
+.r3d .bot{width:min(64%,240px);bottom:5%}.r3d .bot .sh{display:none}  /* el render trae su sombra */
+.r3d.s-lifted .bot{bottom:16%}
 .bot img{display:block;width:100%;filter:drop-shadow(0 12px 14px rgba(0,0,0,.5));position:relative;z-index:1}
 .bot .sh{position:absolute;left:4%;right:0;bottom:-1%;height:16%;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.75),transparent);filter:blur(4px)}
 .bot .glow{position:absolute;inset:-6% -6% 0;border-radius:50%;opacity:0;transition:opacity .4s}
@@ -72,6 +74,8 @@ ha-card{overflow:hidden}
 .s-charging .glow{opacity:1;background:radial-gradient(closest-side,rgba(63,169,255,.55),transparent);animation:breathe 2.4s infinite}
 .s-error .glow,.s-upside .glow{opacity:1;background:radial-gradient(closest-side,rgba(255,59,48,.6),transparent);animation:breathe 1s infinite}
 .s-upside .b3d{transform:rotateX(180deg) translateY(-8%)}
+/* volcado con render: al voltearlo, la sombra quedaría arriba y el robot bajo la hierba */
+.r3d.s-upside .bot{bottom:14%}.r3d.s-upside .bot img{filter:none}
 .s-lifted .bot{bottom:24%;animation:float 2.4s ease-in-out infinite}
 .s-offline .bot{filter:grayscale(1) brightness(.75);opacity:.55}.s-offline .ground{filter:grayscale(.9) brightness(.6)}
 @keyframes breathe{50%{opacity:.35}}
