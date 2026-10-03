@@ -4,28 +4,36 @@
     "step": {
       "user": {
         "title": "McCulloch ROB",
-        "description": "Mowers found: {count}. If it is missing, type the MAC address.",
+        "description": "Mowers found: {count}. If yours is missing, type its MAC address (you can see it in the ESPHome proxy logs).",
         "data": {
-          "address": "Robot (MAC)"
+          "address": "Mower (MAC)"
         }
       },
       "pair": {
-        "title": "Emparejar {address}",
-        "description": "Power-cycle the mower and submit within 3 minutes (pairing mode). Leave PIN empty if none.",
+        "title": "Pair {address}",
+        "description": "Power-cycle the mower and submit within 3 minutes (pairing mode). The PIN is the one on the mower keypad; leave it empty if it has none.",
+        "data": {
+          "pin": "PIN"
+        }
+      },
+      "reauth_confirm": {
+        "title": "New PIN for {address}",
+        "description": "The mower rejected the saved PIN. Type the current PIN (leave it empty if it has none).",
         "data": {
           "pin": "PIN"
         }
       }
     },
     "error": {
-      "invalid_pin": "PIN must be numeric.",
+      "invalid_pin": "The PIN must be numeric (max. 65535).",
       "invalid_auth": "Wrong PIN.",
-      "cannot_connect": "Pairing failed, reboot the mower and retry.",
-      "not_found": "No Bluetooth adapter can see the mower."
+      "cannot_connect": "Pairing failed. Reboot the mower and retry; it sometimes needs 2-3 attempts.",
+      "not_found": "No Bluetooth receiver can see the mower right now.",
+      "ok": "Connected."
     },
     "abort": {
-      "already_configured": "Already configured.",
-      "reauth_successful": "Done."
+      "already_configured": "This mower is already configured.",
+      "reauth_successful": "PIN updated."
     }
   },
   "services": {
@@ -34,60 +42,68 @@
       "description": "Send any protocol command and return the raw response.",
       "fields": {
         "command": {
-          "name": "Comando",
-          "description": "Nombre en protocol.json, p.ej. GetAllStatistics."
+          "name": "Command",
+          "description": "Name in protocol.json, e.g. GetAllStatistics."
         },
         "params": {
-          "name": "Parámetros",
-          "description": "Diccionario de parámetros del comando."
+          "name": "Parameters",
+          "description": "Dictionary with the command parameters."
         },
         "config_entry_id": {
-          "name": "Robot",
-          "description": "Si hay varios."
+          "name": "Mower",
+          "description": "Only needed if you have more than one."
         }
       }
     },
     "probe": {
       "name": "Probe commands",
-      "description": "Try all known read commands.",
+      "description": "Try every known read command and create entities for the ones that answer (reload the integration afterwards).",
       "fields": {
         "config_entry_id": {
-          "name": "Robot",
-          "description": "Si hay varios."
+          "name": "Mower",
+          "description": "Only needed if you have more than one."
         }
       }
     },
     "set_schedule": {
       "name": "Set weekly schedule",
-      "description": "Replace all mowing tasks.",
+      "description": "Replace all mowing tasks of the mower.",
       "fields": {
         "tasks": {
-          "name": "Tareas",
+          "name": "Tasks",
           "description": "List of tasks, each with start, end (HH:MM) and days (in English)."
         },
         "config_entry_id": {
-          "name": "Robot",
-          "description": "If several."
+          "name": "Mower",
+          "description": "Only needed if you have more than one."
         }
       }
     },
     "mow_for": {
       "name": "Mow for",
-      "description": "Mow now for that many hours.",
+      "description": "Mow now for that many hours, ignoring the schedule.",
       "fields": {
         "hours": {
           "name": "Hours",
-          "description": "0.5 to 24 h"
+          "description": "0.5 to 24 h."
+        },
+        "config_entry_id": {
+          "name": "Mower",
+          "description": "Only needed if you have more than one."
         }
       }
     },
     "park_for": {
       "name": "Park for",
-      "description": "Park in the station for that many hours.",
+      "description": "Park in the charging station for that many hours, then resume the schedule.",
       "fields": {
         "hours": {
           "name": "Hours",
-          "description": "0.5 to 168 h"
+          "description": "0.5 to 168 h."
+        },
+        "config_entry_id": {
+          "name": "Mower",
+          "description": "Only needed if you have more than one."
         }
       }
     }

@@ -13,7 +13,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ADDRESS, CONF_CLIENT_ID, CONF_PIN, Platform
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from homeassistant.core import CoreState, Event, HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import ConfigEntryAuthFailed, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
@@ -157,15 +157,17 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         name = call.data["command"]
         if name not in protocol:
             raise ServiceValidationError(f"Comando desconocido: {name}")
-        await coordinator.ensure_connected()
-        result, value = await coordinator.read(name, **call.data["params"])
+        async with coordinator.op_lock:
+            await coordinator.ensure_connected()
+            result, value = await coordinator.read(name, **call.data["params"])
         await coordinator.async_request_refresh()
         return {"command": name, "result": result.name, "value": value}
 
     async def probe(call: ServiceCall) -> ServiceResponse:
         """Vuelve a probar todas las lecturas conocidas."""
         coordinator = _coordinator(hass, call.data.get("config_entry_id"))
-        report = await coordinator.async_probe()
+        async with coordinator.op_lock:
+            report = await coordinator.async_probe()
         await coordinator.async_request_refresh()
         return {"supported": sorted(coordinator.supported), "report": report}
 
@@ -224,8 +226,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: RobConfigEntry) -> bool:
 
     coordinator = RobCoordinator(hass, entry, mower, address, channel_id)
     await coordinator.async_load()
-    # Si el robot no esta al alcance al arrancar, se reintenta solo (ConfigEntryNotReady).
-    await coordinator.async_config_entry_first_refresh()
+    if coordinator.supported:
+        # Ya lo conocemos (sondeo guardado): las entidades se crean aunque el robot esté lejos,
+        # como «no disponibles», y el coordinador sigue reintentando. Así no desaparece de HA.
+        await coordinator.async_refresh()
+        if isinstance(coordinator.last_exception, ConfigEntryAuthFailed):
+            await coordinator.async_shutdown()
+            raise coordinator.last_exception
+    else:
+        # Primera vez: sin sondeo no sabemos qué entidades crear; si no está al alcance, se reintenta.
+        try:
+            await coordinator.async_config_entry_first_refresh()
+        except Exception:
+            await coordinator.async_shutdown()  # que no quede un enlace BLE colgado ocupando el robot
+            raise
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

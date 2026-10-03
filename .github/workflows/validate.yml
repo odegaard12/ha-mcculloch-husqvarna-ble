@@ -39,3 +39,5 @@ jobs:
           EOF
           pip install -r req.txt
       - run: python -m pytest -q tests
+      - name: Pruebas del servidor del panel (PIN y lista blanca de órdenes)
+        run: python robot_panel/test_server.py

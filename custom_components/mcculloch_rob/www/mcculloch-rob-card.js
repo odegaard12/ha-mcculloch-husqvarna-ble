@@ -48,26 +48,31 @@ ha-card{overflow:hidden}
   linear-gradient(90deg,#2b5126 0%,#376630 25%,#2b5126 50%,#376630 75%,#2b5126 100%) 0 0/360px 100%}
 .ground::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgba(23,25,26,.9),rgba(23,25,26,0) 55%)}
 @keyframes roll{to{background-position:20px 0,20px 0,360px 0}}
-.s-mowing .plane,.s-homing .plane{animation-play-state:running}
+.s-homing .plane{animation-play-state:running}
 .s-leaving .plane{animation-play-state:running;animation-direction:reverse}
-.bot{position:absolute;left:50%;bottom:10%;width:min(52%,250px);transform:translateX(-50%);transition:left .9s,bottom .6s,filter .4s,opacity .4s}
+.bot{position:absolute;left:50%;bottom:10%;width:min(48%,230px);transform:translateX(-50%);transition:left .9s,bottom .6s,filter .4s,opacity .4s;perspective:700px}
+.b3d{position:relative;transform-style:preserve-3d;transition:transform .9s cubic-bezier(.45,0,.25,1)}
+.b3d .fx{position:absolute;inset:0;z-index:2;pointer-events:none}
 .bot img{display:block;width:100%;filter:drop-shadow(0 12px 14px rgba(0,0,0,.5));position:relative;z-index:1}
 .bot .sh{position:absolute;left:4%;right:0;bottom:-1%;height:16%;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.75),transparent);filter:blur(4px)}
 .bot .glow{position:absolute;inset:-6% -6% 0;border-radius:50%;opacity:0;transition:opacity .4s}
-.s-mowing .bot{animation:mow 6s ease-in-out infinite}
+/* cortando: cruza, media vuelta en 3D y vuelve; posición y giro con la misma duración */
+.s-mowing .bot{animation:mowpass 14s ease-in-out infinite}.s-mowing .b3d{animation:mowturn 14s ease-in-out infinite}
 .s-mowing img,.s-homing img,.s-leaving img{animation:bump .3s ease-in-out infinite}
 .s-homing .bot{animation:home 5s ease-in-out infinite}.s-leaving .bot{animation:home 5s ease-in-out infinite reverse}
-@keyframes mow{0%,100%{left:47%}50%{left:53%}}
+@keyframes mowpass{0%{left:66%}40%{left:34%}50%{left:34%}90%{left:66%}100%{left:66%}}
+@keyframes mowturn{0%,40%{transform:rotateY(0)}50%,90%{transform:rotateY(180deg)}100%{transform:rotateY(360deg)}}
+.s-docked .b3d{transform:rotateY(-16deg)}.s-lifted .b3d{transform:rotateX(-14deg) rotateZ(5deg)}
 @keyframes home{0%{left:62%}100%{left:40%}}
 @keyframes bump{50%{transform:translateY(-1.5px) rotate(-.5deg)}}
 .s-charging .glow{opacity:1;background:radial-gradient(closest-side,rgba(63,169,255,.55),transparent);animation:breathe 2.4s infinite}
 .s-error .glow,.s-upside .glow{opacity:1;background:radial-gradient(closest-side,rgba(255,59,48,.6),transparent);animation:breathe 1s infinite}
-.s-upside img{transform:rotate(180deg)}
+.s-upside .b3d{transform:rotateX(180deg) translateY(-8%)}
 .s-lifted .bot{bottom:24%;animation:float 2.4s ease-in-out infinite}
 .s-offline .bot{filter:grayscale(1) brightness(.75);opacity:.55}.s-offline .ground{filter:grayscale(.9) brightness(.6)}
 @keyframes breathe{50%{opacity:.35}}
 @keyframes float{50%{transform:translateX(-50%) translateY(-8px) rotate(2deg)}}
-.fx b{position:absolute;bottom:14%;width:3px;height:7px;border-radius:2px;background:#8fdc6f;opacity:0;animation:clip 1s linear infinite}
+.fx b{position:absolute;bottom:6%;width:3px;height:7px;border-radius:2px;background:#8fdc6f;opacity:0;animation:clip 1s linear infinite}
 .s-mowing .fx b{display:block}.fx b{display:none}
 @keyframes clip{0%{opacity:0;transform:none}12%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(260deg)}}
 .pill{position:absolute;left:12px;top:10px;z-index:3;display:inline-flex;align-items:center;gap:7px;font:700 13px/1 system-ui,sans-serif;color:#fff;padding:7px 12px;border-radius:99px;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);border-left:3px solid var(--c)}
@@ -96,8 +101,7 @@ const HTML = `
 <ha-card>
   <div class="scene" id="scene">
     <div class="ground"><div class="plane"></div></div>
-    <div class="bot"><div class="sh"></div><img alt="" draggable="false"><span class="glow"></span></div>
-    <div class="fx" id="fx"></div>
+    <div class="bot"><div class="sh"></div><div class="b3d"><img alt="" draggable="false"><div class="fx" id="fx"></div></div><span class="glow"></span></div>
     <span class="pill" id="pill"><svg viewBox="0 0 24 24"></svg><span></span></span>
     <span class="bat" id="bat"><i><b></b></i><span></span></span>
   </div>
@@ -119,8 +123,18 @@ const HTML = `
 class McCullochRobCard extends HTMLElement {
   setConfig(config) {
     if (!config || !config.entity || !config.entity.startsWith('lawn_mower.')) throw new Error('entity: lawn_mower.xxx');
+    const imageChanged = this._config && this._config.image !== config.image;
     this._config = config;
     this._ids = null;
+    if (imageChanged && this.shadowRoot) this._setImage();  // el editor cambia la foto sin recargar
+  }
+
+  // foto: la de la opción `image` (sobrevive a las actualizaciones), si no robot.webp junto a la tarjeta, y si no el dibujo
+  _setImage() {
+    const img = this.shadowRoot.querySelector('img');
+    const srcs = [this._config.image, BASE + 'robot.webp', BASE + 'robot.svg'].filter(Boolean);
+    img.onerror = () => { srcs.shift(); if (srcs.length) img.src = srcs[0]; else img.onerror = null; };
+    img.src = srcs[0];
   }
 
   static getConfigElement() { return document.createElement('mcculloch-rob-card-editor'); }
@@ -145,15 +159,11 @@ class McCullochRobCard extends HTMLElement {
   _build() {
     const root = this.attachShadow({mode: 'open'});
     root.innerHTML = `<style>${CSS}</style>${HTML}`;
-    // foto: la de la opción `image` (sobrevive a las actualizaciones), si no robot.webp junto a la tarjeta, y si no el dibujo
-    const img = root.querySelector('img');
-    const srcs = [this._config.image, BASE + 'robot.webp', BASE + 'robot.svg'].filter(Boolean);
-    img.onerror = () => { srcs.shift(); if (srcs.length) img.src = srcs[0]; else img.onerror = null; };
-    img.src = srcs[0];
+    this._setImage();
     const fx = root.getElementById('fx');
     for (let i = 0; i < 14; i++) {
       const b = document.createElement('b');
-      b.style.left = (54 + Math.random() * 16) + '%';
+      b.style.left = (70 + Math.random() * 20) + '%';  // detrás del robot; gira con él
       b.style.setProperty('--dx', (20 + Math.random() * 60) + 'px');
       b.style.setProperty('--dy', -(25 + Math.random() * 50) + 'px');
       b.style.animationDelay = (Math.random()) + 's';
@@ -195,7 +205,8 @@ class McCullochRobCard extends HTMLElement {
 
   _update() {
     const c = this._config, h = this._hass, r = this.shadowRoot;
-    if (!this._ids || !Object.keys(this._ids).length) this._resolve();
+    // solo se vuelve a buscar cuando cambia el registro de entidades (HA lo sustituye entero), no en cada estado
+    if (!this._ids || h.entities !== this._entsRef) { this._resolve(); this._entsRef = h.entities; }
     const mower = h.states[c.entity];
     r.getElementById('name').textContent = c.name || (mower && mower.attributes.friendly_name) || this._t('noEntity');
     const act = this._st('activity')?.state, state = this._st('state')?.state;
@@ -227,14 +238,24 @@ class McCullochRobCard extends HTMLElement {
     const nx = this._st('next_start');
     let nextTxt = this._t('none');
     if (nx && !['unknown', 'unavailable', ''].includes(nx.state)) {
-      const d = new Date(nx.state), now = new Date(), tm = d.toLocaleTimeString(h.locale?.language, {hour: '2-digit', minute: '2-digit'});
-      const dd = Math.round((new Date(d.toDateString()) - new Date(now.toDateString())) / 864e5);
-      nextTxt = this._t('next') + ' · ' + (dd === 0 ? this._t('today') : dd === 1 ? this._t('tomorrow') : d.toLocaleDateString(h.locale?.language, {weekday: 'short', day: 'numeric'})) + ' ' + tm;
+      // en la zona horaria que use el perfil de HA (la del servidor salvo que el usuario pida la local)
+      const tz = h.locale?.time_zone === 'local' ? undefined : h.config?.time_zone;
+      const lang = h.locale?.language, d = new Date(nx.state);
+      const day = x => new Date(x.toLocaleDateString('en-CA', {timeZone: tz}) + 'T00:00:00Z');
+      const dd = Math.round((day(d) - day(new Date())) / 864e5);
+      const tm = d.toLocaleTimeString(lang, {hour: '2-digit', minute: '2-digit', timeZone: tz});
+      nextTxt = this._t('next') + ' · ' + (dd === 0 ? this._t('today') : dd === 1 ? this._t('tomorrow')
+        : d.toLocaleDateString(lang, {weekday: 'short', day: 'numeric', timeZone: tz})) + ' ' + tm;
     }
     r.getElementById('next').textContent = nextTxt;
-    const al = offline ? `<div class="alert warn">${this._t('offlineMsg')}</div>`
-      : (upside || lifted || error) ? `<div class="alert">${label}</div>` : '';
-    const alEl = r.getElementById('alert'); if (alEl.innerHTML !== al) alEl.innerHTML = al;
+    // el texto viene de un sensor: siempre como texto, nunca como HTML
+    const [alCls, alTxt] = offline ? ['alert warn', this._t('offlineMsg')] : (upside || lifted || error) ? ['alert', label] : ['', ''];
+    const alEl = r.getElementById('alert');
+    if (alEl.dataset.k !== alCls + alTxt) {
+      alEl.dataset.k = alCls + alTxt;
+      alEl.replaceChildren();
+      if (alTxt) { const div = document.createElement('div'); div.className = alCls; div.textContent = alTxt; alEl.appendChild(div); }
+    }
     r.querySelectorAll('.acts button').forEach(b => {
       b.lastChild.textContent = this._t(b.dataset.a);
       b.disabled = offline;

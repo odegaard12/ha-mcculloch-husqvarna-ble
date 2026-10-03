@@ -50,22 +50,30 @@ class RobMower(RobEntity, LawnMowerEntity):
                 return LawnMowerActivity.MOWING
             if activity == MowerActivity.GOING_HOME:
                 return LawnMowerActivity.RETURNING
+            # parado en el jardín esperando a que alguien actúe: no es avería
+            if activity == MowerActivity.STOPPED_IN_GARDEN:
+                return LawnMowerActivity.PAUSED
         return LawnMowerActivity.ERROR
 
+    # Cada orden toma op_lock: son varios comandos BLE y no deben colarse en medio
+    # de una grabación del horario (que va en una transacción del robot).
     async def async_start_mowing(self) -> None:
-        await self.coordinator.ensure_connected()
-        if self.activity is LawnMowerActivity.PAUSED:
-            await self.coordinator.mower.mower_resume()
-        else:
-            await self.coordinator.mower.mower_override(3.0)
+        async with self.coordinator.op_lock:
+            await self.coordinator.ensure_connected()
+            if self.activity is LawnMowerActivity.PAUSED:
+                await self.coordinator.mower.mower_resume()
+            else:
+                await self.coordinator.mower.mower_override(3.0)
         await self.coordinator.async_request_refresh()
 
     async def async_pause(self) -> None:
-        await self.coordinator.ensure_connected()
-        await self.coordinator.mower.mower_pause()
+        async with self.coordinator.op_lock:
+            await self.coordinator.ensure_connected()
+            await self.coordinator.mower.mower_pause()
         await self.coordinator.async_request_refresh()
 
     async def async_dock(self) -> None:
-        await self.coordinator.ensure_connected()
-        await self.coordinator.mower.mower_park()
+        async with self.coordinator.op_lock:
+            await self.coordinator.ensure_connected()
+            await self.coordinator.mower.mower_park()
         await self.coordinator.async_request_refresh()

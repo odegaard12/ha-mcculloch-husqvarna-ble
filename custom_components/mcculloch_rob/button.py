@@ -73,8 +73,9 @@ class RobButton(RobEntity, ButtonEntity):
         return self.entity_description.key == "probe" or super().available
 
     async def async_press(self) -> None:
-        await self.coordinator.ensure_connected()
-        result = await self.entity_description.press_fn(self.coordinator)
+        async with self.coordinator.op_lock:  # no mezclar con el sondeo ni con una grabación del horario
+            await self.coordinator.ensure_connected()
+            result = await self.entity_description.press_fn(self.coordinator)
         if isinstance(result, ResponseResult) and result is not ResponseResult.OK:
             raise HomeAssistantError(f"El robot respondió {result.name}")
         await self.coordinator.async_request_refresh()

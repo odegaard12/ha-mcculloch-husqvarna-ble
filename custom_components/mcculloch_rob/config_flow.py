@@ -91,6 +91,33 @@ class RobConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
+    async def async_step_reauth(self, entry_data: dict[str, Any]) -> ConfigFlowResult:
+        """El robot rechazó el PIN guardado (lo cambiaron en el menú): se pide otra vez."""
+        self._address = entry_data[CONF_ADDRESS]
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        entry = self._get_reauth_entry()
+        if user_input is not None:
+            pin = user_input.get(CONF_PIN, "").strip()
+            if not _pin_ok(pin):
+                errors["base"] = "invalid_pin"
+            else:
+                # mismo canal: así no hace falta volver a poner el robot en modo emparejamiento
+                result, _ = await self._try_connect(entry.data[CONF_CLIENT_ID], pin)
+                if result == "ok":
+                    return self.async_update_reload_and_abort(entry, data_updates={CONF_PIN: pin})
+                errors["base"] = result
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=vol.Schema({vol.Optional(CONF_PIN, default=""): str}),
+            description_placeholders={"address": self._address or ""},
+            errors=errors,
+        )
+
     async def _try_connect(self, channel_id: int, pin: str) -> tuple[str, str]:
         assert self._address
         device = bluetooth.async_ble_device_from_address(

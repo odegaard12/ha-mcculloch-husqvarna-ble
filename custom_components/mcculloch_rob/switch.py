@@ -65,12 +65,13 @@ class RobSwitch(RobEntity, SwitchEntity):
         return None if value is None else bool(value)
 
     async def _set(self, enabled: bool) -> None:
-        await self.coordinator.ensure_connected()
-        result, _ = await self.coordinator.read(self.entity_description.set, enabled=enabled)
-        if result is not ResponseResult.OK:
-            raise HomeAssistantError(f"El robot rechazó el cambio: {result.name}")
-        result, value = await self.coordinator.read(self.entity_description.get)
-        if result is ResponseResult.OK:
+        async with self.coordinator.op_lock:  # no mezclar con el sondeo ni con una grabación del horario
+            await self.coordinator.ensure_connected()
+            result, _ = await self.coordinator.read(self.entity_description.set, enabled=enabled)
+            if result is not ResponseResult.OK:
+                raise HomeAssistantError(f"El robot rechazó el cambio: {result.name}")
+            result, value = await self.coordinator.read(self.entity_description.get)
+        if result is ResponseResult.OK and self.coordinator.data is not None:
             self.coordinator.data[self.entity_description.get] = value
         self.async_write_ha_state()
 

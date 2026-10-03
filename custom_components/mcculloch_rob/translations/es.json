@@ -15,27 +15,35 @@
         "data": {
           "pin": "PIN"
         }
+      },
+      "reauth_confirm": {
+        "title": "PIN nuevo para {address}",
+        "description": "El robot ha rechazado el PIN guardado. Escribe el PIN actual (vacío si no tiene).",
+        "data": {
+          "pin": "PIN"
+        }
       }
     },
     "error": {
       "invalid_pin": "El PIN debe ser numérico (máx. 65535).",
       "invalid_auth": "PIN incorrecto.",
       "cannot_connect": "No empareja. Reinicia el robot y reintenta; a veces necesita 2-3 intentos.",
-      "not_found": "Ningún receptor Bluetooth ve el robot ahora mismo."
+      "not_found": "Ningún receptor Bluetooth ve el robot ahora mismo.",
+      "ok": "Conectado."
     },
     "abort": {
       "already_configured": "Este robot ya está añadido.",
-      "reauth_successful": "Hecho."
+      "reauth_successful": "PIN actualizado."
     }
   },
   "services": {
     "send_command": {
       "name": "Enviar comando",
-      "description": "Envía cualquier comando del protocolo (ingeniería inversa) y devuelve la respuesta.",
+      "description": "Envía cualquier comando del protocolo y devuelve la respuesta tal cual.",
       "fields": {
         "command": {
           "name": "Comando",
-          "description": "Nombre en protocol.json, p.ej. GetAllStatistics."
+          "description": "Nombre en protocol.json, p. ej. GetAllStatistics."
         },
         "params": {
           "name": "Parámetros",
@@ -43,7 +51,7 @@
         },
         "config_entry_id": {
           "name": "Robot",
-          "description": "Si hay varios."
+          "description": "Solo si tienes varios."
         }
       }
     },
@@ -53,7 +61,7 @@
       "fields": {
         "config_entry_id": {
           "name": "Robot",
-          "description": "Si hay varios."
+          "description": "Solo si tienes varios."
         }
       }
     },
@@ -67,27 +75,35 @@
         },
         "config_entry_id": {
           "name": "Robot",
-          "description": "Si hay varios."
+          "description": "Solo si tienes varios."
         }
       }
     },
     "mow_for": {
       "name": "Cortar durante",
-      "description": "Corta ahora durante esas horas.",
+      "description": "Corta ahora durante esas horas, saltándose el horario.",
       "fields": {
         "hours": {
           "name": "Horas",
-          "description": "0,5 a 24 h"
+          "description": "De 0,5 a 24 h."
+        },
+        "config_entry_id": {
+          "name": "Robot",
+          "description": "Solo si tienes varios."
         }
       }
     },
     "park_for": {
       "name": "Aparcar durante",
-      "description": "Aparca en la base esas horas.",
+      "description": "Aparca en la base esas horas y luego vuelve al horario.",
       "fields": {
         "hours": {
           "name": "Horas",
-          "description": "0,5 a 168 h"
+          "description": "De 0,5 a 168 h."
+        },
+        "config_entry_id": {
+          "name": "Robot",
+          "description": "Solo si tienes varios."
         }
       }
     }

@@ -92,7 +92,10 @@ class RobCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if result is not ResponseResult.OK:
             raise UpdateFailed(f"No conecta: {result.name}")
         if self.model is None:
-            self.model = await self.mower.get_model()
+            try:
+                self.model = await self.mower.get_model()
+            except ValueError as err:  # respuesta rara: el modelo no es imprescindible
+                LOGGER.debug("Modelo no interpretable: %s", err)
 
     async def read(self, name: str, **kwargs: Any) -> tuple[ResponseResult, Any]:
         # Si el enlace se cayo entre dos lecturas la libreria deja client=None: no escribir.
@@ -178,6 +181,9 @@ class RobCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 result, value = await self.read(name)
                 if result is ResponseResult.OK:
                     data[name] = value
+                elif result is ResponseResult.NOT_AVAILABLE:
+                    # el robot dice que ya no hay dato (p. ej. sin próximo arranque): no dejar el viejo
+                    data.pop(name, None)
                 elif result is ResponseResult.UNKNOWN_ERROR:
                     failures += 1
                     if failures >= 3:  # sin respuesta: el canal esta muerto
@@ -187,7 +193,10 @@ class RobCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if "GetNumberOfMessages" in self.supported:
                     data["messages"] = await self._read_messages()
                 if "GetNumberOfTasks" in self.supported:
-                    data["tasks"] = await self._read_tasks()
+                    try:
+                        data["tasks"] = await self._read_tasks()
+                    except ValueError as err:  # un turno ilegible no debe tirar todo el ciclo
+                        LOGGER.debug("Programación no interpretable: %s", err)
                 self._last_slow = monotonic()
         except (BleakError, TimeoutError, AttributeError) as err:
             await close_stale_connections_by_address(self.address)
