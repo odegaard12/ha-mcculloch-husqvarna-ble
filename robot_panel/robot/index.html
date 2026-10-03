@@ -236,6 +236,9 @@ details.all td:last-child{text-align:right;font-weight:560;overflow-wrap:anywher
 .stage.r3d.mowing .body3d{animation:none}
 .stage.r3d .shine,.stage.r3d .bot .shadow{display:none}  /* el render ya trae brillo y sombra */
 .stage.r3d.mowing .bot{width:min(68%,350px)}
+/* volcado con render: al voltearlo la sombra quedaría arriba y el robot bajo la hierba; se sube y va delante de ella */
+.stage.r3d.upside .bot{bottom:24%;z-index:5;width:min(68%,350px)}
+.stage.r3d.upside .bot img{filter:none}
 .stage.r3d .bot img{filter:drop-shadow(0 10px 12px rgba(0,0,0,.35))}
 .dock3d{position:absolute;left:50%;bottom:16%;width:min(58%,300px);transform:translateX(-50%);opacity:0;transition:opacity .6s;pointer-events:none}
 .stage.r3d.docked .dock3d,.stage.r3d.homing .dock3d,.stage.r3d.leaving .dock3d,.stage.r3d.charging .dock3d{opacity:1}
