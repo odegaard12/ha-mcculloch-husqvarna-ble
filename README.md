@@ -8,6 +8,14 @@ Controla tu robot cortacésped **McCulloch ROB, Husqvarna Automower, Gardena SIL
 
 > 🇬🇧 *English summary at the bottom.*
 
+<p align="center">
+  <img src="docs/panel.png" alt="Panel web en el móvil: el robot cortando, batería, franja de corte y órdenes" width="300">
+  &nbsp;
+  <img src="docs/tarjeta.png" alt="Tarjeta de Lovelace en seis estados: cortando, cargando, volviendo, en la base, avería y fuera de alcance" width="520">
+</p>
+
+El robot se anima según su estado: al cortar cruza el césped, **gira en 3D** al final de cada pasada y deja una estela; se le ve cargar, volver a la base, levantado o **volcado** (da la vuelta en 3D). En *Datos* tienes la actividad y la batería de 24 h y las **horas cortadas por día** de la última semana.
+
 ## ¿Qué la diferencia de la integración oficial "Husqvarna Automower BLE"?
 
 | | Oficial | Esta |

@@ -19,6 +19,16 @@ async def main():
     async with TestClient(TestServer(server.make_app())) as c:
         r = await c.post("/api/servicio", json={})
         assert r.status == 401, "sin sesión no se entra"
+        # salud: sin PIN, sin datos; 503 porque aquí no hay HA
+        r = await c.get("/api/salud")
+        assert r.status == 503 and await r.json() == {"ok": True, "ha": False}
+        # cabeceras de seguridad en todo
+        for path in ("/", "/api/sesion"):
+            h = (await c.get(path)).headers
+            assert "frame-ancestors 'self'" in h.get("Content-Security-Policy", ""), path
+            assert h.get("X-Content-Type-Options") == "nosniff", path
+        r = await c.get("/api/historial?d=999")
+        assert r.status == 401  # sin sesión ni con parámetros raros
         # login
         r = await c.post("/api/login", json={"pin": "0000"})
         assert r.status == 403
