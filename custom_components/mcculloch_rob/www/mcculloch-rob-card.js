@@ -8,7 +8,7 @@ const T = {
     docked: 'En la base', paused: 'En pausa', idle: 'Parado', offline: 'Fuera de alcance', error: 'Avería',
     lifted: 'Levantado', upside: 'Volcado', start: 'Cortar', pause: 'Pausa', dock: 'A la base',
     mow1: 'Cortar 1 h', mow3: 'Cortar 3 h', parkNext: 'Aparcar hasta el próximo turno', resume: 'Volver al horario',
-    next: 'Próximo corte', today: 'hoy', tomorrow: 'mañana', none: 'sin programación', battery: 'Batería',
+    next: 'Próximo corte', today: 'hoy', tomorrow: 'mañana', none: 'sin programación', battery: 'Batería', lastData: 'último dato',
     offlineMsg: 'El robot no está al alcance del Bluetooth. Se reconecta solo al volver cerca del receptor.',
     pick: 'Elige el robot (entidad lawn_mower)', name: 'Nombre (opcional)', noEntity: 'No encuentro la entidad',
     image: 'Foto propia (opcional): URL de un PNG/WebP transparente, p. ej. /local/robot.webp',
@@ -18,7 +18,7 @@ const T = {
     docked: 'Docked', paused: 'Paused', idle: 'Stopped', offline: 'Out of range', error: 'Error',
     lifted: 'Lifted', upside: 'Upside down', start: 'Mow', pause: 'Pause', dock: 'Dock',
     mow1: 'Mow 1 h', mow3: 'Mow 3 h', parkNext: 'Park until next run', resume: 'Resume schedule',
-    next: 'Next run', today: 'today', tomorrow: 'tomorrow', none: 'no schedule', battery: 'Battery',
+    next: 'Next run', today: 'today', tomorrow: 'tomorrow', none: 'no schedule', battery: 'Battery', lastData: 'last known',
     offlineMsg: 'The mower is out of Bluetooth range. It reconnects by itself when it comes back near the receiver.',
     pick: 'Pick the mower (lawn_mower entity)', name: 'Name (optional)', noEntity: 'Entity not found',
     image: 'Own photo (optional): URL of a transparent PNG/WebP, e.g. /local/robot.webp',
@@ -76,6 +76,21 @@ ha-card{overflow:hidden}
 .s-upside .b3d{transform:rotateX(180deg) translateY(-8%)}
 /* volcado con render: al voltearlo, la sombra quedaría arriba y el robot bajo la hierba */
 .r3d.s-upside .bot{bottom:14%}.r3d.s-upside .bot img{filter:none}
+/* base de carga (render con la misma cámara que el robot: mismo ancho = encajan) y su piloto */
+.dockw{position:absolute;left:50%;bottom:4%;width:min(64%,240px);transform:translateX(-50%);opacity:0;transition:opacity .6s;pointer-events:none}
+.dockw img{display:block;width:100%}
+.led{position:absolute;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;background:#46e07a;box-shadow:0 0 7px 3px rgba(70,224,122,.75);opacity:0;transition:opacity .4s}
+.r3d.s-docked .dockw,.r3d.s-charging .dockw,.r3d.s-homing .dockw,.r3d.s-leaving .dockw{opacity:1}
+.r3d.s-docked .led{opacity:.9}
+.r3d.s-charging .led{opacity:1;animation:ledblink 1.3s ease-in-out infinite}
+@keyframes ledblink{50%{opacity:.15}}
+.r3d.s-docked .bot,.r3d.s-charging .bot{left:50%;bottom:5%}
+.r3d.s-docked .b3d{transform:none}
+/* llegar a la base: entra rodando y frena; salir: marcha atrás */
+.r3d.s-homing .bot{animation:home3d 6s cubic-bezier(.3,.1,.25,1) infinite;bottom:5%}
+.r3d.s-leaving .bot{animation:leave3d 6s cubic-bezier(.5,0,.7,.9) infinite;bottom:5%}
+@keyframes home3d{0%{left:100%;opacity:0}12%{opacity:1}78%,100%{left:50%;opacity:1}}
+@keyframes leave3d{0%,18%{left:50%;opacity:1}85%{opacity:1}100%{left:100%;opacity:0}}
 .s-lifted .bot{bottom:24%;animation:float 2.4s ease-in-out infinite}
 .s-offline .bot{filter:grayscale(1) brightness(.75);opacity:.55}.s-offline .ground{filter:grayscale(.9) brightness(.6)}
 @keyframes breathe{50%{opacity:.35}}
@@ -109,6 +124,7 @@ const HTML = `
 <ha-card>
   <div class="scene" id="scene">
     <div class="ground"><div class="plane"></div></div>
+    <div class="dockw"><img class="dock3d" alt="" draggable="false"><i class="led"></i></div>
     <div class="bot"><div class="sh"></div><div class="b3d"><img alt="" draggable="false"><div class="fx" id="fx"></div></div><span class="glow"></span></div>
     <span class="pill" id="pill"><svg viewBox="0 0 24 24"></svg><span></span></span>
     <span class="bat" id="bat"><i><b></b></i><span></span></span>
@@ -139,7 +155,7 @@ class McCullochRobCard extends HTMLElement {
 
   // foto: la de la opción `image` (sobrevive a las actualizaciones), si no robot.webp junto a la tarjeta, y si no el dibujo
   _setImage() {
-    const img = this.shadowRoot.querySelector('img');
+    const img = this.shadowRoot.querySelector('.bot img');  // la del robot (antes en el HTML va la de la base)
     const srcs = [this._config.image, BASE + 'rob3d/turn_00.webp', BASE + 'robot.webp', BASE + 'robot.svg'].filter(Boolean);
     img.onerror = () => { srcs.shift(); if (srcs.length) img.src = srcs[0]; else img.onerror = null; };
     img.src = srcs[0];
@@ -155,6 +171,11 @@ class McCullochRobCard extends HTMLElement {
         this._frames = fr;
         const scene = this.shadowRoot.getElementById('scene'), bot = this.shadowRoot.querySelector('.bot'), b3d = this.shadowRoot.querySelector('.b3d');
         scene.classList.add('r3d');
+        this.shadowRoot.querySelector('.dock3d').src = BASE + 'rob3d/base_side.webp';
+        fetch(BASE + 'rob3d/meta.json').then(r => r.json()).then(m => {
+          const led = this.shadowRoot.querySelector('.led');
+          if (m.led) { led.style.left = m.led[0] + '%'; led.style.top = m.led[1] + '%'; }
+        }).catch(() => {});
         let cur = -1;
         const tick = () => {
           if (!this.isConnected) { this._raf = null; return; }  // tarjeta fuera de la pantalla: se para
@@ -230,7 +251,7 @@ class McCullochRobCard extends HTMLElement {
     const SLUG = {bateria: 'battery', actividad: 'activity', estado: 'state', error: 'error', proximo_arranque: 'next_start',
       cargando: 'charging', averia: 'problem', en_la_base: 'in_station', levantado: 'lifted', volcado: 'upside_down',
       cortar_1_hora: 'mow_1h', cortar_3_horas: 'mow_3h', aparcar_hasta_el_proximo_turno: 'park_next',
-      volver_a_la_programacion: 'resume_schedule'};
+      volver_a_la_programacion: 'resume_schedule', programacion_tareas: 'schedule'};
     if (me && me.device_id) {
       for (const e of Object.values(ents)) {
         if (e.device_id !== me.device_id) continue;
@@ -239,6 +260,22 @@ class McCullochRobCard extends HTMLElement {
       }
     }
     this._ids = ids;
+  }
+
+  // próximo arranque según las franjas del robot (lunes = 0), en la hora del navegador
+  _nextFromTasks(tasks) {
+    const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes(), today = (now.getDay() + 6) % 7;
+    for (let k = 0; k < 8; k++) {
+      const d = (today + k) % 7;
+      const m = tasks.filter(t => t['on_' + DAYS[d]]).map(t => t.start_time_in_minutes).filter(x => k > 0 || x > nowMin).sort((a, b) => a - b)[0];
+      if (m == null) continue;
+      const hm = String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+      const day = k === 0 ? this._t('today') : k === 1 ? this._t('tomorrow')
+        : new Date(now.getTime() + k * 864e5).toLocaleDateString(this._hass.locale?.language, {weekday: 'short'});
+      return day + ' ' + hm;
+    }
+    return null;
   }
 
   _st(key) { const id = this._ids[key]; return id ? this._hass.states[id] : undefined; }
@@ -278,7 +315,17 @@ class McCullochRobCard extends HTMLElement {
     }
     const nx = this._st('next_start');
     let nextTxt = this._t('none');
-    if (nx && !['unknown', 'unavailable', ''].includes(nx.state)) {
+    // horario: el de ahora si el robot está conectado; si no, el último guardado en este navegador
+    const key = 'mcrob_tasks_' + c.entity;
+    let tasks = this._st('schedule')?.attributes?.tareas, stale = false;
+    try {
+      if (Array.isArray(tasks)) localStorage.setItem(key, JSON.stringify(tasks));
+      else { tasks = JSON.parse(localStorage.getItem(key) || 'null'); stale = Array.isArray(tasks); }
+    } catch (e) { /* almacenamiento bloqueado: sin respaldo */ }
+    const fromSchedule = Array.isArray(tasks) ? this._nextFromTasks(tasks) : null;
+    if ((!nx || ['unknown', 'unavailable', ''].includes(nx.state)) && fromSchedule) {
+      nextTxt = this._t('next') + ' · ' + fromSchedule + (stale ? ' · ' + this._t('lastData') : '');
+    } else if (nx && !['unknown', 'unavailable', ''].includes(nx.state)) {
       // en la zona horaria que use el perfil de HA (la del servidor salvo que el usuario pida la local)
       const tz = h.locale?.time_zone === 'local' ? undefined : h.config?.time_zone;
       const lang = h.locale?.language, d = new Date(nx.state);
