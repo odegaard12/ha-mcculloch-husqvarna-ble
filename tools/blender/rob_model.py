@@ -194,13 +194,28 @@ def skin(name, grow, material, outer, inner=None):
 
 
 # aro amarillo embutido (detrás y a los lados de la tapa) y tapa negra brillante algo más alta
-ring = skin("aro", 0.010, M_YEL, footprint("planta_aro", 0.215, 0.168, 0.05), footprint("planta_hueco", 0.172, 0.126, 0.035))
+# la banda amarilla rodea la tapa también por delante (más ancha ahí, como en la foto de frente)
+ring = skin("aro", 0.010, M_YEL, footprint("planta_aro", 0.238, 0.172, 0.02), footprint("planta_hueco", 0.172, 0.126, 0.035))
 lid = skin("tapa", 0.020, M_LID, footprint("planta_tapa", 0.172, 0.126, 0.035))
-# botón rojo de parada, delante de la tapa
-btn = cylinder("boton", 0.022, 0.03, (-0.165, 0, TOP - 0.025))
+lid_top = max((lid.matrix_world @ Vector(c)).z for c in lid.bound_box)
+
+# teclado con pantalla: bloque negro brillante sobre la parte delantera de la tapa, con teclas y el STOP rojo encima
+pad = superellipsoid("teclado", 0.058, 0.085, 0.016, 0.35, 0.45, seg_u=16, seg_v=48)
+pad.location = (-0.095, 0, lid_top - 0.004)
+pad.data.materials.append(M_LID)
+M_KEY = mat("teclas", srgb("#2b2e31"), 0.45)
+for i in range(4):
+    for j in range(3):
+        k = box("tecla", (0.011, 0.016, 0.004), (-0.125 + i * 0.016, -0.05 + j * 0.022, lid_top + 0.012))
+        k.data.materials.append(M_KEY)
+btn = superellipsoid("boton", 0.022, 0.034, 0.012, 0.4, 0.4, seg_u=12, seg_v=32)
+btn.location = (-0.098, 0.035, lid_top + 0.016)
 btn.data.materials.append(M_RED)
-for f in btn.data.polygons:
-    f.use_smooth = True
+
+# rejilla en el morro: ranuras horizontales cortadas en el frontal
+for i in range(3):
+    slot = box("rejilla", (0.05, 0.16, 0.006), (-L / 2, 0, CLEAR + 0.055 + i * 0.014))
+    boolean(body, slot)
 
 
 def curved_spoke(cx, fy, cz, side, ang0, r0=0.26, r1=0.72, bend=0.55, steps=10):
@@ -303,7 +318,8 @@ if BRAND:
         label("McCULLOCH", (sx, sy + side * 0.0025, sz), (math.pi / 2, 0, yaw + (0 if side < 0 else math.pi)),
               0.028, M_TXT, depth=0.003)
     lid_top = max((lid.matrix_world @ Vector(c)).z for c in lid.bound_box)
-    label("McCULLOCH", (0.04, 0, lid_top + 0.0004), (0, 0, math.pi / 2 * 0), 0.032, M_YEL, depth=0.0004)
+    # detrás del teclado, para que no lo tape
+    label("McCULLOCH", (0.075, 0, lid_top + 0.0004), (0, 0, 0), 0.026, M_YEL, depth=0.0004)
 caster = cylinder("rueda_delantera", 0.03, 0.025, (-0.19, 0, 0.03), rot=(math.pi / 2, 0, 0))
 caster.data.materials.append(M_TIRE)
 

@@ -194,8 +194,27 @@ async def async_setup_entry(
 ) -> None:
     coordinator = entry.runtime_data
     async_add_entities(
-        RobSensor(coordinator, desc) for desc in SENSORS if desc.command in coordinator.supported
+        [RobSensor(coordinator, desc) for desc in SENSORS if desc.command in coordinator.supported]
+        + [LastSeenSensor(coordinator)]
     )
+
+
+class LastSeenSensor(RobEntity, SensorEntity):
+    """Último contacto con el robot. Siempre disponible: es justo lo que interesa cuando el robot no responde."""
+
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_icon = "mdi:bluetooth-connect"
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator, "last_seen", "Última conexión")
+
+    @property
+    def available(self) -> bool:
+        return True
+
+    @property
+    def native_value(self) -> datetime | None:
+        return self.coordinator.last_seen
 
 
 class RobSensor(RobEntity, SensorEntity):

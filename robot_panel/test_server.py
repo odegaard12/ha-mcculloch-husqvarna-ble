@@ -29,6 +29,12 @@ async def main():
             assert h.get("X-Content-Type-Options") == "nosniff", path
         r = await c.get("/api/historial?d=999")
         assert r.status == 401  # sin sesión ni con parámetros raros
+        # versión: sin sesión (la app la mira para recargarse); avisos: con sesión, y la copia entre Pis firmada
+        r = await c.get("/api/version")
+        assert r.status == 200 and len((await r.json())["v"]) == 12
+        assert (await c.get("/api/push/key")).status == 401
+        r = await c.post("/api/push/peer", data=b"[]", headers={"X-Peer-Sig": "falsa"})
+        assert r.status == 403
         # login
         r = await c.post("/api/login", json={"pin": "0000"})
         assert r.status == 403
@@ -60,6 +66,11 @@ async def main():
             assert r.status == 502 and "error" in await r.json(), (path, r.status)
         r = await c.get("/api/historial")
         assert r.status == 502
+        # con sesión: aquí no hay claves VAPID, así que suscribirse responde 503 y no rompe nada
+        r = await c.get("/api/push/key")
+        assert r.status == 200 and (await r.json())["key"] is None
+        bad = {"subscription": {"endpoint": "http://no-https", "keys": {"p256dh": "a", "auth": "b"}}}
+        assert (await c.post("/api/push/subscribe", json=bad)).status == 503
         cookie = c.session.cookie_jar.filter_cookies(c.make_url("/")).get(server.COOKIE).value
     # un PIN nuevo invalida las sesiones viejas
     os.environ["APP_PIN"] = "9999"
