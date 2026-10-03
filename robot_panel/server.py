@@ -95,7 +95,9 @@ def make_app() -> web.Application:
 
     @web.middleware
     async def auth(req, handler):
-        if req.path.startswith("/api/") and req.path not in ("/api/login", "/api/sesion", "/api/salud") and not session_ok(req):
+        # sin sesión: login, estado de la sesión, salud, versión (para recargar la app) y la copia firmada entre Pis
+        if (req.path.startswith("/api/") and not session_ok(req)
+                and req.path not in ("/api/login", "/api/sesion", "/api/salud", "/api/version", "/api/push/peer")):
             return web.json_response({"error": "pin"}, status=401)
         return await handler(req)
 
@@ -281,6 +283,14 @@ def make_app() -> web.Application:
     app.router.add_get("/", index)
     app.router.add_get("/api/estado", estado)
     app.router.add_get("/api/salud", salud)
+
+    # versión de la app = huella de sus archivos: si cambia tras un despliegue, la app abierta se recarga sola
+    files = [HERE / "robot" / n for n in ("index.html", "sw.js")]
+    version = hashlib.sha256(b"".join(f.read_bytes() for f in files if f.exists())).hexdigest()[:12]
+    app.router.add_get("/api/version", lambda _: web.json_response({"v": version}, headers={"Cache-Control": "no-store"}))
+
+    from push import setup_push  # avisos de la web app (Web Push)
+    setup_push(app, HERE, ha, token, PREFIX, secret)
     app.router.add_post("/api/servicio", servicio)
     app.router.add_get("/api/historial", historial)
     app.router.add_post("/api/programacion", programacion)

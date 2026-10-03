@@ -12,7 +12,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import RobConfigEntry
 from .automower_ble.protocol import MowerActivity, MowerState
-from .entity import RobEntity
+from .entity import LiveEntity
 
 
 async def async_setup_entry(
@@ -21,7 +21,7 @@ async def async_setup_entry(
     async_add_entities([RobMower(entry.runtime_data)])
 
 
-class RobMower(RobEntity, LawnMowerEntity):
+class RobMower(LiveEntity, LawnMowerEntity):
     _attr_supported_features = (
         LawnMowerEntityFeature.START_MOWING
         | LawnMowerEntityFeature.PAUSE

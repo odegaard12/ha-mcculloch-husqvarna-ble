@@ -14,7 +14,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import RobConfigEntry
 from .automower_ble.protocol import ResponseResult
-from .entity import RobEntity
+from .entity import LiveEntity
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -51,7 +51,7 @@ async def async_setup_entry(
     )
 
 
-class RobSwitch(RobEntity, SwitchEntity):
+class RobSwitch(LiveEntity, SwitchEntity):
     entity_description: RobSwitchDescription
     _attr_entity_category = EntityCategory.CONFIG
 

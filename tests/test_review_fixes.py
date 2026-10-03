@@ -22,8 +22,23 @@ async def test_out_of_range_keeps_entities(hass: HomeAssistant, fake) -> None:
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
         assert entry.state is ConfigEntryState.LOADED
+        # el cortacésped (órdenes) no está; los datos muestran lo último que se supo, guardado en disco
         assert hass.states.get("lawn_mower.robot_cortacesped").state == "unavailable"
-        assert hass.states.get("sensor.robot_cortacesped_bateria").state == "unavailable"
+        assert hass.states.get("sensor.robot_cortacesped_bateria").state == "87"
+        assert hass.states.get("sensor.robot_cortacesped_programacion_tareas").state not in ("unknown", "unavailable")
+
+
+async def test_last_seen_survives_out_of_range(hass: HomeAssistant, fake) -> None:
+    """«Última conexión»: se rellena al hablar con el robot y sigue disponible aunque deje de responder."""
+    entry = await _setup(hass)
+    seen = hass.states.get("sensor.robot_cortacesped_ultima_conexion")
+    assert seen is not None and seen.state not in ("unknown", "unavailable")
+    with patch("custom_components.mcculloch_rob.coordinator.bluetooth.async_ble_device_from_address", return_value=None):
+        entry.runtime_data.mower.connected = False
+        await entry.runtime_data.async_refresh()
+        await hass.async_block_till_done()
+        assert hass.states.get("lawn_mower.robot_cortacesped").state == "unavailable"
+        assert hass.states.get("sensor.robot_cortacesped_ultima_conexion").state == seen.state
 
 
 async def test_unknown_state_code_does_not_break(hass: HomeAssistant, fake) -> None:
