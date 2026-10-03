@@ -73,8 +73,21 @@ nav.tabs button.on{color:var(--brand-ink);background:var(--brand);font-weight:70
 .ring svg{transform:rotate(-90deg)}
 .ring .n{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
 .ring b{font-size:23px;line-height:1}.ring small{display:block;font-size:11px;opacity:.8}
+.status small{display:block;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;opacity:.65;font-weight:700;margin-bottom:2px}
 .status b{display:block;font-size:21px;line-height:1.2}
 .status span{opacity:.8;font-size:13.5px}
+.facts:empty{display:none}
+/* horas cortadas por día: barras con el valor encima y el día debajo */
+.wbars{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;align-items:end;height:150px}
+.wbars div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px;font-size:12px;color:var(--muted)}
+.wbars i{display:block;width:100%;max-width:34px;border-radius:8px 8px 3px 3px;background:#47d35a;min-height:3px;transition:height .6s}
+.wbars div.today i{background:linear-gradient(#47d35a,#2e9b3f)}
+.wbars b{font-size:12px;color:var(--ink);font-weight:700}
+.wbars div.today span{color:var(--ink);font-weight:700}
+.facts{grid-template-columns:repeat(auto-fit,minmax(0,1fr))!important}
+.quick h3{display:flex;align-items:center;gap:8px}
+.quick h3 svg{width:16px;height:16px;flex:none}
+.chip.wide{flex-basis:100%;justify-content:center}
 .actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 18px 18px}
 .actions button{border:0;border-radius:18px;padding:12px 6px;background:rgba(255,255,255,.1);color:#fff;font-weight:650;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;min-height:76px}
 .actions button svg{width:26px;height:26px}
@@ -158,13 +171,16 @@ details.all td:last-child{text-align:right;font-weight:560;overflow-wrap:anywher
     radial-gradient(circle at 70% 60%,rgba(0,0,0,.22) 0 .9px,transparent 1.5px) 0 0/4px 5px,
     linear-gradient(90deg,#2b5126 0%,#376630 25%,#2b5126 50%,#376630 75%,#2b5126 100%) 0 0/360px 100%;
   animation:roll 1.6s linear infinite;animation-play-state:paused}
-.stage.mowing .plane,.stage.homing .plane{animation-play-state:running}
+.stage.homing .plane{animation-play-state:running}
 .stage.leaving .plane{animation-play-state:running;animation-direction:reverse}
 @keyframes roll{to{background-position:20px 0,20px 0,360px 0}}
 .ground::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgba(23,25,26,.9) 0,rgba(23,25,26,0) 55%),radial-gradient(70% 90% at 50% 100%,transparent 50%,rgba(10,12,12,.55))}
-.trail{position:absolute;left:50%;right:-5%;bottom:11%;height:15%;border-radius:40% 0 0 40%;opacity:0;transform-origin:0 50%;transform:scaleX(.2);transition:opacity .6s,transform 1.2s ease-out;
-  background:linear-gradient(90deg,rgba(170,230,120,.38),rgba(170,230,120,.12) 60%,transparent);filter:blur(3px)}
+/* estela de césped cortado: dentro del robot, a su espalda (gira con él) */
+.trail{position:absolute;left:62%;width:130%;bottom:-2%;height:22%;border-radius:40% 0 0 40%;opacity:0;transform-origin:0 50%;transform:scaleX(.2);transition:opacity .6s,transform 1.2s ease-out;z-index:0;
+  background:linear-gradient(90deg,rgba(170,230,120,.42),rgba(170,230,120,.14) 55%,transparent);filter:blur(3px)}
 .stage.mowing .trail{opacity:1;transform:none}
+.bot{perspective:700px}
+.body3d{position:relative;transform-style:preserve-3d;transition:transform .9s cubic-bezier(.45,0,.25,1)}
 .blades{position:absolute;left:0;right:0;bottom:0;height:20%;pointer-events:none;z-index:4}
 .blades svg{width:100%;height:100%;display:block}
 .blades path{transform-box:fill-box;transform-origin:50% 100%;animation:sway var(--d,3s) ease-in-out infinite alternate}
@@ -190,16 +206,25 @@ details.all td:last-child{text-align:right;font-weight:560;overflow-wrap:anywher
 @keyframes sweep{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
 .stage.charging .charge{opacity:1}
 .fx{z-index:3}
-.fx b{position:absolute;bottom:16%;width:3px;height:8px;border-radius:2px;background:#8fdc6f;opacity:0;animation:clip 1s linear infinite}
+.fx b{position:absolute;bottom:6%;width:3px;height:8px;border-radius:2px;background:#8fdc6f;opacity:0;animation:clip 1s linear infinite}
 .fx b:nth-child(3n){background:#5fae4b;height:6px}
 @keyframes clip{0%{opacity:0;transform:translate(0,0) rotate(0)}12%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy,-60px)) rotate(260deg)}}
 /* estados */
-.stage.docked .bot{left:50%;bottom:20%}
-/* cortando: el robot avanza hacia su morro (izquierda) y el césped corre por debajo */
-.stage.mowing .bot{animation:mow 6s ease-in-out infinite}
+.stage.docked .bot{left:50%;bottom:22%;width:min(52%,270px)}
+.stage.lifted .bot,.stage.upside .bot{width:min(52%,270px)}
+/* cortando: cruza el césped hacia su morro, gira en 3D sobre sí mismo y vuelve (como sus pasadas reales).
+   .bot mueve la posición y .body3d el giro: misma duración, así van sincronizados */
+.stage.mowing .bot{animation:mowpass 14s ease-in-out infinite}
+.stage.mowing .body3d{animation:mowturn 14s ease-in-out infinite}
 .stage.mowing .bot img,.stage.homing .bot img,.stage.leaving .bot img{animation:bump .3s ease-in-out infinite}
-.stage.mowing .bot,.stage.homing .bot,.stage.leaving .bot{width:min(58%,300px)}
-@keyframes mow{0%,100%{left:47%;bottom:12%}50%{left:53%;bottom:13.5%}}
+.stage.mowing .bot,.stage.homing .bot,.stage.leaving .bot{width:min(54%,280px)}
+@keyframes mowpass{0%{left:66%;bottom:12%}40%{left:34%;bottom:13%}50%{left:34%;bottom:13%}90%{left:66%;bottom:12%}100%{left:66%;bottom:12%}}
+@keyframes mowturn{0%,40%{transform:rotateY(0)}50%,90%{transform:rotateY(180deg)}100%{transform:rotateY(360deg)}}
+/* en la base: se queda girado tres cuartos hacia nosotros */
+.stage.docked .body3d{transform:rotateY(-16deg)}
+/* levantado: se inclina en el aire; volcado: da la vuelta en 3D */
+.stage.lifted .body3d{transform:rotateX(-14deg) rotateZ(5deg)}
+.stage.upside .body3d{transform:rotateX(180deg) translateY(-8%)}
 @keyframes bump{50%{transform:translateY(-1.5px) rotate(-.5deg)}}
 .stage.homing .bot{animation:home 5s ease-in-out infinite}
 @keyframes home{0%{left:64%}100%{left:40%}}
@@ -214,7 +239,6 @@ details.all td:last-child{text-align:right;font-weight:560;overflow-wrap:anywher
 .stage.lifted .bot{bottom:30%;animation:float 2.4s ease-in-out infinite}
 .stage.lifted .bot .shadow{transform:translateY(46px) scale(.6);opacity:.4}
 @keyframes float{50%{transform:translateX(-50%) translateY(-8px) rotate(2deg)}}
-.stage.upside .bot img{transform:rotate(180deg) translateY(-6%)}
 .stage.upside .glow{opacity:1;background:radial-gradient(closest-side,rgba(255,59,48,.55),transparent)}
 .stage.hit .bot{animation:shake .12s linear 10}
 @keyframes shake{25%{transform:translateX(calc(-50% - 4px))}75%{transform:translateX(calc(-50% + 4px))}}
@@ -272,14 +296,17 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
           <div class="scene" id="scene">
             <div class="stage" id="stage">
               <div class="ground"><div class="plane"></div></div>
-              <div class="trail"></div>
               <div class="caption" id="caption"><span class="ic" id="capic"></span><span id="captxt"></span></div>
               <div class="bot">
                 <div class="shadow"></div>
-                <div class="tilt" id="tilt"><img src="static/robot.webp?v=6" onerror="this.onerror=null;this.src='static/robot.svg'" alt="Robot cortacésped" draggable="false"><span class="shine"></span></div>
+                <!-- body3d gira en 3D (vueltas al cortar, vuelco...); la estela y los recortes van dentro para salir siempre por detrás -->
+                <div class="body3d">
+                  <div class="trail"></div>
+                  <div class="tilt" id="tilt"><img src="static/robot.webp?v=6" onerror="this.onerror=null;this.src='static/robot.svg'" alt="Robot cortacésped" draggable="false"><span class="shine"></span></div>
+                  <div class="fx" id="fx"></div>
+                </div>
                 <span class="glow"></span>
               </div>
-              <div class="fx" id="fx"></div>
               <div class="charge" id="charge"><b></b></div>
               <div class="blades" id="blades"></div>
             </div>
@@ -290,7 +317,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
               <svg viewBox="0 0 120 120" width="92" height="92" aria-hidden="true"><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="11"/><circle id="ringfg" cx="60" cy="60" r="52" fill="none" stroke="#ffc20e" stroke-width="11" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7" style="transition:stroke-dashoffset .7s"/></svg>
               <div class="n"><div><b id="bat">–</b><small id="batsub">batería</small></div></div>
             </div>
-            <div class="status"><b id="state">—</b><span id="detail">—</span></div>
+            <div class="status"><small id="statelbl">próximo corte</small><b id="state">—</b><span id="detail">—</span></div>
           </div>
           <div class="facts" id="facts"></div>
           <div class="actions">
@@ -302,27 +329,13 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
         <div id="alerts"></div>
       </div>
       <div class="stack">
-        <div class="card next">
-          <h2>Próximo corte</h2>
-          <div class="big" id="nextbig">—</div><div class="muted" id="nextsub"></div>
-        </div>
-        <div class="card">
-          <h2>Más órdenes</h2>
-          <h3>Cortar ahora durante…</h3>
+        <!-- solo lo del día a día; el horario y las gráficas van en sus pestañas -->
+        <div class="card quick">
+          <h2>Órdenes rápidas</h2>
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 20h18"/><path d="M6 20c0-4 1-7 3-9M12 20c0-5 0-8 1-11M18 20c0-4-1-6-3-8"/></svg>Cortar ahora durante</h3>
           <div class="chips"><button class="chip" data-mow="1">1 h</button><button class="chip" data-mow="2">2 h</button><button class="chip" data-mow="3">3 h</button><button class="chip" data-mow="5">5 h</button><button class="chip" data-mow="8">8 h</button></div>
-          <h3>Aparcar en la base…</h3>
-          <div class="chips"><button class="chip" data-btn="aparcar_hasta_el_proximo_turno">Hasta el próximo turno</button><button class="chip" data-park="3">3 h</button><button class="chip" data-park="12">12 h</button><button class="chip" data-park="24">24 h</button><button class="chip" data-btn="aparcar_hasta_nuevo_aviso">Hasta nuevo aviso</button></div>
-          <h3>Programación</h3>
-          <div class="chips"><button class="chip" data-btn="volver_a_la_programacion">Volver a la programación</button><button class="chip" data-go="horario">Editar horario</button></div>
-        </div>
-        <div class="card">
-          <h2>Actividad · últimas 24 h</h2>
-          <div class="tl" id="tl"></div><div class="tlh"><span>-24 h</span><span>-18</span><span>-12</span><span>-6</span><span>ahora</span></div>
-          <div class="legend" id="legend"></div>
-        </div>
-        <div class="card">
-          <h2>Batería · últimas 24 h <span class="muted" id="sparkinfo"></span></h2>
-          <svg class="spark" id="spark" viewBox="0 0 300 90" preserveAspectRatio="none"></svg>
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Aparcar en la base</h3>
+          <div class="chips"><button class="chip" data-park="3">3 h</button><button class="chip" data-park="12">12 h</button><button class="chip" data-park="24">24 h</button><button class="chip" data-btn="aparcar_hasta_el_proximo_turno">Hasta el próximo turno</button><button class="chip" data-btn="aparcar_hasta_nuevo_aviso">Hasta nuevo aviso</button></div>
         </div>
       </div>
     </div>
@@ -334,6 +347,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
       <div class="card">
         <h2>Semana <span class="muted" id="weekhours"></span></h2>
         <div id="week"></div>
+        <div class="chips" style="margin-top:14px"><button class="chip wide" data-btn="volver_a_la_programacion">Volver a la programación (si lo aparcaste o mandaste cortar)</button></div>
       </div>
       <div class="card">
         <h2>Editar horario <span class="dirty" id="dirty" hidden>sin guardar</span></h2>
@@ -356,6 +370,19 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
   <section class="view" id="v-datos">
     <div class="cols">
       <div class="stack">
+        <div class="card">
+          <h2>Actividad · últimas 24 h</h2>
+          <div class="tl" id="tl"></div><div class="tlh"><span>-24 h</span><span>-18</span><span>-12</span><span>-6</span><span>ahora</span></div>
+          <div class="legend" id="legend"></div>
+        </div>
+        <div class="card">
+          <h2>Batería · últimas 24 h <span class="muted" id="sparkinfo"></span></h2>
+          <svg class="spark" id="spark" viewBox="0 0 300 90" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="card">
+          <h2>Cortado por día · 7 días <span class="muted" id="weekmowtot"></span></h2>
+          <div class="wbars" id="wbars"></div>
+        </div>
         <div class="card"><h2>Ahora mismo</h2><dl class="kv" id="sensors"></dl></div>
         <div class="card"><h2>Uso acumulado</h2><div class="grid2" id="stats"></div></div>
       </div>
@@ -516,8 +543,6 @@ function render(){
   $('#ringfg').style.strokeDashoffset = 326.7 * (1 - (isNaN(bat) ? 0 : bat) / 100);
   $('#ringfg').style.stroke = bat < 20 ? '#ff6b5b' : '#ffc20e';
   const s = val('sensor','estado'), a = val('sensor','actividad'), m = val('sensor','modo');
-  $('#state').textContent = a && a !== 'none' ? (ACTIVITY[a] || a) : (STATE[s] || s || '—');
-  $('#detail').textContent = [a && a !== 'none' && STATE[s] ? STATE[s] : null, MODE[m] ? 'modo ' + MODE[m] : null].filter(Boolean).join(' · ') || '—';
   const offline = !st('lawn_mower') || st('lawn_mower').state === 'unavailable';
   const flags = {battery: bat, activity: a, state: s, charging, offline,
     lifted: on('binary_sensor','levantado'), upsideDown: on('binary_sensor','volcado'), collision: on('binary_sensor','choque'),
@@ -535,19 +560,33 @@ function render(){
   $('#alerts').innerHTML = al.join('');
 
   const tasks = st('sensor','programacion_tareas')?.attributes?.tareas || [];
+  // junto a la batería: lo que va a pasar (el estado ya lo dice la etiqueta de la foto)
   const run = runningNow(tasks), nx = nextRun(tasks);
-  if (run) { $('#nextbig').textContent = 'Ahora, en su franja'; $('#nextsub').textContent = `de ${hm(run.start_time_in_minutes)} a ${hm(run.start_time_in_minutes + run.duration_in_minutes)}`; }
-  else if (nx) { $('#nextbig').textContent = (nx.k === 0 ? 'Hoy' : nx.k === 1 ? 'Mañana' : DLONG[nx.d][0].toUpperCase() + DLONG[nx.d].slice(1)) + ' a las ' + hm(nx.m); $('#nextsub').textContent = 'según la programación del robot'; }
-  else { $('#nextbig').textContent = 'Sin programar'; $('#nextsub').textContent = 'Crea un horario en la pestaña Horario'; }
-
-  const temp = val('sensor','temperatura_interna_crudo'), sig = val('sensor','calidad_senal_del_cable');
-  const week = tasks.reduce((acc, t) => acc + t.duration_in_minutes * DAYS.filter(d => t['on_' + d]).length, 0);
-  $('#facts').innerHTML = `<div><b>${sig != null ? sig + ' %' : '–'}</b><small>señal del cable</small></div><div><b>${temp != null ? (temp / 10).toFixed(0) + ' °C' : '–'}</b><small>temperatura</small></div><div><b>${tasks.length ? Math.round(week / 60) + ' h' : '–'}</b><small>programadas/semana</small></div>`;
+  const mowingNow = ['mowing', 'going_out'].includes(a);
+  if (mowingNow && run) { $('#statelbl').textContent = 'cortando'; $('#state').textContent = 'Hasta las ' + hm(run.start_time_in_minutes + run.duration_in_minutes); }
+  else if (run) { $('#statelbl').textContent = 'franja de ahora'; $('#state').textContent = `${hm(run.start_time_in_minutes)}–${hm(run.start_time_in_minutes + run.duration_in_minutes)}`; }
+  else if (nx) { $('#statelbl').textContent = 'próximo corte'; $('#state').textContent = (nx.k === 0 ? 'Hoy' : nx.k === 1 ? 'Mañana' : DLONG[nx.d][0].toUpperCase() + DLONG[nx.d].slice(1)) + ' ' + hm(nx.m); }
+  else { $('#statelbl').textContent = 'próximo corte'; $('#state').textContent = 'Sin horario'; }
+  $('#detail').textContent = [MODE[m] ? 'modo ' + MODE[m] : null, charging ? 'cargando' : null].filter(Boolean).join(' · ') || ' ';
+  weekMin = tasks.reduce((acc, t) => acc + t.duration_in_minutes * DAYS.filter(d => t['on_' + d]).length, 0);
+  renderFacts();
   renderWeek(tasks);
   if (!editing) loadEditor(tasks);
   renderDatos(); renderRobot();
   const upd = st('sensor','bateria')?.last_updated;
   $('#foot').textContent = 'Bluetooth → ESP32 → Home Assistant' + (upd ? ' · última lectura ' + ago(upd) : '');
+}
+
+// tres datos útiles bajo la batería; los que no tienen valor no se muestran
+let mowed24 = null, weekMin = 0;
+function renderFacts(){
+  const blades = Number(val('sensor','uso_de_las_cuchillas'));
+  const f = [
+    mowed24 != null ? [(mowed24 / 36e5).toFixed(1) + ' h', 'cortado 24 h'] : null,
+    weekMin ? [Math.round(weekMin / 60) + ' h', 'por semana'] : null,
+    !isNaN(blades) && val('sensor','uso_de_las_cuchillas') != null ? [Math.round(blades) + ' h', 'cuchillas'] : null,
+  ].filter(Boolean);
+  $('#facts').innerHTML = f.map(([b, s]) => `<div><b>${esc(b)}</b><small>${s}</small></div>`).join('');
 }
 
 /* ---------- horario ---------- */
@@ -633,7 +672,8 @@ function renderDatos(){
     + row('Temperatura interna', temp != null ? (Number(temp) / 10).toFixed(1) + ' °C (estimada)' : null)
     + row('Levantado', yn('levantado')) + row('Choque ahora', yn('choque')) + row('Volcado', yn('volcado'))
     + row('Orden manual', val('sensor','orden_manual'));
-  const stat = (v, l) => `<div class="stat"><b>${v}</b><small>${l}</small></div>`;
+  // casillas sin dato (el robot no lo da) no se pintan
+  const stat = (v, l) => (v == null || v === '–' || v === '') ? '' : `<div class="stat"><b>${v}</b><small>${l}</small></div>`;
   const num = k => Number(val('sensor', k) || 0).toLocaleString('es-ES');
   const cut = Number(val('sensor','tiempo_total_cortando')), cycles = Number(val('sensor','ciclos_de_carga'));
   $('#stats').innerHTML = stat(fmtH(val('sensor','tiempo_total_cortando')),'cortando') + stat(fmtH(val('sensor','tiempo_total_en_marcha')),'en marcha')
@@ -671,13 +711,31 @@ async function loadActivity(){
     const t0 = Date.now() - 864e5;
     if (!pts.length) { $('#tl').innerHTML = ''; $('#legend').textContent = 'Aún no hay historial.'; return; }
     const segs = pts.map((p, i) => ({v: p.v, a: Math.max(p.t, t0), b: i + 1 < pts.length ? pts[i + 1].t : Date.now()})).filter(x => x.b > t0);
-    $('#tl').innerHTML = segs.map(x => `<b style="width:${(x.b - x.a) / 864e5 * 100}%;background:${ACOL[x.v] || '#5b6064'}" title="${ACTIVITY[x.v] || x.v}"></b>`).join('');
+    $('#tl').innerHTML = segs.map(x => `<b style="width:${(x.b - x.a) / 864e5 * 100}%;background:${ACOL[x.v] || '#5b6064'}" title="${esc(ACTIVITY[x.v] || x.v)}"></b>`).join('');
     const tot = {}; segs.forEach(x => tot[x.v] = (tot[x.v] || 0) + (x.b - x.a));
-    $('#legend').innerHTML = Object.entries(tot).sort((a, b) => b[1] - a[1]).map(([k, ms]) => `<span><i style="background:${ACOL[k] || '#5b6064'}"></i>${ACTIVITY[k] || k} ${(ms / 36e5).toFixed(1)} h</span>`).join('');
+    $('#legend').innerHTML = Object.entries(tot).sort((a, b) => b[1] - a[1]).map(([k, ms]) => `<span><i style="background:${ACOL[k] || '#5b6064'}"></i>${esc(ACTIVITY[k] || k)} ${(ms / 36e5).toFixed(1)} h</span>`).join('');
+    mowed24 = tot.mowing || 0; renderFacts();
+  } catch(e) {}
+}
+// horas cortadas cada día de los últimos 7 (días naturales, hora local)
+async function loadWeekMow(){
+  if (locked) return;
+  try {
+    const pts = (await (await api('api/historial?e=actividad&d=7')).json()).map(p => ({t: new Date(p.t).getTime(), v: p.v})).filter(p => p.v && p.v !== 'unknown');
+    const days = [];
+    for (let k = 6; k >= 0; k--) { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - k); days.push({a: d.getTime(), b: d.getTime() + 864e5, ms: 0, dow: (d.getDay() + 6) % 7, today: k === 0}); }
+    pts.forEach((p, i) => {
+      if (p.v !== 'mowing') return;
+      const a = p.t, b = i + 1 < pts.length ? pts[i + 1].t : Date.now();
+      days.forEach(d => { d.ms += Math.max(0, Math.min(b, d.b) - Math.max(a, d.a)); });
+    });
+    const max = Math.max(36e5, ...days.map(d => d.ms)), tot = days.reduce((s, d) => s + d.ms, 0);
+    $('#wbars').innerHTML = days.map(d => `<div class="${d.today ? 'today' : ''}" title="${(d.ms / 36e5).toFixed(1)} h"><b>${d.ms >= 6e5 ? (d.ms / 36e5).toFixed(1) : ''}</b><i style="height:${Math.round(d.ms / max * 110)}px"></i><span>${d.today ? 'hoy' : 'LMXJVSD'[d.dow]}</span></div>`).join('');
+    $('#weekmowtot').textContent = (tot / 36e5).toFixed(1) + ' h en total';
   } catch(e) {}
 }
 async function loadHistory(){
-  loadActivity();
+  loadActivity(); loadWeekMow();
   if (locked) return;
   try {
     const pts = (await (await api('api/historial')).json()).map(p => ({t: new Date(p.t).getTime(), v: Number(p.v)})).filter(p => !isNaN(p.v));
@@ -715,7 +773,8 @@ setInterval(loadHistory, 10 * 60 * 1000);
 (() => {
   const stage = document.getElementById('stage'), fx = document.getElementById('fx'), pill = document.getElementById('sstate');
   // recortes de hierba: salen por detrás del robot (a la derecha, el morro mira a la izquierda)
-  for (let i = 0; i < 18; i++) { const b = document.createElement('b'); b.style.left = (54 + Math.random() * 16) + '%'; b.style.setProperty('--dx', (20 + Math.random() * 70) + 'px'); b.style.setProperty('--dy', -(30 + Math.random() * 60) + 'px'); b.style.animationDelay = (Math.random() * 1) + 's'; fx.appendChild(b); }
+  // posiciones relativas al robot: salen de su parte trasera (derecha de la foto) y giran con él
+  for (let i = 0; i < 18; i++) { const b = document.createElement('b'); b.style.left = (70 + Math.random() * 20) + '%'; b.style.setProperty('--dx', (20 + Math.random() * 70) + 'px'); b.style.setProperty('--dy', -(30 + Math.random() * 60) + 'px'); b.style.animationDelay = (Math.random() * 1) + 's'; fx.appendChild(b); }
   // hierba en primer plano para dar profundidad
   let blades = '';
   for (let i = 0; i < 70; i++) {

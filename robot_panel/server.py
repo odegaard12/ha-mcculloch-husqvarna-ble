@@ -46,6 +46,16 @@ def load_env() -> None:
                 os.environ.setdefault(k.strip(), v.strip().strip('"'))
 
 
+# El panel no carga nada de fuera: todo «solo de este sitio». frame-ancestors 'self' deja que HA lo
+# muestre en su barra lateral (el ingress es el mismo origen) pero no que otra web lo meta en un iframe.
+SECURITY_HEADERS = {
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
+                               "img-src 'self' data:; connect-src 'self'; frame-ancestors 'self'; base-uri 'none'; form-action 'self'",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+}
+
 COOKIE = "rob_sesion"
 SESSION_DAYS = 180
 MAX_FAILS, FAIL_WINDOW = 5, 300  # 5 PIN fallidos en 5 min bloquean esa IP 5 min
@@ -85,7 +95,7 @@ def make_app() -> web.Application:
 
     @web.middleware
     async def auth(req, handler):
-        if req.path.startswith("/api/") and req.path not in ("/api/login", "/api/sesion") and not session_ok(req):
+        if req.path.startswith("/api/") and req.path not in ("/api/login", "/api/sesion", "/api/salud") and not session_ok(req):
             return web.json_response({"error": "pin"}, status=401)
         return await handler(req)
 
@@ -148,6 +158,17 @@ def make_app() -> web.Application:
         except (ClientError, TimeoutError) as e:
             return unreachable(e)
         return web.json_response([s for s in data if s["entity_id"].split(".", 1)[1].startswith(PREFIX)])
+
+    async def salud(req):
+        """Para el despliegue y la vigilancia: ¿sirve y llega a HA? Sin PIN y sin datos del robot."""
+        ha_ok = False
+        if token:
+            try:
+                async with req.app["http"].get(f"{ha}/api/", timeout=ClientTimeout(total=5)) as r:
+                    ha_ok = r.status == 200
+            except (ClientError, TimeoutError):
+                pass
+        return web.json_response({"ok": True, "ha": ha_ok}, status=200 if ha_ok else 503)
 
     def unreachable(e: Exception):
         return web.json_response({"error": f"No llego a Home Assistant: {type(e).__name__}"}, status=502)
@@ -226,7 +247,11 @@ def make_app() -> web.Application:
     async def historial(req):
         if not token:
             return no_token()
-        start = (datetime.now(UTC) - timedelta(hours=24)).isoformat()
+        try:  # ?d=7 para la semana; acotado para no pedir a HA meses de historial
+            days = min(7, max(1, int(req.query.get("d", "1"))))
+        except ValueError:
+            days = 1
+        start = (datetime.now(UTC) - timedelta(days=days)).isoformat()
         entity = f"sensor.{PREFIX}_" + ("actividad" if req.query.get("e") == "actividad" else "bateria")
         url = f"{ha}/api/history/period/{start}"
         params = {"filter_entity_id": entity, "minimal_response": "", "no_attributes": ""}
@@ -244,6 +269,7 @@ def make_app() -> web.Application:
         resp = await handler(req)
         if not req.path.startswith("/api/"):
             resp.headers["Cache-Control"] = "no-cache"
+        resp.headers.update(SECURITY_HEADERS)
         return resp
 
     app = web.Application(middlewares=[no_cache, auth])
@@ -254,6 +280,7 @@ def make_app() -> web.Application:
     app.on_cleanup.append(on_cleanup)
     app.router.add_get("/", index)
     app.router.add_get("/api/estado", estado)
+    app.router.add_get("/api/salud", salud)
     app.router.add_post("/api/servicio", servicio)
     app.router.add_get("/api/historial", historial)
     app.router.add_post("/api/programacion", programacion)
