@@ -9,10 +9,15 @@ from pathlib import Path
 
 from PIL import Image, ImageChops
 
+import sys
+
 HERE = Path(__file__).resolve().parent
-SRC = HERE / "out"
-DST = HERE.parents[1] / "ha_app" / "robot" / "rob3d"
-CARD = HERE.parents[1] / "custom_components" / "mcculloch_rob" / "www" / "rob3d"
+# uso: to_web.py [origen] [destino]   (sin argumentos: out -> panel y copia para la tarjeta)
+#   con nombre (uso propio):  to_web.py tools/blender/out_marca ha_app/robot/rob3d
+#   sin nombre (repo/tarjeta): to_web.py tools/blender/out custom_components/mcculloch_rob/www/rob3d
+SRC = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else HERE / "out"
+DST = Path(sys.argv[2]).resolve() if len(sys.argv) > 2 else HERE.parents[1] / "ha_app" / "robot" / "rob3d"
+CARD = None if len(sys.argv) > 2 else HERE.parents[1] / "custom_components" / "mcculloch_rob" / "www" / "rob3d"
 WIDTH = 520  # px del recorte final (suficiente para pantallas 2x en el panel)
 
 files = sorted(SRC.glob("turn_*.png")) + ([SRC / "base_side.png"] if (SRC / "base_side.png").exists() else [])
@@ -48,7 +53,19 @@ for name, im in ims.items():
     out = DST / name.replace(".png", ".webp")
     c.save(out, "WEBP", quality=82, method=4)  # method=6 tarda ~17 s por imagen y apenas ahorra
     total += out.stat().st_size
-if CARD.parent.exists():
+# dónde está el LED verde de la base (en % de la imagen): la web pone ahí un piloto que parpadea al cargar
+base_web = DST / "base_side.webp"
+if base_web.exists():
+    import json
+    im = Image.open(base_web).convert("RGBA")
+    pts = [(x, y) for y in range(im.height) for x in range(im.width)
+           if (lambda p: p[3] > 128 and p[1] > 120 and p[1] > p[0] * 1.6 and p[1] > p[2] * 1.4)(im.getpixel((x, y)))]
+    if pts:
+        cx = sum(p[0] for p in pts) / len(pts) / im.width * 100
+        cy = sum(p[1] for p in pts) / len(pts) / im.height * 100
+        (DST / "meta.json").write_text(json.dumps({"led": [round(cx, 1), round(cy, 1)]}))
+        print("LED en", round(cx, 1), round(cy, 1))
+if CARD is not None and CARD.parent.exists():
     shutil.rmtree(CARD, ignore_errors=True)
     shutil.copytree(DST, CARD)
 print(f"ok: {len(ims)} imágenes, recorte {box}, {total // 1024} KB en total")

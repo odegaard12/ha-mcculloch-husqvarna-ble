@@ -240,13 +240,20 @@ details.all td:last-child{text-align:right;font-weight:560;overflow-wrap:anywher
 .stage.r3d.upside .bot{bottom:24%;z-index:5;width:min(68%,350px)}
 .stage.r3d.upside .bot img{filter:none}
 .stage.r3d .bot img{filter:drop-shadow(0 10px 12px rgba(0,0,0,.35))}
-.dock3d{position:absolute;left:50%;bottom:16%;width:min(58%,300px);transform:translateX(-50%);opacity:0;transition:opacity .6s;pointer-events:none}
-.stage.r3d.docked .dock3d,.stage.r3d.homing .dock3d,.stage.r3d.leaving .dock3d,.stage.r3d.charging .dock3d{opacity:1}
+.dockw{position:absolute;left:50%;bottom:16%;width:min(58%,300px);transform:translateX(-50%);opacity:0;transition:opacity .6s;pointer-events:none}
+.dock3d{display:block;width:100%}
+.stage.r3d.docked .dockw,.stage.r3d.homing .dockw,.stage.r3d.leaving .dockw,.stage.r3d.charging .dockw{opacity:1}
+/* piloto de la base: fijo en la base, parpadea mientras carga */
+.led{position:absolute;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:#46e07a;box-shadow:0 0 8px 3px rgba(70,224,122,.75);opacity:0;transition:opacity .4s}
+.stage.r3d.docked .led{opacity:.9}
+.stage.r3d.charging .led{opacity:1;animation:ledblink 1.3s ease-in-out infinite}
+@keyframes ledblink{50%{opacity:.15}}
 .stage.r3d.docked .bot,.stage.r3d.charging .bot{left:50%;bottom:17%;width:min(58%,300px)}
 .stage.r3d.docked .body3d{transform:none}
 .stage.r3d.homing .bot,.stage.r3d.leaving .bot{bottom:16.5%;width:min(58%,300px)}
-.stage.r3d.homing .bot{animation:home3d 6s ease-in-out infinite}
-.stage.r3d.leaving .bot{animation:leave3d 6s ease-in-out infinite}
+/* llegar: entra rodando y frena suave sobre la placa; salir: arranca marcha atrás y acelera */
+.stage.r3d.homing .bot{animation:home3d 6s cubic-bezier(.3,.1,.25,1) infinite}
+.stage.r3d.leaving .bot{animation:leave3d 6s cubic-bezier(.5,0,.7,.9) infinite}
 @keyframes home3d{0%{left:95%;opacity:0}12%{opacity:1}80%,100%{left:50%;opacity:1}}
 @keyframes leave3d{0%,15%{left:50%;opacity:1}88%{opacity:1}100%{left:95%;opacity:0}}
 @keyframes bump{50%{transform:translateY(-1.5px) rotate(-.5deg)}}
@@ -322,7 +329,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
               <div class="ground"><div class="plane"></div></div>
               <div class="caption" id="caption"><span class="ic" id="capic"></span><span id="captxt"></span></div>
               <!-- base de carga renderizada en Blender: misma cámara y encuadre que el robot, así encaja debajo -->
-              <img class="dock3d" id="dock3d" alt="" draggable="false">
+              <div class="dockw"><img class="dock3d" id="dock3d" alt="" draggable="false"><i class="led" id="led"></i></div>
               <div class="bot">
                 <div class="shadow"></div>
                 <!-- body3d gira en 3D (vueltas al cortar, vuelco...); la estela y los recortes van dentro para salir siempre por detrás -->
@@ -881,7 +888,15 @@ setInterval(loadHistory, 10 * 60 * 1000);
     b3.classList.toggle('back', f > 6 && f < 18);  // de espaldas: estela y recortes al otro lado
   };
   Promise.all(FR.map(src => new Promise((ok, ko) => { const i = new Image(); i.onload = ok; i.onerror = ko; i.src = src; })))
-    .then(() => { r3d = true; imgEl.onerror = null; stage.classList.add('r3d'); document.getElementById('dock3d').src = 'static/rob3d/base_side.webp?v=1'; showFrame(0); })
+    .then(() => {
+      r3d = true; imgEl.onerror = null; stage.classList.add('r3d'); showFrame(0);
+      document.getElementById('dock3d').src = 'static/rob3d/base_side.webp?v=2';
+      // posición del LED dentro de la imagen de la base (la calcula to_web.py)
+      fetch('static/rob3d/meta.json?v=2').then(r => r.json()).then(m => {
+        const led = document.getElementById('led');
+        if (m.led) { led.style.left = m.led[0] + '%'; led.style.top = m.led[1] + '%'; }
+      }).catch(() => {});
+    })
     .catch(() => {});  // sin renders: sigue la foto con el giro CSS
   const has = c => stage.classList.contains(c);
   function frame3d(){
