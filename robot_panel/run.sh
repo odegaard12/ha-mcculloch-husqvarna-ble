@@ -2,7 +2,9 @@
 # Como complemento, las opciones vienen en /data/options.json; en Docker suelto, por variables de entorno.
 if [ -f /data/options.json ]; then
   ROBOT_PREFIX=$(/usr/bin/python3 -c "import json; print(json.load(open('/data/options.json')).get('robot_prefix', 'robot_cortacesped'))")
-  export ROBOT_PREFIX
+  # más robots en la misma app, p. ej. landroid:Landroid:landroid (prefijo:nombre:tipo)
+  ROBOTS=$(/usr/bin/python3 -c "import json; print(json.load(open('/data/options.json')).get('robots') or '')")
+  export ROBOT_PREFIX ROBOTS
 fi
 # claves (sesión y avisos push) y suscripciones en /data: lo único que sobrevive a actualizar el complemento
 if [ -d /data ]; then

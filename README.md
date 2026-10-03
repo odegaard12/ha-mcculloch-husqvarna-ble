@@ -88,6 +88,24 @@ cd robot_panel && cp robot_app.env.example robot_app.env && python3 server.py
 
 El servidor guarda el token de HA y nunca lo envía al navegador. Además solo permite órdenes del robot, de una lista cerrada.
 
+### Varios robots en la misma app
+
+¿Tienes también un **Worx Landroid** (integración [Landroid Cloud](https://github.com/MTrab/landroid_cloud))? Añádelo con `ROBOTS` en `robot_app.env` (u opción `robots` del complemento):
+
+```
+ROBOTS=landroid:Landroid:landroid
+```
+
+Formato `prefijo:nombre:tipo`, separados por comas. El prefijo es el id de su `lawn_mower.xxx`, y el tipo es `mcculloch` o `landroid`. Arriba sale una barra con los robots, con su estado y su batería, para cambiar de uno a otro. Tocando **Mis robots** se abre una ficha de cada uno.
+
+Del Landroid se ven:
+- el estado y la batería;
+- el horario guardado, solo para consultar: se edita en la app de Worx;
+- la actividad de 24 h y de 7 días, el error, la lluvia, la señal Wi-Fi y el uso acumulado;
+- sus interruptores: modo fiesta, bloqueo, Off Limits y horario automático.
+
+Las órdenes Cortar, Pausa, A la base y Cortar solo los bordes también funcionan. Sin conexión se quedan sus últimos datos.
+
 ## Avisos al móvil
 
 **Desde la web app** (recomendado): en *Ajustes → Avisos en este móvil → Activar avisos*. El panel avisa por notificación push de avería, vuelco, robot levantado, parado en el jardín y 1 o 3 días sin conexión. No consulta nada periódicamente: se suscribe a los cambios de Home Assistant. Cada aviso sale como mucho una vez cada 6 h y nunca más de 6 al día. En iPhone hace falta iOS 16.4 o posterior y abrir la app desde el icono de la pantalla de inicio. Las claves VAPID se crean con `py_vapid` en `vapid_private.pem`, junto a `server.py`.

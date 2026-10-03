@@ -2,6 +2,20 @@
 
 Todas las versiones de la integración, la tarjeta y el panel web.
 
+## v0.3.2 · Varios robots en el panel: McCulloch y Worx Landroid
+
+#### Novedades
+- **Varios robots en la misma app**: barra arriba con cada robot (estado y batería) para cambiar de uno a otro, y ficha **Mis robots** al tocar el título. Recuerda el último que viste.
+- **Worx Landroid** (integración Landroid Cloud):
+  - estado, batería y horario guardado (solo para consultar);
+  - actividad de 24 h y de 7 días, error, lluvia, señal Wi-Fi y uso acumulado;
+  - sus interruptores y las órdenes Cortar, Pausa, A la base y Cortar solo los bordes.
+- Opción nueva `ROBOTS` (`prefijo:nombre:tipo`), también en el complemento como `robots`.
+
+#### Correcciones
+- Sin dato de batería, el panel mostraba «0 %»; ahora muestra «–».
+- Los interruptores quedan desactivados mientras el robot no está conectado.
+
 ## v0.3.1 · Vuelta al diseño anterior del robot
 
 #### Cambios

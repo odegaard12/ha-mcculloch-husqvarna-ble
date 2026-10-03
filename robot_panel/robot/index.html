@@ -40,6 +40,35 @@ header.top h1{font-size:18px;margin:0;font-weight:750;flex:1}
 .live{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:5px 10px;border-radius:99px;background:var(--ok-soft);color:var(--ok);font-weight:650}
 .live i{width:7px;height:7px;border-radius:50%;background:currentColor}
 .live.off{background:var(--warn-soft);color:var(--warn)}
+/* varios robots: el nombre de arriba abre «Mis robots» y la barra cambia de uno a otro */
+.pick{flex:1;display:flex;align-items:center;gap:6px;border:0;background:none;padding:4px 0;cursor:pointer;text-align:left;min-width:0}
+.pick h1{font-size:18px;margin:0;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pick .cnt{font-size:12px;font-weight:700;padding:3px 8px;border-radius:99px;background:var(--brand-soft);color:var(--ink);white-space:nowrap}
+.rbar{display:grid;grid-template-columns:repeat(var(--n,2),1fr);gap:6px;padding:4px;margin:0 0 12px;border-radius:16px;background:var(--card);border:1px solid var(--line)}
+.rbar[hidden]{display:none}
+.rbar button{display:flex;align-items:center;gap:8px;border:0;background:none;border-radius:12px;padding:8px 10px;cursor:pointer;min-width:0;min-height:44px}
+.rbar button.on{background:var(--brand);color:var(--brand-ink)}
+.rbar b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rbar small{margin-left:auto;font-size:12px;font-weight:650;opacity:.75;white-space:nowrap}
+.dotc{width:9px;height:9px;border-radius:50%;flex:none;background:var(--c,#8a8f92);box-shadow:0 0 0 2px rgba(255,255,255,.5)}
+.sheet{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
+.sheet[hidden]{display:none}
+.sheet .panel{background:var(--bg);width:100%;max-width:560px;border-radius:24px 24px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom));max-height:85vh;overflow:auto;animation:up .22s ease-out}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+.sheet h2{margin:4px 4px 12px;font-size:18px;display:flex;align-items:center}
+.sheet h2 button{margin-left:auto;border:0;background:var(--card);border-radius:99px;width:36px;height:36px;cursor:pointer;font-size:18px}
+.rcard{display:flex;gap:12px;align-items:center;width:100%;text-align:left;border:1px solid var(--line);background:var(--card);border-radius:20px;padding:12px;cursor:pointer}
+.rcard + .rcard{margin-top:10px}
+.rcard.on{border-color:var(--brand);box-shadow:0 0 0 2px var(--brand) inset}
+.rcard img{width:76px;height:56px;object-fit:contain;flex:none}
+.rcard .tx{flex:1;min-width:0}
+.rcard .tx b{display:block;font-size:16px}
+.rcard .tx small{display:block;color:var(--muted);font-size:13px}
+.rcard .st{display:flex;align-items:center;gap:6px;font-weight:650;font-size:14px;margin-top:4px}
+.rcard .bt{font-size:20px;font-weight:800;white-space:nowrap}
+/* el Landroid usa el mismo modelo 3D teñido a su naranja; lo que solo tiene el McCulloch se esconde */
+body[data-kind="landroid"] .tilt img,body[data-kind="landroid"] .dock3d,.rcard img.ld{filter:hue-rotate(-24deg) saturate(1.35)}
+body[data-kind="landroid"] .mc-only,body:not([data-kind="landroid"]) .ld-only{display:none!important}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;justify-content:center;background:var(--nav);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
 nav.tabs .in{display:grid;grid-template-columns:repeat(4,1fr);width:100%;max-width:520px;gap:4px}
 nav.tabs button{border:0;background:none;border-radius:14px;padding:6px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;color:var(--muted);cursor:pointer}
@@ -308,9 +337,11 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
 <div class="app">
   <header class="top">
     <img src="static/icon-192.png?v=6" alt="">
-    <h1>Mi robot</h1>
+    <button class="pick" id="pick" aria-label="Mis robots"><h1 id="rname">Mi robot</h1><span class="cnt" id="rcnt" hidden></span></button>
     <span class="live off" id="live"><i></i><span>conectando</span></span>
   </header>
+  <div class="rbar" id="rbar" hidden></div>
+  <div class="sheet" id="sheet" hidden><div class="panel" role="dialog" aria-label="Mis robots"><h2>Mis robots<button id="sheetx" aria-label="Cerrar">✕</button></h2><div id="rlist"></div></div></div>
 
   <nav class="tabs" aria-label="Secciones"><div class="in">
     <button data-v="inicio" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Inicio</button>
@@ -362,7 +393,12 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
       </div>
       <div class="stack">
         <!-- solo lo del día a día; el horario y las gráficas van en sus pestañas -->
-        <div class="card quick">
+        <div class="card quick ld-only">
+          <h2>Órdenes rápidas</h2>
+          <div class="chips"><button class="chip" data-btn="corte_de_bordes">Cortar solo los bordes</button></div>
+          <p class="muted" style="font-size:13px;margin:12px 0 0">El Landroid va por Wi-Fi y la nube de Worx: si el robot no tiene cobertura, verás sus últimos datos.</p>
+        </div>
+        <div class="card quick mc-only">
           <h2>Órdenes rápidas</h2>
           <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 20h18"/><path d="M6 20c0-4 1-7 3-9M12 20c0-5 0-8 1-11M18 20c0-4-1-6-3-8"/></svg>Cortar ahora durante</h3>
           <div class="chips"><button class="chip" data-mow="1">1 h</button><button class="chip" data-mow="2">2 h</button><button class="chip" data-mow="3">3 h</button><button class="chip" data-mow="5">5 h</button><button class="chip" data-mow="8">8 h</button></div>
@@ -379,9 +415,13 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
       <div class="card">
         <h2>Semana <span class="muted" id="weekhours"></span></h2>
         <div id="week"></div>
-        <div class="chips" style="margin-top:14px"><button class="chip wide" data-btn="volver_a_la_programacion">Volver a la programación</button></div>
+        <div class="chips mc-only" style="margin-top:14px"><button class="chip wide" data-btn="volver_a_la_programacion">Volver a la programación</button></div>
       </div>
-      <div class="card">
+      <div class="card ld-only">
+        <h2>Editar horario</h2>
+        <p class="muted" style="margin:0">El horario del Landroid se cambia desde la app de Worx; aquí se ve tal como lo tiene guardado.</p>
+      </div>
+      <div class="card mc-only">
         <h2>Editar horario <span class="dirty" id="dirty" hidden>sin guardar</span></h2>
         <h3>Plantillas</h3>
         <div class="chips" id="templates"></div>
@@ -432,11 +472,11 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
         <div class="card"><h2>Ajustes del robot</h2><div id="toggles"></div></div>
         <div class="card">
           <h2>Avisos en este móvil</h2>
-          <p class="muted" style="margin:0 0 12px;font-size:14px">Te avisa si el robot tiene una avería, se vuelca, se queda levantado o parado, o lleva días sin conexión.</p>
+          <p class="muted" style="margin:0 0 12px;font-size:14px">Te avisa si el robot tiene una avería, se vuelca, se queda levantado o parado, o lleva días sin conexión.<span class="ld-only"> Por ahora solo vigila al McCulloch.</span></p>
           <div id="pushbox" class="chips"></div>
           <div id="pushmsg" class="muted" style="font-size:13px;margin-top:10px"></div>
         </div>
-        <div class="card"><h2>Mantenimiento</h2><div class="chips"><button class="chip" data-btn="poner_en_hora">Poner el reloj en hora</button></div></div>
+        <div class="card mc-only"><h2>Mantenimiento</h2><div class="chips"><button class="chip" data-btn="poner_en_hora">Poner el reloj en hora</button></div></div>
         <div class="card" id="installcard">
           <h2>App</h2>
           <p class="muted" id="installtxt" style="margin:0 0 12px">Añádela a la pantalla de inicio para abrirla como una app.</p>
@@ -452,13 +492,18 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
 <div class="toast" id="toast"></div>
 
 <script>
-const P = 'robot_cortacesped';
+// robot que se está viendo: P es el prefijo de sus entidades; la lista sale de /api/robots
+let P = 'robot_cortacesped', KIND = 'mcculloch', ROBOTS = [{id: P, name: 'Mi robot', kind: 'mcculloch'}];
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const STATE = {off:'Apagado',wait_for_safetypin:'Esperando PIN',stopped:'Parado',fatal_error:'Error grave',pending_start:'Arrancando',paused:'En pausa',in_operation:'Trabajando',restricted:'En espera',error:'Error'};
-const ACTIVITY = {none:'Sin actividad',charging:'Cargando',going_out:'Saliendo de la base',mowing:'Cortando el césped',going_home:'Volviendo a la base',parked:'Aparcado en la base',stopped_in_garden:'Parado en el jardín'};
+const ACTIVITY = {none:'Sin actividad',charging:'Cargando',going_out:'Saliendo de la base',mowing:'Cortando el césped',going_home:'Volviendo a la base',parked:'Aparcado en la base',stopped_in_garden:'Parado en el jardín',
+  // estados del cortacésped del Landroid (su historial de actividad sale de ahí)
+  docked:'En la base',returning:'Volviendo a la base',paused:'En pausa',edgecut:'Cortando bordes',error:'Error',unavailable:'Sin conexión'};
 const MODE = {auto:'automático',manual:'manual',home:'aparcado siempre',demo:'demo',poi:'punto de interés'};
-const ERR = {no_loop_signal:'Sin señal del cable',outside_working_area:'Fuera de la zona de trabajo',wrong_loop_signal:'Señal del cable incorrecta',trapped:'Atrapado',lifted:'Levantado',upside_down:'Volcado',low_battery:'Batería baja',empty_battery:'Batería vacía',stuck_in_charging_station:'Atascado en la base',collision_sensor_problem_front:'Sensor de choque delantero',collision_sensor_problem_rear:'Sensor de choque trasero',wheel_motor_blocked_left:'Rueda izquierda bloqueada',wheel_motor_blocked_right:'Rueda derecha bloqueada',cutting_system_blocked:'Cuchillas bloqueadas',mower_tilted:'Robot inclinado',no_drive:'No avanza',temporary_battery_problem:'Problema temporal de batería',alarm_mower_lifted:'Alarma: robot levantado',alarm_mower_switched_off:'Alarma: robot apagado',guide_1_not_found:'No encuentra el cable guía',charging_station_blocked:'Base bloqueada',ninguno:'Sin avisos'};
+const ERR = {no_loop_signal:'Sin señal del cable',outside_working_area:'Fuera de la zona de trabajo',wrong_loop_signal:'Señal del cable incorrecta',trapped:'Atrapado',lifted:'Levantado',upside_down:'Volcado',low_battery:'Batería baja',empty_battery:'Batería vacía',stuck_in_charging_station:'Atascado en la base',collision_sensor_problem_front:'Sensor de choque delantero',collision_sensor_problem_rear:'Sensor de choque trasero',wheel_motor_blocked_left:'Rueda izquierda bloqueada',wheel_motor_blocked_right:'Rueda derecha bloqueada',cutting_system_blocked:'Cuchillas bloqueadas',mower_tilted:'Robot inclinado',no_drive:'No avanza',temporary_battery_problem:'Problema temporal de batería',alarm_mower_lifted:'Alarma: robot levantado',alarm_mower_switched_off:'Alarma: robot apagado',guide_1_not_found:'No encuentra el cable guía',charging_station_blocked:'Base bloqueada',ninguno:'Sin avisos',
+  // códigos del Landroid
+  no_error:'Sin errores',wire_missing:'Falta el cable perimetral',outside_wire:'Fuera del cable perimetral',rain_delay:'Esperando por la lluvia',close_door_to_mow:'Cierra la tapa para cortar',close_door_to_go_home:'Cierra la tapa para volver',blade_motor_blocked:'Motor de las cuchillas bloqueado',wheel_motor_blocked:'Motor de una rueda bloqueado',trapped_timeout:'Atrapado demasiado tiempo',battery_low:'Batería baja',reverse_wire:'Cable perimetral al revés',charge_error:'Error de carga',timeout_finding_home:'No encuentra la base'};
 const errText = c => c ? (ERR[c] || c.replaceAll('_',' ').replace(/^./, x => x.toUpperCase())) : '—';
 const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'], DN = ['L','M','X','J','V','S','D'], DLONG = ['lunes','martes','miércoles','jueves','viernes','sábado','domingo'];
 const hm = m => { m = Math.round(m); return String(Math.floor(m / 60)).padStart(2,'0') + ':' + String(m % 60).padStart(2,'0'); };
@@ -538,7 +583,7 @@ function drawPins(){
 }
 async function tryPin(){
   const r = await fetch('api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({pin: pinBuf})});
-  if (r.ok) { locked = false; $('#lock').hidden = true; $('#msgpin').textContent = ''; poll(); loadHistory(); pushRender().catch(() => {}); return; }
+  if (r.ok) { locked = false; $('#lock').hidden = true; $('#msgpin').textContent = ''; loadRobots().then(() => { poll(); loadHistory(); }); pushRender().catch(() => {}); return; }
   const j = await r.json().catch(() => ({}));
   $('#msgpin').textContent = j.error || 'PIN incorrecto';
   $('#pins').classList.add('shake'); setTimeout(() => $('#pins').classList.remove('shake'), 400);
@@ -566,9 +611,7 @@ async function poll(){
     const j = await r.json();
     if (!r.ok) { setLive(false, 'sin datos'); $('#alerts').innerHTML = `<div class="alert warn">${esc(j.error || 'Home Assistant no responde')}</div>`; return; }
     states = {}; for (const x of j) states[x.entity_id] = x;
-    const lm = st('lawn_mower');
-    setLive(lm && lm.state !== 'unavailable', lm && lm.state === 'unavailable' ? 'fuera de alcance' : null);
-    render();
+    render(); renderRobots();
   } catch(e) { if (!locked) setLive(false); }
 }
 async function svc(domain, service, entity_id, label){
@@ -592,8 +635,62 @@ function show(v){
 }
 $('nav.tabs').onclick = e => { const b = e.target.closest('button'); if (b) show(b.dataset.v); };
 
+/* ---------- varios robots ---------- */
+const LMS = {mowing:'Cortando', edgecut:'Cortando bordes', returning:'Volviendo a la base', docked:'En la base', paused:'En pausa', error:'Error'};
+// resumen de cualquier robot (no solo el que se ve) para la barra y «Mis robots»
+function summary(r){
+  const g = (dom, key) => states[`${dom}.${r.id}${key ? '_' + key : ''}`];
+  const v = (dom, key) => { const s = g(dom, key); return s && !['unknown','unavailable'].includes(s.state) ? s.state : null; };
+  const lm = g('lawn_mower'), off = !lm || lm.state === 'unavailable';
+  let txt, col;
+  if (off) { txt = 'Sin conexión'; col = '#8a8f92'; }
+  else if (r.kind === 'landroid') { txt = LMS[lm.state] || lm.state; col = {mowing:'#47d35a', edgecut:'#47d35a', returning:'#47d35a', error:'#ff3b30'}[lm.state] || '#ffc20e'; }
+  else {
+    const a = v('sensor','actividad'), bad = v('binary_sensor','averia') === 'on';
+    txt = bad ? 'Avería' : ACTIVITY[a] || 'Parado';
+    col = bad ? '#ff3b30' : ['mowing','going_out','going_home'].includes(a) ? '#47d35a' : a === 'charging' ? '#3fa9ff' : '#ffc20e';
+  }
+  const seen = v('sensor', r.kind === 'landroid' ? 'ultima_actualizacion' : 'ultima_conexion');
+  return {txt, col, bat: v('sensor','bateria'), seen: off && seen && !isNaN(new Date(seen)) ? ago(seen) : null};
+}
+function renderRobots(){
+  const many = ROBOTS.length > 1;
+  $('#rname').textContent = many ? 'Mis robots' : 'Mi robot';
+  $('#rcnt').hidden = !many; $('#rcnt').textContent = ROBOTS.length + ' ▾';
+  $('#rbar').hidden = !many;
+  if (!many) return;
+  $('#rbar').style.setProperty('--n', ROBOTS.length);
+  $('#rbar').innerHTML = ROBOTS.map(r => { const s = summary(r); return `<button data-r="${esc(r.id)}" class="${r.id === P ? 'on' : ''}" aria-pressed="${r.id === P}"><span class="dotc" style="--c:${s.col}"></span><b>${esc(r.name)}</b><small>${s.bat != null ? esc(s.bat) + ' %' : '—'}</small></button>`; }).join('');
+  if (!$('#sheet').hidden) drawSheet();
+}
+function drawSheet(){
+  $('#rlist').innerHTML = ROBOTS.map(r => {
+    const s = summary(r), ld = r.kind === 'landroid';
+    return `<button class="rcard${r.id === P ? ' on' : ''}" data-r="${esc(r.id)}">
+      <img src="static/rob3d/turn_00.webp?v=1" class="${ld ? 'ld' : ''}" alt="" onerror="this.onerror=null;this.src='static/robot.webp?v=6'">
+      <span class="tx"><b>${esc(r.name)}</b><small>${ld ? 'Worx Landroid · Wi-Fi' : 'McCulloch ROB · Bluetooth'}</small>
+      <span class="st"><span class="dotc" style="--c:${s.col}"></span>${esc(s.txt)}${s.seen ? ' · ' + esc(s.seen) : ''}</span></span>
+      <span class="bt">${s.bat != null ? esc(s.bat) + '%' : '–'}</span></button>`;
+  }).join('');
+}
+function pickRobot(id){
+  const r = ROBOTS.find(x => x.id === id) || ROBOTS[0];
+  const changed = r.id !== P;
+  P = r.id; KIND = r.kind; document.body.dataset.kind = KIND;
+  try { localStorage.setItem('robot', P); } catch(e) {}
+  $('#sheet').hidden = true;
+  if (!changed) return renderRobots();
+  editing = false; mowed24 = null;
+  ['#tl','#wbars','#spark'].forEach(s => $(s).innerHTML = ''); $('#legend').textContent = ''; $('#weekmowtot').textContent = ''; $('#sparkinfo').textContent = '';
+  if (Object.keys(states).length) { render(); renderRobots(); }
+  loadHistory();
+}
+$('#pick').onclick = () => { if (ROBOTS.length > 1) { drawSheet(); $('#sheet').hidden = false; } };
+$('#sheetx').onclick = () => { $('#sheet').hidden = true; };
+$('#sheet').onclick = e => { if (e.target === e.currentTarget) $('#sheet').hidden = true; const b = e.target.closest('[data-r]'); if (b) pickRobot(b.dataset.r); };
+$('#rbar').onclick = e => { const b = e.target.closest('[data-r]'); if (b) pickRobot(b.dataset.r); };
+
 /* ---------- órdenes ---------- */
-const LM = `lawn_mower.${P}`;
 async function durante(accion, horas){
   document.querySelectorAll('.chip').forEach(b => b.disabled = true);
   toast('Hablando con el robot…');
@@ -606,6 +703,7 @@ async function durante(accion, horas){
 }
 document.querySelector('.actions').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
+  const LM = `lawn_mower.${P}`;
   ({start: () => svc('lawn_mower','start_mowing',LM,'Cortando'), pause: () => svc('lawn_mower','pause',LM,'En pausa'), dock: () => svc('lawn_mower','dock',LM,'Volviendo a la base')})[b.dataset.act]();
 };
 document.addEventListener('click', e => {
@@ -629,62 +727,96 @@ function runningNow(tasks){
   return tasks.find(t => t['on_' + DAYS[today]] && nowMin >= t.start_time_in_minutes && nowMin < t.start_time_in_minutes + t.duration_in_minutes);
 }
 
-function render(){
-  const bat = Number(val('sensor','bateria')), charging = on('binary_sensor','cargando');
-  $('#bat').textContent = isNaN(bat) ? '–' : bat + '%';
-  $('#batsub').textContent = charging ? 'cargando' : 'batería';
-  $('#ringfg').style.strokeDashoffset = 326.7 * (1 - (isNaN(bat) ? 0 : bat) / 100);
-  $('#ringfg').style.stroke = bat < 20 ? '#ff6b5b' : '#ffc20e';
+// McCulloch (Bluetooth): estado, avisos y horario tal como los da la integración propia
+// sin dato, NaN (Number(null) daría 0 % y parecería batería vacía)
+const num = (dom, key) => { const v = val(dom, key); return v == null ? NaN : Number(v); };
+function readMcCulloch(){
+  const bat = num('sensor','bateria'), charging = on('binary_sensor','cargando');
   const s = val('sensor','estado'), a = val('sensor','actividad'), m = val('sensor','modo');
   const offline = !st('lawn_mower') || st('lawn_mower').state === 'unavailable';
-  const flags = {battery: bat, activity: a, state: s, charging, offline,
+  const flags = {kind: 'mcculloch', battery: bat, activity: a, state: s, charging, offline,
     lifted: on('binary_sensor','levantado'), upsideDown: on('binary_sensor','volcado'), collision: on('binary_sensor','choque'),
     error: on('binary_sensor','averia') || s === 'error' || s === 'fatal_error', inBase: on('binary_sensor','en_la_base')};
   flags.errorText = errText(val('sensor','error'));
+  const cmin = Number(val('sensor','carga_restante'));
+  flags.chargeMin = cmin > 0 ? Math.round(cmin) : null;
 
   const al = [];
-  if (st('lawn_mower') && st('lawn_mower').state === 'unavailable') al.push(`<div class="alert warn">El robot no está al alcance del Bluetooth. Se reconecta solo al volver cerca del receptor.</div>`);
+  if (offline && st('lawn_mower')) al.push(`<div class="alert warn">El robot no está al alcance del Bluetooth. Se reconecta solo al volver cerca del receptor.</div>`);
   if (on('binary_sensor','averia')) al.push(`<div class="alert">⚠ ${esc(errText(val('sensor','error')))}</div>`);
   if (on('binary_sensor','levantado')) al.push(`<div class="alert warn">El robot está levantado.</div>`);
   if (on('binary_sensor','volcado')) al.push(`<div class="alert">El robot está volcado.</div>`);
   const clock = val('sensor','reloj_del_robot');
   if (clock) { const readAt = new Date(st('sensor','reloj_del_robot').last_updated); const dm = (readAt - new Date(clock)) / 60000; if (Math.abs(dm) > 5) al.push(`<div class="alert info"><span>El reloj del robot va ${Math.abs(Math.round(dm))} min ${dm > 0 ? 'atrasado' : 'adelantado'}.</span><button class="chip" data-btn="poner_en_hora">Ponerlo en hora</button></div>`); }
-  $('#alerts').innerHTML = al.join('');
+  return {flags, alerts: al, tasks: st('sensor','programacion_tareas')?.attributes?.tareas || [], seen: val('sensor','ultima_conexion'),
+    detail: [MODE[m] ? 'modo ' + MODE[m] : null, charging ? 'cargando' : null], foot: 'Bluetooth → ESP32 → Home Assistant'};
+}
+// Landroid (Wi-Fi + nube de Worx): no hay sensor de actividad, sale del estado del cortacésped y del código de error
+const ldTasks = () => (st('sensor','proximo_horario')?.attributes?.slots || [])
+  .filter(s => DAYS.includes(s.day) && (s.duration_extended || s.duration) > 0)
+  .map(s => ({start_time_in_minutes: toMin(s.start), duration_in_minutes: s.duration_extended || s.duration, ['on_' + s.day]: true}));
+function readLandroid(){
+  const lm = st('lawn_mower'), ls = lm?.state, offline = !lm || ls === 'unavailable';
+  const bat = num('sensor','bateria'), charging = on('binary_sensor','cargando');
+  const err = val('sensor','error'), rain = on('binary_sensor','sensor_de_lluvia') || err === 'rain_delay';
+  const errOn = !!err && !['no_error', 'unknown', 'rain_delay'].includes(err);
+  const activity = ['mowing', 'edgecut'].includes(ls) ? 'mowing' : ls === 'returning' ? 'going_home' : ls === 'docked' ? (charging ? 'charging' : 'parked') : null;
+  const flags = {kind: 'landroid', battery: bat, activity, state: ls === 'paused' ? 'paused' : null, charging, offline, rain,
+    lifted: err === 'lifted', upsideDown: err === 'upside_down', collision: false,
+    error: ls === 'error' || (errOn && !['lifted', 'upside_down'].includes(err)), inBase: ls === 'docked', errorText: errText(err)};
+  const seen = val('sensor','ultima_actualizacion');
+  const al = [];
+  if (offline) al.push(`<div class="alert warn">El Landroid no llega a la nube de Worx (sin Wi-Fi o apagado).${seen ? ` Datos de ${esc(ago(seen))}.` : ''}</div>`);
+  else if (errOn) al.push(`<div class="alert">⚠ ${esc(errText(err))}</div>`);
+  const wait = Number(val('sensor','retraso_por_lluvia_restante'));
+  if (!offline && rain) al.push(`<div class="alert info">Llueve: el robot espera${wait > 0 ? ` unas ${h1(wait)} h` : ''} a que se seque el césped.</div>`);
+  const prog = val('sensor','progreso_diario'), zone = val('select','zona');
+  return {flags, alerts: al, tasks: ldTasks(), seen,
+    detail: [zone ? 'zona ' + zone : null, prog != null ? Math.round(Number(prog)) + ' % del día' : null, charging ? 'cargando' : null],
+    foot: 'Wi-Fi → nube de Worx → Home Assistant'};
+}
+function render(){
+  document.body.dataset.kind = KIND;
+  const d = KIND === 'landroid' ? readLandroid() : readMcCulloch(), flags = d.flags, bat = flags.battery, a = flags.activity;
+  setLive(!flags.offline, flags.offline ? (KIND === 'landroid' ? 'sin conexión' : 'fuera de alcance') : null);
+  $('#bat').textContent = isNaN(bat) ? '–' : bat + '%';
+  $('#batsub').textContent = flags.charging ? 'cargando' : 'batería';
+  $('#ringfg').style.strokeDashoffset = 326.7 * (1 - (isNaN(bat) ? 0 : bat) / 100);
+  $('#ringfg').style.stroke = bat < 20 ? '#ff6b5b' : '#ffc20e';
+  $('#alerts').innerHTML = d.alerts.join('');
 
-  const tasks = st('sensor','programacion_tareas')?.attributes?.tareas || [];
+  const tasks = d.tasks;
   // junto a la batería: lo que va a pasar (el estado ya lo dice la etiqueta de la foto)
   const run = runningNow(tasks), nx = nextRun(tasks);
   // datos para la indicación de la escena (qué está haciendo y qué viene)
   flags.until = run ? hm(run.start_time_in_minutes + run.duration_in_minutes) : null;
   flags.next = nx ? (nx.k === 0 ? 'hoy' : nx.k === 1 ? 'mañana' : 'el ' + DLONG[nx.d]) + ' a las ' + hm(nx.m) : null;
-  const cmin = Number(val('sensor','carga_restante'));
-  flags.chargeMin = cmin > 0 ? Math.round(cmin) : null;
-  const seen = val('sensor','ultima_conexion');
-  flags.lastSeen = seen && !isNaN(new Date(seen)) ? ago(seen) : null;  // «Última conexión»: sigue disponible sin robot
+  flags.lastSeen = d.seen && !isNaN(new Date(d.seen)) ? ago(d.seen) : null;  // sigue disponible sin robot
   window.robot3d && window.robot3d.update(flags);
   const mowingNow = ['mowing', 'going_out'].includes(a);
   if (mowingNow && run) { $('#statelbl').textContent = 'cortando'; $('#state').textContent = 'Hasta las ' + hm(run.start_time_in_minutes + run.duration_in_minutes); }
   else if (run) { $('#statelbl').textContent = 'franja de ahora'; $('#state').textContent = `${hm(run.start_time_in_minutes)}–${hm(run.start_time_in_minutes + run.duration_in_minutes)}`; }
   else if (nx) { $('#statelbl').textContent = 'próximo corte'; $('#state').textContent = (nx.k === 0 ? 'Hoy' : nx.k === 1 ? 'Mañana' : DLONG[nx.d][0].toUpperCase() + DLONG[nx.d].slice(1)) + ' ' + hm(nx.m); }
   else { $('#statelbl').textContent = 'próximo corte'; $('#state').textContent = 'Sin horario'; }
-  $('#detail').textContent = [MODE[m] ? 'modo ' + MODE[m] : null, charging ? 'cargando' : null].filter(Boolean).join(' · ') || ' ';
-  weekMin = tasks.reduce((acc, t) => acc + t.duration_in_minutes * DAYS.filter(d => t['on_' + d]).length, 0);
+  $('#detail').textContent = d.detail.filter(Boolean).join(' · ') || ' ';
+  weekMin = tasks.reduce((acc, t) => acc + t.duration_in_minutes * DAYS.filter(dd => t['on_' + dd]).length, 0);
   renderFacts();
   renderWeek(tasks);
-  if (!editing) loadEditor(tasks);
+  if (!editing && KIND === 'mcculloch') loadEditor(tasks);
   renderDatos(); renderRobot();
   const upd = st('sensor','bateria')?.last_updated;
-  $('#foot').textContent = 'Bluetooth → ESP32 → Home Assistant' + (upd ? ' · última lectura ' + ago(upd) : '');
+  $('#foot').textContent = d.foot + (upd ? ' · última lectura ' + ago(upd) : '');
 }
 
 // tres datos útiles bajo la batería; los que no tienen valor no se muestran
 let mowed24 = null, weekMin = 0;
 function renderFacts(){
-  const blades = Number(val('sensor','uso_de_las_cuchillas'));
+  const bk = KIND === 'landroid' ? 'tiempo_de_uso_de_las_cuchillas_desde_el_reinicio' : 'uso_de_las_cuchillas';
+  const blades = Number(val('sensor', bk));
   const f = [
     mowed24 != null ? [h1(mowed24 / 36e5) + ' h', 'cortado 24 h'] : null,
     weekMin ? [Math.round(weekMin / 60) + ' h', 'por semana'] : null,
-    !isNaN(blades) && val('sensor','uso_de_las_cuchillas') != null ? [Math.round(blades) + ' h', 'cuchillas'] : null,
+    !isNaN(blades) && val('sensor', bk) != null ? [Math.round(blades) + ' h', 'cuchillas'] : null,
   ].filter(Boolean);
   $('#facts').innerHTML = f.map(([b, s]) => `<div><b>${esc(b)}</b><small>${s}</small></div>`).join('');
 }
@@ -759,7 +891,43 @@ $('#save').onclick = async () => {
 };
 
 /* ---------- datos ---------- */
+function renderAll(){
+  // «Todos los datos»: sin botones ni actualizaciones, y sin repetir el nombre del robot en cada fila
+  const base = st('lawn_mower')?.attributes?.friendly_name || '';
+  const all = Object.values(states).filter(x => { const [dom, obj] = x.entity_id.split('.'); return !['button', 'update'].includes(dom) && (obj === P || obj.startsWith(P + '_')); })
+    .sort((a, b) => (a.attributes.friendly_name || '').localeCompare(b.attributes.friendly_name || '', 'es'));
+  const name = x => { const n = x.attributes.friendly_name || x.entity_id; return (base && n.startsWith(base + ' ') ? n.slice(base.length + 1) : n.replace(/^Robot cortacésped\s*/i, '')) || n; };
+  $('#allcount').textContent = all.length + ' datos';
+  $('#all').innerHTML = all.map(x => `<tr><td>${esc(name(x))}</td><td>${esc(x.state)}${x.attributes.unit_of_measurement ? ' ' + esc(x.attributes.unit_of_measurement) : ''}</td></tr>`).join('');
+}
+const stat = (v, l) => (v == null || v === '–' || v === '') ? '' : `<div class="stat"><b>${v}</b><small>${l}</small></div>`;
+function renderDatosLandroid(){
+  const yn = k => val('binary_sensor', k) != null ? (on('binary_sensor', k) ? 'sí' : 'no') : null;
+  const row = (k, v) => v != null && v !== '' ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : '';
+  const n = (k, u, dec) => { const v = val('sensor', k); return v == null || isNaN(v) ? null : (dec ? h1(v) : Math.round(Number(v)).toLocaleString('es-ES')) + u; };
+  const ls = st('lawn_mower')?.state, err = val('sensor','error');
+  const pitch = val('sensor','cabeceo'), roll = val('sensor','alabeo');
+  $('#sensors').innerHTML = row('Estado', ls === 'unavailable' ? 'Sin conexión' : LMS[ls] || ls)
+    + row(ls === 'unavailable' ? 'Último error' : 'Error', err ? errText(err) : null)
+    + row('Cargando', yn('cargando')) + row('Lloviendo', yn('sensor_de_lluvia'))
+    + row('Espera por lluvia', n('retraso_por_lluvia_restante', ' h', true))
+    + row('Hecho hoy', n('progreso_diario', ' %')) + row('Zona', val('select','zona'))
+    + row('Señal Wi-Fi', n('intensidad_de_senal', ' dBm'))
+    + row('Batería', [n('temperatura_de_la_bateria', ' °C', true), n('voltaje_de_la_bateria', ' V', true)].filter(Boolean).join(' · '))
+    + row('Inclinación', pitch != null && roll != null ? `${h1(pitch)}° / ${h1(roll)}°` : null)
+    + row('Última actualización', val('sensor','ultima_actualizacion') ? fmtDate(val('sensor','ultima_actualizacion')) : null);
+  const km = val('sensor','distancia_total_recorrida');
+  $('#stats').innerHTML = stat(fmtH(val('sensor','tiempo_total_de_funcionamiento_del_cortacesped')), 'en marcha')
+    + stat(km != null ? Math.round(Number(km)).toLocaleString('es-ES') + ' km' : null, 'recorridos')
+    + stat(val('sensor','ciclos_de_carga_totales_de_la_bateria') != null ? Number(val('sensor','ciclos_de_carga_totales_de_la_bateria')).toLocaleString('es-ES') : null, 'ciclos de carga')
+    + stat(fmtH(val('sensor','tiempo_total_de_uso_de_las_cuchillas')), 'cuchillas en total')
+    + stat(fmtH(val('sensor','tiempo_de_uso_de_las_cuchillas_desde_el_reinicio')), 'cuchillas desde el último cambio');
+  $('#msgcount').textContent = '';
+  $('#msgs').innerHTML = `<div class="empty">La nube de Worx no guarda un historial de avisos${err && err !== 'no_error' ? `; el último es «${esc(errText(err))}»` : ''}.</div>`;
+  renderAll();
+}
 function renderDatos(){
+  if (KIND === 'landroid') return renderDatosLandroid();
   const yn = k => st('binary_sensor', k) ? (on('binary_sensor', k) ? 'sí' : 'no') : null;
   const row = (k, v) => v != null && v !== '' ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : '';
   const temp = val('sensor','temperatura_interna_crudo');
@@ -773,7 +941,6 @@ function renderDatos(){
     + row('Levantado', yn('levantado')) + row('Choque ahora', yn('choque')) + row('Volcado', yn('volcado'))
     + row('Orden manual', val('sensor','orden_manual'));
   // casillas sin dato (el robot no lo da) no se pintan
-  const stat = (v, l) => (v == null || v === '–' || v === '') ? '' : `<div class="stat"><b>${v}</b><small>${l}</small></div>`;
   const num = k => Number(val('sensor', k) || 0).toLocaleString('es-ES');
   const cut = Number(val('sensor','tiempo_total_cortando')), cycles = Number(val('sensor','ciclos_de_carga'));
   $('#stats').innerHTML = stat(fmtH(val('sensor','tiempo_total_cortando')),'cortando') + stat(fmtH(val('sensor','tiempo_total_en_marcha')),'en marcha')
@@ -785,17 +952,25 @@ function renderDatos(){
   const total = st('sensor','ultimo_aviso')?.attributes?.total;
   $('#msgcount').textContent = total ? total + ' en la memoria' : '';
   $('#msgs').innerHTML = msgs.length ? msgs.map(x => `<div class="msg"><span class="dot s${x.gravedad}"></span><div><b>${esc(errText(x.texto))}</b><br><small>${fmtDate(x.fecha)} · código ${x.codigo}</small></div></div>`).join('') : '<div class="empty">Sin avisos.</div>';
-  const all = Object.values(states).filter(x => !x.entity_id.startsWith('button.')).sort((a, b) => (a.attributes.friendly_name || '').localeCompare(b.attributes.friendly_name || '', 'es'));
-  $('#allcount').textContent = all.length + ' datos';
-  $('#all').innerHTML = all.map(x => `<tr><td>${esc((x.attributes.friendly_name || x.entity_id).replace(/^Robot cortacésped\s*/i, ''))}</td><td>${esc(x.state)}${x.attributes.unit_of_measurement ? ' ' + esc(x.attributes.unit_of_measurement) : ''}</td></tr>`).join('');
+  renderAll();
 }
 
 /* ---------- ajustes ---------- */
 const TOGGLES = [['modo_eco','Modo ECO','Gasta menos batería con el motor de corte más suave'],['sensorcontrol_ritmo_segun_crecimiento','SensorControl','Corta más o menos según lo que crezca el césped'],['modo_garaje','Modo garaje','Entra en la base como si fuera un garaje']];
+const TOGGLES_LD = [['modo_pausa','Modo fiesta','Se salta el horario hasta que lo quites'],['bloqueo','Bloqueo','Pide el PIN en el propio robot para moverlo'],['off_limits','Off Limits','Respeta las zonas prohibidas'],['auto_schedule','Horario automático','Worx calcula el horario según el césped']];
 $('#toggles').onchange = e => { const k = e.target.dataset.tg; if (k) svc('switch', e.target.checked ? 'turn_on' : 'turn_off', `switch.${P}_${k}`, 'Ajuste guardado'); };
 function renderRobot(){
-  $('#toggles').innerHTML = TOGGLES.filter(([k]) => st('switch', k)).map(([k, t, d]) => `<label class="toggle"><span><b>${t}</b><br><small>${d}</small></span><span class="sw"><input type="checkbox" data-tg="${k}" ${on('switch', k) ? 'checked' : ''}><span></span></span></label>`).join('') || '<div class="empty">Sin ajustes disponibles.</div>';
+  const ld = KIND === 'landroid';
+  $('#toggles').innerHTML = (ld ? TOGGLES_LD : TOGGLES).filter(([k]) => st('switch', k)).map(([k, t, d]) => `<label class="toggle"><span><b>${t}</b><br><small>${d}</small></span><span class="sw"><input type="checkbox" data-tg="${k}" ${on('switch', k) ? 'checked' : ''} ${val('switch', k) == null ? 'disabled title="El robot no está conectado"' : ''}><span></span></span></label>`).join('') || '<div class="empty">Sin ajustes disponibles.</div>';
   const row = (k, v) => v ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : '';
+  if (ld) {
+    const n = k => { const v = val('number', k); return v == null ? null : Math.round(Number(v)).toLocaleString('es-ES'); };
+    $('#info').innerHTML = row('Modelo', 'Worx Landroid') + row('Firmware', st('update','firmware')?.attributes?.installed_version)
+      + row('Césped', n('lawn_size') ? n('lawn_size') + ' m²' : null) + row('Perímetro', n('lawn_perimeter') ? n('lawn_perimeter') + ' m' : null)
+      + row('Par del motor', n('par_motor') != null ? n('par_motor') + ' %' : null) + row('Extensión de horario', n('extension_de_tiempo') != null ? n('extension_de_tiempo') + ' %' : null)
+      + row('Cuchillas cambiadas', val('sensor','momento_del_reinicio_del_tiempo_de_cuchillas') ? fmtDate(val('sensor','momento_del_reinicio_del_tiempo_de_cuchillas')) : null);
+    return;
+  }
   $('#info').innerHTML = row('Modelo', 'McCulloch ROB S800') + row('Nº de serie', val('sensor','numero_de_serie')) + row('Software', val('sensor','version_software'))
     + row('Firmware', val('sensor','firmware_aplicacion')) + row('Reloj del robot', val('sensor','reloj_del_robot') ? fmtDate(val('sensor','reloj_del_robot')) : null)
     + row('Pasar el cable', val('sensor','pasar_el_cable_cm') ? val('sensor','pasar_el_cable_cm') + ' cm' : null)
@@ -803,29 +978,32 @@ function renderRobot(){
     + row('Sensibilidad SensorControl', val('sensor','sensibilidad_sensorcontrol'));
 }
 
-const ACOL = {mowing:'#47d35a', going_out:'#9be27c', going_home:'#ffd257', charging:'#3fa9ff', parked:'#8a8f92', stopped_in_garden:'#ff9f0a', none:'#5b6064'};
+const ACOL = {mowing:'#47d35a', going_out:'#9be27c', going_home:'#ffd257', charging:'#3fa9ff', parked:'#8a8f92', stopped_in_garden:'#ff9f0a', none:'#5b6064',
+  edgecut:'#47d35a', returning:'#ffd257', docked:'#8a8f92', paused:'#ff9f0a', error:'#ff3b30', unavailable:'#3a3d40'};
+// historial del robot que se ve; si se cambia de robot a medias, la respuesta vieja se tira
+const hist = async q => { const me = P, j = await (await api(`api/historial?r=${encodeURIComponent(me)}${q}`)).json(); if (me !== P) throw new Error('otro robot'); return j; };
 async function loadActivity(){
   if (locked) return;
   try {
-    const pts = (await (await api('api/historial?e=actividad')).json()).map(p => ({t: new Date(p.t).getTime(), v: p.v})).filter(p => p.v && p.v !== 'unknown');
+    const pts = (await hist('&e=actividad')).map(p => ({t: new Date(p.t).getTime(), v: p.v})).filter(p => p.v && p.v !== 'unknown');
     const t0 = Date.now() - 864e5;
     if (!pts.length) { $('#tl').innerHTML = ''; $('#legend').textContent = 'Aún no hay historial.'; return; }
     const segs = pts.map((p, i) => ({v: p.v, a: Math.max(p.t, t0), b: i + 1 < pts.length ? pts[i + 1].t : Date.now()})).filter(x => x.b > t0);
     $('#tl').innerHTML = segs.map(x => `<b style="width:${(x.b - x.a) / 864e5 * 100}%;background:${ACOL[x.v] || '#5b6064'}" title="${esc(ACTIVITY[x.v] || x.v)}"></b>`).join('');
     const tot = {}; segs.forEach(x => tot[x.v] = (tot[x.v] || 0) + (x.b - x.a));
     $('#legend').innerHTML = Object.entries(tot).sort((a, b) => b[1] - a[1]).map(([k, ms]) => `<span><i style="background:${ACOL[k] || '#5b6064'}"></i>${esc(ACTIVITY[k] || k)} ${h1(ms / 36e5)} h</span>`).join('');
-    mowed24 = tot.mowing || 0; renderFacts();
+    mowed24 = (tot.mowing || 0) + (tot.edgecut || 0); renderFacts();
   } catch(e) {}
 }
 // horas cortadas cada día de los últimos 7 (días naturales, hora local)
 async function loadWeekMow(){
   if (locked) return;
   try {
-    const pts = (await (await api('api/historial?e=actividad&d=7')).json()).map(p => ({t: new Date(p.t).getTime(), v: p.v})).filter(p => p.v && p.v !== 'unknown');
+    const pts = (await hist('&e=actividad&d=7')).map(p => ({t: new Date(p.t).getTime(), v: p.v})).filter(p => p.v && p.v !== 'unknown');
     const days = [];
     for (let k = 6; k >= 0; k--) { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - k); days.push({a: d.getTime(), b: d.getTime() + 864e5, ms: 0, dow: (d.getDay() + 6) % 7, today: k === 0}); }
     pts.forEach((p, i) => {
-      if (p.v !== 'mowing') return;
+      if (p.v !== 'mowing' && p.v !== 'edgecut') return;
       const a = p.t, b = i + 1 < pts.length ? pts[i + 1].t : Date.now();
       days.forEach(d => { d.ms += Math.max(0, Math.min(b, d.b) - Math.max(a, d.a)); });
     });
@@ -838,7 +1016,7 @@ async function loadHistory(){
   loadActivity(); loadWeekMow();
   if (locked) return;
   try {
-    const pts = (await (await api('api/historial')).json()).map(p => ({t: new Date(p.t).getTime(), v: Number(p.v)})).filter(p => !isNaN(p.v));
+    const pts = (await hist('')).map(p => ({t: new Date(p.t).getTime(), v: Number(p.v)})).filter(p => !isNaN(p.v));
     if (pts.length < 2) { $('#spark').innerHTML = '<text x="150" y="48" text-anchor="middle" fill="currentColor" opacity=".5" font-size="11">Aún no hay historial</text>'; return; }
     const t0 = Date.now() - 864e5, x = t => Math.max(0, (t - t0) / 864e5 * 300), y = v => 84 - v * 0.78;
     const d = pts.map((p, i) => `${i ? 'L' : 'M'}${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ') + ` L300,${y(pts.at(-1).v).toFixed(1)}`;
@@ -860,8 +1038,20 @@ $('#logout').onclick = async () => { await fetch('api/logout', {method:'POST'});
   try { const v = localStorage.getItem('vista'); if (v && $('#v-' + v)) show(v); } catch(e) {}
   checkVersion();
   try { const s = await (await fetch('api/sesion', {cache:'no-store'})).json(); $('#logout').hidden = !s.pin; if (s.pin_len > 0 && s.pin_len <= 12) pinLen = s.pin_len; if (s.pin && !s.ok) { showLock(); return; } } catch(e) {}
+  await loadRobots();
   poll(); loadHistory(); pushRender().catch(() => {});
 })();
+// qué robots hay y cuál se veía la última vez
+async function loadRobots(){
+  try {
+    const r = await api('api/robots', {cache: 'no-store'});
+    if (r.ok) { const j = await r.json(); if (Array.isArray(j) && j.length) ROBOTS = j; }
+  } catch(e) {}
+  let saved = null; try { saved = localStorage.getItem('robot'); } catch(e) {}
+  const r = ROBOTS.find(x => x.id === saved) || ROBOTS[0];
+  P = r.id; KIND = r.kind; document.body.dataset.kind = KIND;
+  renderRobots();
+}
 addEventListener('robot3d-ready', () => { if (Object.keys(states).length) render(); });
 setInterval(() => { if (!document.hidden) poll(); }, 5000);
 setInterval(loadHistory, 10 * 60 * 1000);
@@ -912,10 +1102,12 @@ setInterval(loadHistory, 10 * 60 * 1000);
     document.getElementById('charge').style.setProperty('--lvl', (isNaN(s.battery) ? 50 : s.battery) + '%');
     // indicación de abajo: qué está haciendo y qué viene (la etiqueta de arriba ya dice el estado)
     const pct = isNaN(s.battery) ? '' : ` · ${s.battery} %`;
-    const cap = cls.offline ? ['off', s.lastSeen ? `Sin conexión desde ${s.lastSeen} · se reconecta solo` : 'Se reconecta solo al acercarse al receptor']
+    const ld = s.kind === 'landroid';
+    const cap = cls.offline ? ['off', s.lastSeen ? `Sin conexión desde ${s.lastSeen} · se reconecta solo` : ld ? 'Se reconecta solo al volver a tener Wi-Fi' : 'Se reconecta solo al acercarse al receptor']
       : cls.upside ? ['warn', 'Dale la vuelta y confirma en el robot']
       : cls.lifted ? ['up', 'Déjalo en el césped para que siga']
-      : cls.error ? ['warn', 'Revisa el robot y confírmalo en su teclado']
+      : cls.error ? ['warn', ld ? 'Revísalo y pulsa OK en el robot' : 'Revisa el robot y confírmalo en su teclado']
+      : s.rain && cls.docked ? ['pause', 'Llueve: espera en la base a que se seque']
       : cls.charging ? ['bolt', s.chargeMin ? `Cargada en ~${s.chargeMin} min${pct}` : `Cargando${pct}` + (s.next ? ` · corta ${s.next}` : '')]
       : cls.homing ? ['home', (s.battery < 30 ? 'Va a la base a cargar' : 'Vuelve a la base') + pct]
       : cls.leaving ? ['out', s.until ? `Sale a cortar hasta las ${s.until}` : 'Sale a cortar']

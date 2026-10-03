@@ -66,11 +66,11 @@ async def main():
             assert r.status == 502 and "error" in await r.json(), (path, r.status)
         r = await c.get("/api/historial")
         assert r.status == 502
-        # con sesión: aquí no hay claves VAPID, así que suscribirse responde 503 y no rompe nada
+        # con sesión: sin pywebpush no hay clave (503); con él, py_vapid la crea y la suscripción sin https se rechaza
         r = await c.get("/api/push/key")
-        assert r.status == 200 and (await r.json())["key"] is None
+        assert r.status == 200 and "key" in await r.json()
         bad = {"subscription": {"endpoint": "http://no-https", "keys": {"p256dh": "a", "auth": "b"}}}
-        assert (await c.post("/api/push/subscribe", json=bad)).status == 503
+        assert (await c.post("/api/push/subscribe", json=bad)).status in (400, 503)
         cookie = c.session.cookie_jar.filter_cookies(c.make_url("/")).get(server.COOKIE).value
     # un PIN nuevo invalida las sesiones viejas
     os.environ["APP_PIN"] = "9999"
@@ -84,6 +84,20 @@ async def main():
         assert codes[:20] == [403] * 20 and codes[20] == 429, codes
         r = await c3.post("/api/login", json={"pin": "4321"}, headers={"CF-Connecting-IP": "10.9.9.9"})
         assert r.status == 429
+    # varios robots: el McCulloch siempre primero; las entradas mal escritas de ROBOTS se ignoran
+    os.environ["ROBOTS"] = "landroid:Landroid:landroid, Mal:Nombre:landroid,x:y:otro,robot_cortacesped:Repe:mcculloch"
+    async with TestClient(TestServer(server.make_app())) as c4:
+        await c4.post("/api/login", json={"pin": "4321"})
+        robots = await (await c4.get("/api/robots")).json()
+        assert [r["id"] for r in robots] == ["robot_cortacesped", "landroid"], robots
+        assert robots[1] == {"id": "landroid", "name": "Landroid", "kind": "landroid"}
+        ok = {"domain": "lawn_mower", "service": "dock", "entity_id": "lawn_mower.landroid"}
+        assert (await c4.post("/api/servicio", json=ok)).status == 502  # pasa el filtro; no hay HA
+        for e in ("lawn_mower.landroidx", "lawn_mower.landroid,lawn_mower.vecino", "switch.mal_eco"):
+            r = await c4.post("/api/servicio", json={**ok, "entity_id": e})
+            assert r.status == 403, e
+        assert (await c4.get("/api/historial?r=landroid&e=actividad")).status == 502
+    del os.environ["ROBOTS"]
     print("servidor: todo OK")
 
 

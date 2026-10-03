@@ -9,6 +9,8 @@ Variables (fichero robot_app.env junto a este script):
   APP_PIN       PIN para abrir la app (vacio = sin bloqueo); lo pone el usuario con set_pin.sh
   PORT          8106
   ROBOT_PREFIX  prefijo de las entidades del robot (por defecto robot_cortacesped)
+  ROBOT_NAME    nombre que se ve en la app (por defecto McCulloch)
+  ROBOTS        más robots, p. ej. landroid:Landroid:landroid (prefijo:nombre:tipo, separados por comas)
 
 Como complemento de HA (ingress) no hace falta nada: el supervisor da la URL y el token.
 """
@@ -27,9 +29,23 @@ from pathlib import Path
 from aiohttp import ClientError, ClientSession, ClientTimeout, web
 
 HERE = Path(__file__).resolve().parent
-PREFIX = os.environ.get("ROBOT_PREFIX", "").strip() or "robot_cortacesped"
-# una sola entidad del robot, nunca una lista separada por comas (HA la trocearía)
-ENTITY_RE = re.compile(rf"(lawn_mower|button|switch)\.{re.escape(PREFIX)}(_[a-z0-9_]+)?")
+
+
+def parse_robots() -> list[dict]:
+    """El primero es el McCulloch (ROBOT_PREFIX); ROBOTS=prefijo:Nombre:tipo,... añade más (tipo mcculloch | landroid)."""
+    prefix = os.environ.get("ROBOT_PREFIX", "").strip() or "robot_cortacesped"
+    out = [{"id": prefix, "name": os.environ.get("ROBOT_NAME", "").strip()[:40] or "McCulloch", "kind": "mcculloch"}]
+    for item in os.environ.get("ROBOTS", "").split(","):
+        parts = [p.strip() for p in item.split(":")]
+        if (len(parts) == 3 and re.fullmatch(r"[a-z0-9_]+", parts[0]) and parts[2] in ("mcculloch", "landroid")
+                and parts[0] not in [r["id"] for r in out]):
+            out.append({"id": parts[0], "name": parts[1][:40] or parts[0], "kind": parts[2]})
+    return out
+
+
+def entity_re(ids: list[str]) -> re.Pattern:
+    # una sola entidad de alguno de los robots, nunca una lista separada por comas (HA la trocearía)
+    return re.compile(rf"(lawn_mower|button|switch)\.({'|'.join(map(re.escape, ids))})(_[a-z0-9_]+)?")
 ALLOWED = {
     ("lawn_mower", "start_mowing"), ("lawn_mower", "pause"), ("lawn_mower", "dock"),
     ("button", "press"), ("switch", "turn_on"), ("switch", "turn_off"),
@@ -76,6 +92,11 @@ def make_app() -> web.Application:
     ha = os.environ.get("HA_URL", "http://supervisor/core" if supervisor else "http://homeassistant.local:8123").rstrip("/")
     pin = os.environ.get("APP_PIN", "")
     secret = load_secret()
+    robots = parse_robots()
+    ids = [r["id"] for r in robots]
+    kinds = {r["id"]: r["kind"] for r in robots}
+    ENTITY_RE = entity_re(ids)
+    PREFIX = ids[0]
     fails: dict[str, list[float]] = {}
     all_fails: list[float] = []
     # la firma incluye el PIN: al cambiarlo, todas las sesiones anteriores dejan de valer
@@ -159,7 +180,13 @@ def make_app() -> web.Application:
                 data = await r.json()
         except (ClientError, TimeoutError) as e:
             return unreachable(e)
-        return web.json_response([s for s in data if s["entity_id"].split(".", 1)[1].startswith(PREFIX)])
+        def mine(eid: str) -> bool:
+            obj = eid.split(".", 1)[1]
+            return any(obj == i or obj.startswith(i + "_") for i in ids)
+        return web.json_response([s for s in data if mine(s["entity_id"])])
+
+    async def lista(_):
+        return web.json_response(robots)
 
     async def salud(req):
         """Para el despliegue y la vigilancia: ¿sirve y llega a HA? Sin PIN y sin datos del robot."""
@@ -254,7 +281,13 @@ def make_app() -> web.Application:
         except ValueError:
             days = 1
         start = (datetime.now(UTC) - timedelta(days=days)).isoformat()
-        entity = f"sensor.{PREFIX}_" + ("actividad" if req.query.get("e") == "actividad" else "bateria")
+        rid = req.query.get("r") if req.query.get("r") in ids else PREFIX
+        if req.query.get("e") != "actividad":
+            entity = f"sensor.{rid}_bateria"
+        elif kinds[rid] == "landroid":  # Landroid no tiene sensor de actividad: su estado sale del cortacésped
+            entity = f"lawn_mower.{rid}"
+        else:
+            entity = f"sensor.{rid}_actividad"
         url = f"{ha}/api/history/period/{start}"
         params = {"filter_entity_id": entity, "minimal_response": "", "no_attributes": ""}
         try:
@@ -282,6 +315,7 @@ def make_app() -> web.Application:
     app.on_cleanup.append(on_cleanup)
     app.router.add_get("/", index)
     app.router.add_get("/api/estado", estado)
+    app.router.add_get("/api/robots", lista)
     app.router.add_get("/api/salud", salud)
 
     # versión de la app = huella de sus archivos: si cambia tras un despliegue, la app abierta se recarga sola
