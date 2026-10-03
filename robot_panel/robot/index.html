@@ -193,9 +193,13 @@ details.all td:last-child{text-align:right;font-weight:560;overflow-wrap:anywher
 .shine{position:absolute;inset:0;z-index:2;pointer-events:none;-webkit-mask:url(static/robot.webp?v=6) center/100% 100% no-repeat;mask:url(static/robot.webp?v=6) center/100% 100% no-repeat;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.28) 50%,transparent 65%);background-size:250% 100%;background-position:var(--sx,60%) 0;mix-blend-mode:screen}
 .bot .shadow{position:absolute;left:4%;right:0;bottom:-1%;height:16%;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.75),rgba(0,0,0,.35) 60%,transparent);filter:blur(4px);transition:.5s}
 .bot .glow{position:absolute;inset:-6% -6% 0;border-radius:50%;opacity:0;z-index:0;transition:opacity .4s}
-.caption{position:absolute;left:50%;bottom:14px;transform:translate(-50%,8px);display:flex;align-items:center;gap:10px;padding:10px 18px;border-radius:16px;background:rgba(10,11,12,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#fff;font-weight:750;font-size:15px;white-space:nowrap;opacity:0;transition:.4s;z-index:3;border:1px solid rgba(255,255,255,.08)}
-.caption .ic{font-size:18px}
-.stage.cap .caption{opacity:1;transform:translate(-50%,0)}
+/* indicación tipo subtítulo: franja abajo con degradado, por encima de la hierba y sin tapar al robot */
+.caption{position:absolute;left:0;right:0;bottom:0;transform:translateY(8px);display:flex;align-items:center;justify-content:center;gap:9px;padding:26px 16px 12px;
+  background:linear-gradient(to bottom,transparent,rgba(8,9,10,.78) 55%);color:#fff;font-weight:700;font-size:14.5px;line-height:1.25;text-align:center;opacity:0;transition:.4s;z-index:5;pointer-events:none}
+.caption .ic{display:inline-flex}
+.caption .ic svg{width:17px;height:17px;fill:none;stroke:#ffc20e;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.stage.cap .caption{opacity:1;transform:none}
+.stage.cap .blades{opacity:.55}
 .stage.homing .ic{animation:nudge 1.2s ease-in-out infinite}.stage.leaving .ic{animation:nudge 1.2s ease-in-out infinite reverse}
 @keyframes nudge{50%{transform:translateX(5px)}}
 .stage.charging .ic{animation:blink 1.4s infinite}
@@ -225,6 +229,23 @@ details.all td:last-child{text-align:right;font-weight:560;overflow-wrap:anywher
 /* levantado: se inclina en el aire; volcado: da la vuelta en 3D */
 .stage.lifted .body3d{transform:rotateX(-14deg) rotateZ(5deg)}
 .stage.upside .body3d{transform:rotateX(180deg) translateY(-8%)}
+/* ---- con el robot 3D de Blender (.r3d): los fotogramas hacen el giro; la base se ve al volver, cargar y salir ---- */
+.rear{position:absolute;inset:0;z-index:2;pointer-events:none}
+.rear .fx{position:absolute;inset:0}
+.body3d.back .rear{transform:scaleX(-1)}  /* mirando a la derecha: estela y recortes al otro lado */
+.stage.r3d.mowing .body3d{animation:none}
+.stage.r3d .shine,.stage.r3d .bot .shadow{display:none}  /* el render ya trae brillo y sombra */
+.stage.r3d.mowing .bot{width:min(68%,350px)}
+.stage.r3d .bot img{filter:drop-shadow(0 10px 12px rgba(0,0,0,.35))}
+.dock3d{position:absolute;left:50%;bottom:16%;width:min(58%,300px);transform:translateX(-50%);opacity:0;transition:opacity .6s;pointer-events:none}
+.stage.r3d.docked .dock3d,.stage.r3d.homing .dock3d,.stage.r3d.leaving .dock3d,.stage.r3d.charging .dock3d{opacity:1}
+.stage.r3d.docked .bot,.stage.r3d.charging .bot{left:50%;bottom:17%;width:min(58%,300px)}
+.stage.r3d.docked .body3d{transform:none}
+.stage.r3d.homing .bot,.stage.r3d.leaving .bot{bottom:16.5%;width:min(58%,300px)}
+.stage.r3d.homing .bot{animation:home3d 6s ease-in-out infinite}
+.stage.r3d.leaving .bot{animation:leave3d 6s ease-in-out infinite}
+@keyframes home3d{0%{left:95%;opacity:0}12%{opacity:1}80%,100%{left:50%;opacity:1}}
+@keyframes leave3d{0%,15%{left:50%;opacity:1}88%{opacity:1}100%{left:95%;opacity:0}}
 @keyframes bump{50%{transform:translateY(-1.5px) rotate(-.5deg)}}
 .stage.homing .bot{animation:home 5s ease-in-out infinite}
 @keyframes home{0%{left:64%}100%{left:40%}}
@@ -297,13 +318,14 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
             <div class="stage" id="stage">
               <div class="ground"><div class="plane"></div></div>
               <div class="caption" id="caption"><span class="ic" id="capic"></span><span id="captxt"></span></div>
+              <!-- base de carga renderizada en Blender: misma cámara y encuadre que el robot, así encaja debajo -->
+              <img class="dock3d" id="dock3d" alt="" draggable="false">
               <div class="bot">
                 <div class="shadow"></div>
                 <!-- body3d gira en 3D (vueltas al cortar, vuelco...); la estela y los recortes van dentro para salir siempre por detrás -->
-                <div class="body3d">
-                  <div class="trail"></div>
+                <div class="body3d" id="body3d">
+                  <div class="rear"><div class="trail"></div><div class="fx" id="fx"></div></div>
                   <div class="tilt" id="tilt"><img src="static/robot.webp?v=6" onerror="this.onerror=null;this.src='static/robot.svg'" alt="Robot cortacésped" draggable="false"><span class="shine"></span></div>
-                  <div class="fx" id="fx"></div>
                 </div>
                 <span class="glow"></span>
               </div>
@@ -548,7 +570,6 @@ function render(){
     lifted: on('binary_sensor','levantado'), upsideDown: on('binary_sensor','volcado'), collision: on('binary_sensor','choque'),
     error: on('binary_sensor','averia') || s === 'error' || s === 'fatal_error', inBase: on('binary_sensor','en_la_base')};
   flags.errorText = errText(val('sensor','error'));
-  window.robot3d && window.robot3d.update(flags);
 
   const al = [];
   if (st('lawn_mower') && st('lawn_mower').state === 'unavailable') al.push(`<div class="alert warn">El robot no está al alcance del Bluetooth. Se reconecta solo al volver cerca del receptor.</div>`);
@@ -562,6 +583,12 @@ function render(){
   const tasks = st('sensor','programacion_tareas')?.attributes?.tareas || [];
   // junto a la batería: lo que va a pasar (el estado ya lo dice la etiqueta de la foto)
   const run = runningNow(tasks), nx = nextRun(tasks);
+  // datos para la indicación de la escena (qué está haciendo y qué viene)
+  flags.until = run ? hm(run.start_time_in_minutes + run.duration_in_minutes) : null;
+  flags.next = nx ? (nx.k === 0 ? 'hoy' : nx.k === 1 ? 'mañana' : 'el ' + DLONG[nx.d]) + ' a las ' + hm(nx.m) : null;
+  const cmin = Number(val('sensor','carga_restante'));
+  flags.chargeMin = cmin > 0 ? Math.round(cmin) : null;
+  window.robot3d && window.robot3d.update(flags);
   const mowingNow = ['mowing', 'going_out'].includes(a);
   if (mowingNow && run) { $('#statelbl').textContent = 'cortando'; $('#state').textContent = 'Hasta las ' + hm(run.start_time_in_minutes + run.duration_in_minutes); }
   else if (run) { $('#statelbl').textContent = 'franja de ahora'; $('#state').textContent = `${hm(run.start_time_in_minutes)}–${hm(run.start_time_in_minutes + run.duration_in_minutes)}`; }
@@ -809,11 +836,21 @@ setInterval(loadHistory, 10 * 60 * 1000);
     if (s.collision && !wasHit) { stage.classList.remove('hit'); void stage.offsetWidth; stage.classList.add('hit'); }
     wasHit = s.collision;
     document.getElementById('charge').style.setProperty('--lvl', (isNaN(s.battery) ? 50 : s.battery) + '%');
-    const cap = cls.charging ? ['⚡', 'Cargando en la base' + (isNaN(s.battery) ? '' : ' · ' + s.battery + '%')]
-      : cls.homing ? ['⌂', 'Volviendo a la base'] : cls.leaving ? ['➜', 'Saliendo de la base']
-      : cls.docked ? ['⌂', 'Aparcado en la base'] : null;
+    // indicación de abajo: qué está haciendo y qué viene (la etiqueta de arriba ya dice el estado)
+    const pct = isNaN(s.battery) ? '' : ` · ${s.battery} %`;
+    const cap = cls.offline ? ['off', 'Se reconecta solo al acercarse al receptor']
+      : cls.upside ? ['warn', 'Dale la vuelta y confirma en el robot']
+      : cls.lifted ? ['up', 'Déjalo en el césped para que siga']
+      : cls.error ? ['warn', 'Revisa el robot y confírmalo en su teclado']
+      : cls.charging ? ['bolt', s.chargeMin ? `Cargada en ~${s.chargeMin} min${pct}` : `Cargando${pct}` + (s.next ? ` · corta ${s.next}` : '')]
+      : cls.homing ? ['home', (s.battery < 30 ? 'Va a la base a cargar' : 'Vuelve a la base') + pct]
+      : cls.leaving ? ['out', s.until ? `Sale a cortar hasta las ${s.until}` : 'Sale a cortar']
+      : cls.mowing ? ['mow', (s.until ? `Corta hasta las ${s.until}` : 'Cortando') + pct]
+      : cls.docked ? ['home', s.next ? `Vuelve a cortar ${s.next}` : 'Sin horario: pulsa Cortar']
+      : cls.paused ? ['pause', 'Pulsa Cortar para seguir o A la base']
+      : null;
     stage.classList.toggle('cap', !!cap);
-    if (cap) { document.getElementById('capic').textContent = cap[0]; document.getElementById('captxt').textContent = cap[1]; }
+    if (cap) { document.getElementById('capic').innerHTML = `<svg viewBox="0 0 24 24">${ICON[cap[0]]}</svg>`; document.getElementById('captxt').textContent = cap[1]; }
     // la etiqueta sale de las mismas clases que la escena: nunca dicen cosas distintas
     const [lbl, col, ic] = cls.offline ? ['Fuera de línea', '#8a8f92', 'off'] : cls.upside ? ['Volcado', '#ff3b30', 'warn']
       : cls.lifted ? ['Levantado', '#ff9f0a', 'up'] : cls.error ? ['Avería' + (s.errorText ? ': ' + s.errorText : ''), '#ff3b30', 'warn']
@@ -830,9 +867,36 @@ setInterval(loadHistory, 10 * 60 * 1000);
   scene.addEventListener('pointermove', e => fromPoint(e.clientX, e.clientY));
   scene.addEventListener('pointerleave', () => { target = null; });
   addEventListener('deviceorientation', e => { if (e.gamma == null) return; target = [Math.max(-12, Math.min(12, (e.beta - 40) * -.4)), Math.max(-28, Math.min(28, e.gamma * 1.1))]; lastInput = performance.now(); });
+  // Robot 3D renderizado en Blender: 24 vistas (cada 15°). Si cargan todas, sustituyen a la foto.
+  const FR = Array.from({length: 24}, (_, k) => `static/rob3d/turn_${String(k).padStart(2, '0')}.webp?v=1`);
+  const imgEl = tilt.querySelector('img'), b3 = document.getElementById('body3d'), botEl = stage.querySelector('.bot');
+  let r3d = false, curFrame = -1;
+  const showFrame = f => {
+    f = ((Math.round(f) % 24) + 24) % 24;
+    if (f === curFrame) return;
+    curFrame = f; imgEl.src = FR[f];
+    b3.classList.toggle('back', f > 6 && f < 18);  // de espaldas: estela y recortes al otro lado
+  };
+  Promise.all(FR.map(src => new Promise((ok, ko) => { const i = new Image(); i.onload = ok; i.onerror = ko; i.src = src; })))
+    .then(() => { r3d = true; imgEl.onerror = null; stage.classList.add('r3d'); document.getElementById('dock3d').src = 'static/rob3d/base_side.webp?v=1'; showFrame(0); })
+    .catch(() => {});  // sin renders: sigue la foto con el giro CSS
+  const has = c => stage.classList.contains(c);
+  function frame3d(){
+    if (has('mowing')) {
+      // mismo reloj que la animación de posición: el giro cae justo al final de cada pasada
+      const an = botEl.getAnimations().find(a => a.animationName === 'mowpass');
+      const ph = an && an.currentTime != null ? (an.currentTime % 14000) / 14000 : 0;
+      return ph < .4 ? 0 : ph < .5 ? (ph - .4) / .1 * 12 : ph < .9 ? 12 : 12 + (ph - .9) / .1 * 12;
+    }
+    if (has('homing') || has('leaving') || has('upside') || has('docked') || has('charging')) return 0;
+    // quieto: el dedo o el ratón lo giran de verdad (±90°); si no, se balancea un poco
+    const live = target && performance.now() - lastInput < 4000;
+    return live ? target[1] / 50 * 12 : Math.sin((performance.now() - t0) / 2600) * 1.2;
+  }
   (function loop(){
     if (!document.hidden) {
-      if (!target || performance.now() - lastInput > 4000) { const k = (performance.now() - t0) / 1000; set(Math.sin(k * .7) * 3, Math.sin(k * .45) * 16); }
+      if (r3d) { showFrame(frame3d()); set(target ? target[0] * .4 : 0, 0); }
+      else if (!target || performance.now() - lastInput > 4000) { const k = (performance.now() - t0) / 1000; set(Math.sin(k * .7) * 3, Math.sin(k * .45) * 16); }
       else set(target[0], target[1]);
     }
     requestAnimationFrame(loop);

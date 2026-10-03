@@ -14,7 +14,7 @@ Controla tu robot cortacésped **McCulloch ROB, Husqvarna Automower, Gardena SIL
   <img src="docs/tarjeta.png" alt="Tarjeta de Lovelace en seis estados: cortando, cargando, volviendo, en la base, avería y fuera de alcance" width="520">
 </p>
 
-El robot se anima según su estado: al cortar cruza el césped, **gira en 3D** al final de cada pasada y deja una estela; se le ve cargar, volver a la base, levantado o **volcado** (da la vuelta en 3D). En *Datos* tienes la actividad y la batería de 24 h y las **horas cortadas por día** de la última semana.
+El robot es un **modelo 3D propio hecho en Blender** (`tools/blender/rob_model.py`, sin logotipos), renderizado desde 24 ángulos. Se anima según su estado: al cortar cruza el césped, **gira en 3D** al final de cada pasada y deja una estela; se le ve cargar, volver a la base, levantado o **volcado** (da la vuelta en 3D). En *Datos* tienes la actividad y la batería de 24 h y las **horas cortadas por día** de la última semana.
 
 ## ¿Qué la diferencia de la integración oficial "Husqvarna Automower BLE"?
 

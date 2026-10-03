@@ -53,6 +53,10 @@ ha-card{overflow:hidden}
 .bot{position:absolute;left:50%;bottom:10%;width:min(48%,230px);transform:translateX(-50%);transition:left .9s,bottom .6s,filter .4s,opacity .4s;perspective:700px}
 .b3d{position:relative;transform-style:preserve-3d;transition:transform .9s cubic-bezier(.45,0,.25,1)}
 .b3d .fx{position:absolute;inset:0;z-index:2;pointer-events:none}
+.r3d.s-mowing .b3d{animation:none}            /* con renders el giro lo hacen los fotogramas */
+.b3d.back .fx{transform:scaleX(-1)}           /* de espaldas: recortes al otro lado */
+.r3d .bot img{filter:drop-shadow(0 10px 12px rgba(0,0,0,.35))}
+.r3d .bot{width:min(66%,320px)}.r3d .bot .sh{display:none}  /* el render deja aire alrededor y trae su sombra */
 .bot img{display:block;width:100%;filter:drop-shadow(0 12px 14px rgba(0,0,0,.5));position:relative;z-index:1}
 .bot .sh{position:absolute;left:4%;right:0;bottom:-1%;height:16%;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.75),transparent);filter:blur(4px)}
 .bot .glow{position:absolute;inset:-6% -6% 0;border-radius:50%;opacity:0;transition:opacity .4s}
@@ -132,9 +136,42 @@ class McCullochRobCard extends HTMLElement {
   // foto: la de la opción `image` (sobrevive a las actualizaciones), si no robot.webp junto a la tarjeta, y si no el dibujo
   _setImage() {
     const img = this.shadowRoot.querySelector('img');
-    const srcs = [this._config.image, BASE + 'robot.webp', BASE + 'robot.svg'].filter(Boolean);
+    const srcs = [this._config.image, BASE + 'rob3d/turn_00.webp', BASE + 'robot.webp', BASE + 'robot.svg'].filter(Boolean);
     img.onerror = () => { srcs.shift(); if (srcs.length) img.src = srcs[0]; else img.onerror = null; };
     img.src = srcs[0];
+    if (!this._config.image) this._load3d(img);
+  }
+
+  // Robot renderizado en Blender: 24 vistas cada 15°. Al cortar, el giro del final de cada pasada es real.
+  _load3d(img) {
+    if (this._frames) return;
+    const fr = Array.from({length: 24}, (_, k) => `${BASE}rob3d/turn_${String(k).padStart(2, '0')}.webp`);
+    Promise.all(fr.map(src => new Promise((ok, ko) => { const i = new Image(); i.onload = ok; i.onerror = ko; i.src = src; })))
+      .then(() => {
+        this._frames = fr;
+        const scene = this.shadowRoot.getElementById('scene'), bot = this.shadowRoot.querySelector('.bot'), b3d = this.shadowRoot.querySelector('.b3d');
+        scene.classList.add('r3d');
+        let cur = -1;
+        const tick = () => {
+          if (!this.isConnected) { this._raf = null; return; }  // tarjeta fuera de la pantalla: se para
+          let f = 0;
+          if (scene.dataset.s === 'mowing') {
+            const an = bot.getAnimations().find(a => a.animationName === 'mowpass');
+            const ph = an && an.currentTime != null ? (an.currentTime % 14000) / 14000 : 0;
+            f = ph < .4 ? 0 : ph < .5 ? (ph - .4) / .1 * 12 : ph < .9 ? 12 : 12 + (ph - .9) / .1 * 12;
+          }
+          f = ((Math.round(f) % 24) + 24) % 24;
+          if (f !== cur) { cur = f; img.src = fr[f]; b3d.classList.toggle('back', f > 6 && f < 18); }
+          this._raf = requestAnimationFrame(tick);
+        };
+        this._raf = requestAnimationFrame(tick);
+      })
+      .catch(() => {});  // sin renders: queda la imagen fija con el giro CSS
+  }
+
+  connectedCallback() {
+    // al volver a la pantalla, reanudar el bucle de fotogramas si estaba parado
+    if (this._frames && !this._raf && this.shadowRoot) { this._frames = null; this._setImage(); }
   }
 
   static getConfigElement() { return document.createElement('mcculloch-rob-card-editor'); }
