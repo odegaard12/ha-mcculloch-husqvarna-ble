@@ -17,6 +17,7 @@ const T = {
     pick: 'Robot (entidad lawn_mower)', name: 'Nombre que se ve (opcional)', noEntity: 'No encuentro la entidad',
     pick2: 'Segundo robot (opcional): otro McCulloch o un Landroid', name2: 'Nombre del segundo robot (opcional)',
     image: 'Foto propia del primer robot (opcional): URL de un PNG/WebP transparente',
+    rename: 'Cambiar el nombre', renameFail: 'No se pudo cambiar el nombre (hace falta un usuario administrador)',
   },
   en: {
     mowing: 'Mowing', homing: 'Going home', leaving: 'Leaving the dock', charging: 'Charging',
@@ -30,6 +31,7 @@ const T = {
     pick: 'Mower (lawn_mower entity)', name: 'Display name (optional)', noEntity: 'Entity not found',
     pick2: 'Second mower (optional): another McCulloch or a Landroid', name2: 'Second mower name (optional)',
     image: 'Own photo of the first mower (optional): URL of a transparent PNG/WebP',
+    rename: 'Rename', renameFail: 'Could not rename (an administrator user is needed)',
   },
 };
 
@@ -52,16 +54,25 @@ const errsReady = fetch(BASE + 'errores_es.json' + VER).then(r => r.json()).then
 const CSS = `
 :host{display:block}
 ha-card{overflow:hidden}
-.rbar{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:6px;background:var(--secondary-background-color,rgba(127,127,127,.12))}
+.rbar{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 10px 8px}
 .rbar[hidden]{display:none}
-.rbar button{display:flex;align-items:center;gap:8px;min-width:0;border:0;border-radius:10px;padding:7px 10px;cursor:pointer;background:none;color:var(--primary-text-color);font:600 13px/1.2 system-ui,sans-serif;text-align:left;transition:background .25s}
-.rbar button.on{background:var(--card-background-color,#fff);box-shadow:0 1px 3px rgba(0,0,0,.18)}
-.rbar .rtx{display:flex;flex-direction:column;min-width:0}
+/* cada robot con su foto y su color de marca: el elegido, relleno; el otro, solo con el borde */
+.rbar button{--k:#ffc20e;position:relative;display:flex;align-items:center;gap:8px;min-width:0;border:1.5px solid color-mix(in srgb,var(--k) 45%,transparent);border-radius:14px;padding:6px 8px;cursor:pointer;
+  background:color-mix(in srgb,var(--k) 8%,transparent);color:var(--primary-text-color);font:650 13.5px/1.2 system-ui,sans-serif;text-align:left;transition:background .25s,border-color .25s,transform .15s,box-shadow .25s}
+.rbar button.ld{--k:#f38a12}
+.rbar button:active{transform:scale(.97)}
+.rbar button.on{background:var(--k);border-color:var(--k);color:#1b1b1b;box-shadow:0 4px 14px color-mix(in srgb,var(--k) 40%,transparent)}
+.rbar .th{width:38px;height:28px;flex:none;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(0,0,0,.3))}
+.rbar .rtx{display:flex;flex-direction:column;min-width:0;flex:1}
 .rbar b{overflow-wrap:anywhere}
-.rbar small{opacity:.7;font-weight:500;font-size:11.5px}
+.rbar small{display:flex;align-items:center;gap:5px;opacity:.75;font-weight:550;font-size:11.5px}
+.rbar button.on small{opacity:.8}
+.rbar .pen{flex:none;width:28px;height:28px;display:grid;place-items:center;border-radius:9px;background:rgba(0,0,0,.12)}
+.rbar .pen svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.rbar input{flex:1;min-width:0;border:0;border-radius:8px;padding:6px 8px;font:650 13.5px system-ui,sans-serif;background:rgba(255,255,255,.9);color:#1b1b1b}
 .scene.swap .bot,.scene.swap .dockw{animation:swapin .35s cubic-bezier(.2,.7,.2,1)}
 @keyframes swapin{from{opacity:0;transform:translateX(-50%) translateY(6px)}}
-.rbar i{width:8px;height:8px;border-radius:50%;flex:none;background:var(--c,#8a8f92)}
+.rbar i{width:7px;height:7px;border-radius:50%;flex:none;background:var(--c,#8a8f92);box-shadow:0 0 0 1.5px rgba(255,255,255,.55)}
 /* jardín: cielo, setos al fondo y césped con franjas anchas de corte (igual que la app) */
 .scene{position:relative;height:190px;overflow:hidden;background:linear-gradient(to bottom,#26323d 0%,#2f3b41 34%,#3a4636 52%,#1c2617 78%,#141b11 100%)}
 .scene::before{content:"";position:absolute;left:-4%;right:-4%;top:30%;height:24%;pointer-events:none;filter:blur(.6px);opacity:.95;
@@ -211,6 +222,32 @@ class McCullochRobCard extends HTMLElement {
     return [{entity: c.entity, name: c.name}, c.entity_2 ? {entity: c.entity_2, name: c.name_2} : null].filter(Boolean);
   }
 
+  // cambiar el nombre desde la barra: se guarda en el registro de entidades de HA (lo ve todo el mundo, en
+  // cualquier móvil). Vacío = vuelve al nombre de siempre. Enter o salir del campo guarda; Esc cancela.
+  _rename(btn) {
+    if (!btn || this._renaming) return;
+    const entity = btn.dataset.e, b = btn.querySelector('b');
+    const inp = document.createElement('input');
+    inp.value = b.textContent; inp.maxLength = 40; inp.setAttribute('aria-label', this._t('rename'));
+    this._renaming = true;
+    btn.querySelector('.rtx').replaceWith(inp); btn.querySelector('.pen')?.remove();
+    inp.focus(); inp.select();
+    let done = false;
+    const finish = async save => {
+      if (done) return; done = true;
+      const v = inp.value.trim();
+      if (save && v !== b.textContent) {
+        try { await this._hass.callWS({type: 'config/entity_registry/update', entity_id: entity, name: v || null}); }
+        catch (err) { alert(this._t('renameFail')); }
+      }
+      this._renaming = false;
+      this.shadowRoot.getElementById('rbar').dataset.k = '';  // redibuja con el nombre nuevo
+      this._update();
+    };
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') finish(true); if (e.key === 'Escape') finish(false); });
+    inp.addEventListener('blur', () => finish(true));
+  }
+
   _kind(entity) { return this._hass?.entities?.[entity]?.platform === 'landroid_cloud' ? 'landroid' : 'mcculloch'; }
 
   // foto: la de la opción `image` (solo primer robot), si no los renders 3D de su modelo, y si no el dibujo
@@ -353,6 +390,8 @@ class McCullochRobCard extends HTMLElement {
     const end = () => { if (!u.on) return; u.on = false; u.rel = performance.now(); if (performance.now() - u.lt > 80) u.vel = 0; };
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) scene.addEventListener(ev, end);
     root.getElementById('rbar').addEventListener('click', e => {
+      if (e.target.closest('input')) return;
+      if (e.target.closest('[data-pen]')) { e.stopPropagation(); this._rename(e.target.closest('button')); return; }
       const b = e.target.closest('button'); if (!b || b.dataset.e === this._sel) return;
       this._sel = b.dataset.e;
       try { localStorage.setItem('mcrob_sel_' + this._config.entity, this._sel); } catch (err) { /* sin almacenamiento */ }
@@ -427,23 +466,26 @@ class McCullochRobCard extends HTMLElement {
     const c = this._config, h = this._hass, r = this.shadowRoot;
     if (!this._robots().some(x => x.entity === this._sel)) this._sel = c.entity;
     const robots = this._robots();
-    const name = x => x.name || h.states[x.entity]?.attributes?.friendly_name || x.entity.split('.')[1];
-    // barra de robots: solo con dos; cada uno con su estado y su batería
+    // nombre: el que se le puso desde la tarjeta (registro de HA, igual en todos los móviles), si no el de la config
+    const name = x => h.entities?.[x.entity]?.name || x.name || h.states[x.entity]?.attributes?.friendly_name || x.entity.split('.')[1];
+    // barra de robots: solo con dos; cada uno con su foto, su color, su estado y su batería
     const bar = r.getElementById('rbar');
     bar.hidden = robots.length < 2;
-    if (robots.length > 1) {
+    if (robots.length > 1 && !this._renaming) {
       const key = robots.map(x => { const q = this._status(x.entity); return [x.entity, q.s, q.bat, name(x), x.entity === this._sel].join('|'); }).join(';');
       if (bar.dataset.k !== key) {
         bar.dataset.k = key;
         bar.replaceChildren(...robots.map(x => {
-          const q = this._status(x.entity), b = document.createElement('button');
+          const q = this._status(x.entity), b = document.createElement('button'), on = x.entity === this._sel;
           b.dataset.e = x.entity;
-          b.className = x.entity === this._sel ? 'on' : '';
-          b.innerHTML = '<i></i><span class="rtx"><b></b><small></small></span>';
+          b.className = (on ? 'on ' : '') + (q.kind === 'landroid' ? 'ld' : '');
+          b.innerHTML = `<img class="th" alt=""><span class="rtx"><b></b><small><i></i><span></span></small></span>`
+            + (on ? `<span class="pen" data-pen title="${this._t('rename')}"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/></svg></span>` : '');
+          b.querySelector('.th').src = `${BASE}${q.kind === 'landroid' ? 'rob3d_landroid' : 'rob3d'}/icono.webp${VER}`;
           b.querySelector('i').style.setProperty('--c', COLOR[q.s]);
           b.querySelector('b').textContent = name(x);
           const st = q.s === 'offline' && q.kind === 'landroid' ? this._t('noLink') : this._t(q.s);
-          b.querySelector('small').textContent = isNaN(q.bat) ? st : `${st} · ${q.bat}%`;
+          b.querySelector('small span').textContent = isNaN(q.bat) ? st : `${st} · ${q.bat}%`;
           return b;
         }));
       }
