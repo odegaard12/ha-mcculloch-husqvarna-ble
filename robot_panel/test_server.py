@@ -124,6 +124,22 @@ async def main():
         # quitarla con la actual
         assert (await c5.post("/api/robots/clave", json={"id": "landroid", "actual": "2468", "nueva": ""})).status == 200
         assert (await c5.post("/api/servicio", json=ok)).status == 502
+        # copia entre Pis: una vieja (reenviada) no pisa nada y devuelve la buena; una más nueva sí entra
+        import hashlib, hmac, json as _json  # noqa: E401
+        secret = bytes.fromhex((server.HERE / ".app_secret").read_text().strip())
+        sig = lambda b: hmac.new(secret, b"robots-peer:" + b, hashlib.sha256).hexdigest()  # noqa: E731
+        old = _json.dumps({"v": 1, "robots": {"landroid": {"name": "Viejo"}}}).encode()
+        r = await c5.post("/api/robots/peer", data=old, headers={"X-Peer-Sig": sig(old)})
+        back = await r.read()
+        assert r.status == 200 and _json.loads(back)["robots"]["landroid"]["name"] == "Robot de abajo"
+        assert r.headers["X-Peer-Sig"] == sig(back)  # la respuesta va firmada
+        new = _json.dumps({"v": 9e12, "robots": {"landroid": {"name": "Nuevo"}}}).encode()
+        assert (await c5.post("/api/robots/peer", data=new, headers={"X-Peer-Sig": sig(new)})).status == 200
+        names = {x["id"]: x["name"] for x in await (await c5.get("/api/robots")).json()}
+        assert names["landroid"] == "Nuevo", names
+        # avisos: solo servicios push de verdad (nada de mandar peticiones a otras direcciones)
+        evil = {"subscription": {"endpoint": "https://10.0.0.1/x", "keys": {"p256dh": "a", "auth": "b"}}}
+        assert (await c5.post("/api/push/subscribe", json=evil)).status in (400, 503)
     del os.environ["ROBOTS"]
     print("servidor: todo OK")
 

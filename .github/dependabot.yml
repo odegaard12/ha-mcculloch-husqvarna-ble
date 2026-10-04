@@ -1,0 +1,9 @@
+# Avisa (con una PR) cuando hay versiones nuevas de las acciones de la CI
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "CI"

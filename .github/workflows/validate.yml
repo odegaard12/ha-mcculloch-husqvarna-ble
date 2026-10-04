@@ -4,29 +4,39 @@ on:
   push:
   pull_request:
   schedule:
-    - cron: "0 4 * * 1"
+    - cron: "0 4 * * 1"  # cada lunes: avisa si una versión nueva de HA rompe algo
+
+# una sola ejecución por rama: un push nuevo cancela la anterior
+concurrency:
+  group: validar-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   hassfest:
-    runs-on: ubuntu-latest
+    name: Validación de Home Assistant (hassfest)
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: home-assistant/actions/hassfest@master
 
   hacs:
-    runs-on: ubuntu-latest
+    name: Validación de HACS
+    runs-on: ubuntu-24.04
     steps:
       - uses: hacs/action@main
         with:
           category: integration
 
   tests:
-    runs-on: ubuntu-latest
+    name: Pruebas (integración y servidor de la app)
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.14"
+          cache: pip
+          cache-dependency-path: .github/workflows/validate.yml
       - name: Instalar Home Assistant de pruebas
         run: |
           pip install pytest-homeassistant-custom-component
@@ -38,6 +48,7 @@ jobs:
                   print(req)
           EOF
           pip install -r req.txt
-      - run: python -m pytest -q tests
-      - name: Pruebas del servidor del panel (PIN y lista blanca de órdenes)
+      - name: Pruebas de la integración y la tarjeta
+        run: python -m pytest -q tests
+      - name: Pruebas del servidor de la app (PIN, lista blanca, contraseñas por robot, copia entre servidores)
         run: python robot_panel/test_server.py

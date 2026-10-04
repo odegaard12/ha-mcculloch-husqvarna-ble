@@ -15,13 +15,21 @@
         "data": {
           "pin": "PIN"
         }
+      },
+      "reauth_confirm": {
+        "title": "New PIN for {address}",
+        "description": "The mower rejected the saved PIN. Type the current PIN (leave it empty if it has none).",
+        "data": {
+          "pin": "PIN"
+        }
       }
     },
     "error": {
       "invalid_pin": "PIN must be numeric.",
       "invalid_auth": "Wrong PIN.",
       "cannot_connect": "Pairing failed, reboot the mower and retry.",
-      "not_found": "No Bluetooth adapter can see the mower."
+      "not_found": "No Bluetooth adapter can see the mower.",
+      "ok": "Connected."
     },
     "abort": {
       "already_configured": "Already configured.",
@@ -78,6 +86,10 @@
         "hours": {
           "name": "Hours",
           "description": "0.5 to 24 h"
+        },
+        "config_entry_id": {
+          "name": "Mower",
+          "description": "Only needed if you have more than one."
         }
       }
     },
@@ -88,6 +100,10 @@
         "hours": {
           "name": "Hours",
           "description": "0.5 to 168 h"
+        },
+        "config_entry_id": {
+          "name": "Mower",
+          "description": "Only needed if you have more than one."
         }
       }
     }

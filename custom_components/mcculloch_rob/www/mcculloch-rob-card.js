@@ -13,10 +13,11 @@ const T = {
     next: 'Próximo corte', today: 'hoy', tomorrow: 'mañana', none: 'sin programación', battery: 'Batería', lastData: 'último dato', lastSeen: 'Última conexión',
     offlineMsg: 'El robot no está al alcance del Bluetooth. Se reconecta solo al volver cerca del receptor.',
     offlineLd: 'No llega a la nube de Worx (sin Wi-Fi o apagado). Se reconecta solo.',
-    rain: 'Llueve: espera a que se seque el césped', noLink: 'Sin conexión',
+    rain: 'Llueve: espera a que se seque el césped', noLink: 'Sin conexión', noneOff: 'el horario se verá al conectar',
     pick: 'Robot (entidad lawn_mower)', name: 'Nombre que se ve (opcional)', noEntity: 'No encuentro la entidad',
     pick2: 'Segundo robot (opcional): otro McCulloch o un Landroid', name2: 'Nombre del segundo robot (opcional)',
     image: 'Foto propia del primer robot (opcional): URL de un PNG/WebP transparente',
+    rename: 'Cambiar el nombre', renameFail: 'No se pudo cambiar el nombre (hace falta un usuario administrador)',
   },
   en: {
     mowing: 'Mowing', homing: 'Going home', leaving: 'Leaving the dock', charging: 'Charging',
@@ -26,10 +27,11 @@ const T = {
     next: 'Next run', today: 'today', tomorrow: 'tomorrow', none: 'no schedule', battery: 'Battery', lastData: 'last known', lastSeen: 'Last seen',
     offlineMsg: 'The mower is out of Bluetooth range. It reconnects by itself when it comes back near the receiver.',
     offlineLd: 'It cannot reach the Worx cloud (no Wi-Fi or switched off). It reconnects by itself.',
-    rain: 'Raining: waiting for the lawn to dry', noLink: 'Offline',
+    rain: 'Raining: waiting for the lawn to dry', noLink: 'Offline', noneOff: 'schedule shows up once connected',
     pick: 'Mower (lawn_mower entity)', name: 'Display name (optional)', noEntity: 'Entity not found',
     pick2: 'Second mower (optional): another McCulloch or a Landroid', name2: 'Second mower name (optional)',
     image: 'Own photo of the first mower (optional): URL of a transparent PNG/WebP',
+    rename: 'Rename', renameFail: 'Could not rename (an administrator user is needed)',
   },
 };
 
@@ -52,24 +54,40 @@ const errsReady = fetch(BASE + 'errores_es.json' + VER).then(r => r.json()).then
 const CSS = `
 :host{display:block}
 ha-card{overflow:hidden}
-.rbar{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:6px;background:var(--secondary-background-color,rgba(127,127,127,.12))}
+.rbar{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 10px 8px}
 .rbar[hidden]{display:none}
-.rbar button{display:flex;align-items:center;gap:8px;min-width:0;border:0;border-radius:10px;padding:7px 10px;cursor:pointer;background:none;color:var(--primary-text-color);font:600 13px/1.2 system-ui,sans-serif;text-align:left;transition:background .25s}
-.rbar button.on{background:var(--card-background-color,#fff);box-shadow:0 1px 3px rgba(0,0,0,.18)}
-.rbar .rtx{display:flex;flex-direction:column;min-width:0}
+/* cada robot con su foto y su color de marca: el elegido, relleno; el otro, solo con el borde */
+.rbar button{--k:#ffc20e;position:relative;display:flex;align-items:center;gap:8px;min-width:0;border:1.5px solid color-mix(in srgb,var(--k) 45%,transparent);border-radius:14px;padding:6px 8px;cursor:pointer;
+  background:color-mix(in srgb,var(--k) 8%,transparent);color:var(--primary-text-color);font:650 13.5px/1.2 system-ui,sans-serif;text-align:left;transition:background .25s,border-color .25s,transform .15s,box-shadow .25s}
+.rbar button.ld{--k:#f38a12}
+.rbar button:active{transform:scale(.97)}
+.rbar button.on{background:var(--k);border-color:var(--k);color:#1b1b1b;box-shadow:0 4px 14px color-mix(in srgb,var(--k) 40%,transparent)}
+.rbar .th{width:38px;height:28px;flex:none;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(0,0,0,.3))}
+.rbar .rtx{display:flex;flex-direction:column;min-width:0;flex:1}
 .rbar b{overflow-wrap:anywhere}
-.rbar small{opacity:.7;font-weight:500;font-size:11.5px}
+.rbar small{display:flex;align-items:center;gap:5px;opacity:.75;font-weight:550;font-size:11.5px}
+.rbar button.on small{opacity:.8}
+.rbar .pen{flex:none;width:28px;height:28px;display:grid;place-items:center;border-radius:9px;background:rgba(0,0,0,.12)}
+.rbar .pen svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.rbar input{flex:1;min-width:0;border:0;border-radius:8px;padding:6px 8px;font:650 13.5px system-ui,sans-serif;background:rgba(255,255,255,.9);color:#1b1b1b}
 .scene.swap .bot,.scene.swap .dockw{animation:swapin .35s cubic-bezier(.2,.7,.2,1)}
 @keyframes swapin{from{opacity:0;transform:translateX(-50%) translateY(6px)}}
-.rbar i{width:8px;height:8px;border-radius:50%;flex:none;background:var(--c,#8a8f92)}
-.scene{position:relative;height:190px;overflow:hidden;background:radial-gradient(90% 75% at 50% 30%,#3a3d40 0%,#232527 55%,#17191a 100%)}
-.ground{position:absolute;left:-40%;right:-40%;bottom:-6%;height:64%;perspective:380px;perspective-origin:50% -30%;-webkit-mask:linear-gradient(to bottom,transparent,#000 38%);mask:linear-gradient(to bottom,transparent,#000 38%)}
+.rbar i{width:7px;height:7px;border-radius:50%;flex:none;background:var(--c,#8a8f92);box-shadow:0 0 0 1.5px rgba(255,255,255,.55)}
+/* jardín: cielo, setos al fondo y césped con franjas anchas de corte (igual que la app) */
+.scene{position:relative;height:190px;overflow:hidden;background:linear-gradient(to bottom,#26323d 0%,#2f3b41 34%,#3a4636 52%,#1c2617 78%,#141b11 100%)}
+.scene::before{content:"";position:absolute;left:-4%;right:-4%;top:30%;height:24%;pointer-events:none;filter:blur(.6px);opacity:.95;
+  background:radial-gradient(30px 26px at 50% 100%,#1d3519 64%,transparent 66%) 0 100%/46px 70% repeat-x,
+    radial-gradient(40px 34px at 50% 100%,#24421f 64%,transparent 66%) 16px 100%/64px 88% repeat-x,
+    linear-gradient(to top,#1a2f16 0 26%,transparent 26%)}
+.ground{position:absolute;left:-40%;right:-40%;bottom:-6%;height:64%;perspective:380px;perspective-origin:50% -30%;-webkit-mask:linear-gradient(to bottom,transparent,#000 30%);mask:linear-gradient(to bottom,transparent,#000 30%)}
 .plane{position:absolute;inset:-40% 0 0;transform:rotateX(64deg);transform-origin:50% 100%;animation:roll 1.6s linear infinite paused;
-  background:radial-gradient(circle at 30% 40%,rgba(200,245,150,.13) 0 .8px,transparent 1.3px) 0 0/5px 7px,
-  radial-gradient(circle at 70% 60%,rgba(0,0,0,.22) 0 .9px,transparent 1.5px) 0 0/4px 5px,
-  linear-gradient(90deg,#2b5126 0%,#376630 25%,#2b5126 50%,#376630 75%,#2b5126 100%) 0 0/360px 100%}
-.ground::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgba(23,25,26,.9),rgba(23,25,26,0) 55%)}
-@keyframes roll{to{background-position:20px 0,20px 0,360px 0}}
+  background:radial-gradient(circle at 30% 40%,rgba(214,252,160,.16) 0 .8px,transparent 1.3px) 0 0/5px 7px,
+  radial-gradient(circle at 70% 60%,rgba(0,0,0,.26) 0 .9px,transparent 1.5px) 0 0/4px 5px,
+  repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 2px,transparent 2px 9px) 0 0/9px 100%,
+  linear-gradient(90deg,#2d5627 0 50%,#3b7033 50% 100%) 0 0/150px 100%}
+.ground::before{content:"";position:absolute;inset:0;z-index:1;background:radial-gradient(38% 62% at 50% 86%,rgba(255,244,206,.12),transparent 70%)}
+.ground::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgba(20,27,17,.85),rgba(20,27,17,0) 50%)}
+@keyframes roll{to{background-position:20px 0,20px 0,18px 0,150px 0}}
 .s-homing .plane{animation-play-state:running}
 .s-leaving .plane{animation-play-state:running;animation-direction:reverse}
 .bot{position:absolute;left:50%;bottom:10%;width:min(48%,230px);transform:translateX(-50%);transition:left .9s,bottom .6s,filter .4s,opacity .4s;perspective:700px}
@@ -81,8 +99,9 @@ ha-card{overflow:hidden}
 /* Landroid sin renders propios: el modelo del McCulloch teñido de naranja */
 .tint .bot img,.tint .dockw img{filter:hue-rotate(-24deg) saturate(1.35) drop-shadow(0 10px 12px rgba(0,0,0,.35))}
 /* tamaño por la altura de la escena (190 px), no por el ancho: en tarjetas anchas no se sale por arriba */
-.r3d .bot{width:min(64%,240px);bottom:5%}.r3d .bot .sh{display:none}  /* el render trae su sombra */
-.r3d.s-lifted .bot{bottom:16%}
+/* el render trae su sombra y un margen transparente abajo (~30 %): bajado para que pise el centro del césped */
+.r3d .bot{width:min(64%,240px);bottom:-14%}.r3d .bot .sh{display:none}
+.r3d.s-lifted .bot{bottom:-2%}
 .bot img{display:block;width:100%;filter:drop-shadow(0 12px 14px rgba(0,0,0,.5));position:relative;z-index:1}
 .bot .sh{position:absolute;left:4%;right:0;bottom:-1%;height:16%;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.75),transparent);filter:blur(4px)}
 .bot .glow{position:absolute;inset:-6% -6% 0;border-radius:50%;opacity:0;transition:opacity .4s}
@@ -99,7 +118,7 @@ ha-card{overflow:hidden}
 .s-error .glow,.s-upside .glow{opacity:1;background:radial-gradient(closest-side,rgba(255,59,48,.6),transparent);animation:breathe 1s infinite}
 .s-upside .b3d{transform:rotateX(180deg) translateY(-8%)}
 /* volcado con render: al voltearlo, la sombra quedaría arriba y el robot bajo la hierba */
-.r3d.s-upside .bot{bottom:14%}.r3d.s-upside .bot img{filter:none}
+.r3d.s-upside .bot{bottom:-4%}.r3d.s-upside .bot img{filter:none}
 /* base de carga (render con la misma cámara que el robot: mismo ancho = encajan) y su piloto */
 .dockw{position:absolute;left:50%;bottom:4%;width:min(64%,240px);transform:translateX(-50%);opacity:0;transition:opacity .6s;pointer-events:none}
 .dockw img{display:block;width:100%}
@@ -116,16 +135,20 @@ ha-card{overflow:hidden}
 @keyframes home3d{0%{left:100%;opacity:0}14%{opacity:1}78%{left:65%;opacity:1}92%{left:64%;opacity:1}100%{left:64%;opacity:0}}
 @keyframes leave3d{0%,18%{left:50%;opacity:1}85%{opacity:1}100%{left:100%;opacity:0}}
 .s-lifted .bot{bottom:24%;animation:float 2.4s ease-in-out infinite}
-.s-offline .bot{filter:grayscale(1) brightness(.75);opacity:.55}.s-offline .ground{filter:grayscale(.9) brightness(.6)}
+.s-offline .bot{filter:grayscale(1) brightness(.85) contrast(.9)}
 @keyframes breathe{50%{opacity:.35}}
 @keyframes float{50%{transform:translateX(-50%) translateY(-8px) rotate(2deg)}}
 .fx b{position:absolute;bottom:6%;width:3px;height:7px;border-radius:2px;background:#8fdc6f;opacity:0;animation:clip 1s linear infinite}
 .s-mowing .fx b{display:block}.fx b{display:none}
 @keyframes clip{0%{opacity:0;transform:none}12%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(260deg)}}
-.pill{position:absolute;left:12px;top:10px;z-index:3;display:inline-flex;align-items:center;gap:7px;font:700 13px/1.25 system-ui,sans-serif;color:#fff;padding:7px 12px;border-radius:16px;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);border-left:3px solid var(--c);max-width:calc(100% - 112px)}
-.pill span{overflow-wrap:anywhere}  /* en dos líneas si hace falta, nunca cortada */
+/* etiqueta y batería en la misma fila: nunca se pisan (la etiqueta es corta; el detalle va en el aviso de abajo) */
+.top{position:absolute;left:12px;right:12px;top:10px;z-index:3;display:flex;gap:8px;justify-content:space-between;align-items:flex-start;pointer-events:none}
+.pill{display:inline-flex;align-items:center;gap:7px;min-width:0;font:700 13px/1.25 system-ui,sans-serif;color:#fff;padding:7px 12px;border-radius:16px;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);border-left:3px solid var(--c);transition:border-color .4s}
+.pill span{overflow-wrap:anywhere}
+.pill.bump{animation:pillin .35s cubic-bezier(.2,.8,.2,1)}
+@keyframes pillin{from{opacity:0;transform:translateY(-4px)}}
 .pill svg{width:15px;height:15px;flex:none;fill:none;stroke:var(--c);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
-.bat{position:absolute;right:12px;top:10px;z-index:3;display:flex;align-items:center;gap:6px;font:700 13px/1 system-ui,sans-serif;color:#fff;padding:7px 10px;border-radius:99px;background:rgba(0,0,0,.5)}
+.bat{flex:none;display:flex;align-items:center;gap:6px;font:700 13px/1 system-ui,sans-serif;color:#fff;padding:7px 10px;border-radius:99px;background:rgba(0,0,0,.5)}
 .bat i{position:relative;width:22px;height:11px;border:2px solid rgba(255,255,255,.8);border-radius:3px}
 .bat i::after{content:"";position:absolute;right:-5px;top:2px;width:2px;height:4px;background:rgba(255,255,255,.8);border-radius:1px}
 .bat i b{position:absolute;left:1px;top:1px;bottom:1px;border-radius:1px;background:var(--bc,#47d35a)}
@@ -153,8 +176,10 @@ const HTML = `
     <div class="ground"><div class="plane"></div></div>
     <div class="dockw"><img class="dock3d" alt="" draggable="false"><i class="led"></i></div>
     <div class="bot"><div class="sh"></div><div class="b3d"><img alt="" draggable="false"><div class="fx" id="fx"></div></div><span class="glow"></span></div>
-    <span class="pill" id="pill"><svg viewBox="0 0 24 24"></svg><span></span></span>
-    <span class="bat" id="bat"><i><b></b></i><span></span></span>
+    <div class="top">
+      <span class="pill" id="pill"><svg viewBox="0 0 24 24"></svg><span></span></span>
+      <span class="bat" id="bat"><i><b></b></i><span></span></span>
+    </div>
   </div>
   <div class="body">
     <div class="title"><b id="name"></b><span id="next"></span></div>
@@ -197,13 +222,39 @@ class McCullochRobCard extends HTMLElement {
     return [{entity: c.entity, name: c.name}, c.entity_2 ? {entity: c.entity_2, name: c.name_2} : null].filter(Boolean);
   }
 
+  // cambiar el nombre desde la barra: se guarda en el registro de entidades de HA (lo ve todo el mundo, en
+  // cualquier móvil). Vacío = vuelve al nombre de siempre. Enter o salir del campo guarda; Esc cancela.
+  _rename(btn) {
+    if (!btn || this._renaming) return;
+    const entity = btn.dataset.e, b = btn.querySelector('b');
+    const inp = document.createElement('input');
+    inp.value = b.textContent; inp.maxLength = 40; inp.setAttribute('aria-label', this._t('rename'));
+    this._renaming = true;
+    btn.querySelector('.rtx').replaceWith(inp); btn.querySelector('.pen')?.remove();
+    inp.focus(); inp.select();
+    let done = false;
+    const finish = async save => {
+      if (done) return; done = true;
+      const v = inp.value.trim();
+      if (save && v !== b.textContent) {
+        try { await this._hass.callWS({type: 'config/entity_registry/update', entity_id: entity, name: v || null}); }
+        catch (err) { alert(this._t('renameFail')); }
+      }
+      this._renaming = false;
+      this.shadowRoot.getElementById('rbar').dataset.k = '';  // redibuja con el nombre nuevo
+      this._update();
+    };
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') finish(true); if (e.key === 'Escape') finish(false); });
+    inp.addEventListener('blur', () => finish(true));
+  }
+
   _kind(entity) { return this._hass?.entities?.[entity]?.platform === 'landroid_cloud' ? 'landroid' : 'mcculloch'; }
 
   // foto: la de la opción `image` (solo primer robot), si no los renders 3D de su modelo, y si no el dibujo
   _setImage() {
     const img = this.shadowRoot.querySelector('.bot img');  // la del robot (antes en el HTML va la de la base)
     const ld = this._kind(this._sel) === 'landroid', own = this._sel === this._config.entity && this._config.image;
-    const srcs = [own, BASE + (ld ? 'rob3d_landroid/' : 'rob3d/') + 'turn_00.webp', BASE + 'rob3d/turn_00.webp', BASE + 'robot.webp', BASE + 'robot.svg'].filter(Boolean);
+    const srcs = [own, BASE + (ld ? 'rob3d_landroid/' : 'rob3d/') + 'turn_00.webp' + VER, BASE + 'rob3d/turn_00.webp' + VER, BASE + 'robot.webp' + VER, BASE + 'robot.svg' + VER].filter(Boolean);
     img.onerror = () => { srcs.shift(); if (srcs.length) img.src = srcs[0]; else img.onerror = null; };
     img.src = srcs[0];
     if (!own) this._load3d(ld); else { this._fr = null; this.shadowRoot.getElementById('scene').classList.remove('r3d', 'tint'); }
@@ -215,7 +266,7 @@ class McCullochRobCard extends HTMLElement {
     const scene = this.shadowRoot.getElementById('scene');
     const tryDir = i => {
       const dir = BASE + dirs[i];
-      const fr = Array.from({length: 24}, (_, k) => `${dir}turn_${String(k).padStart(2, '0')}.webp`);
+      const fr = Array.from({length: 24}, (_, k) => `${dir}turn_${String(k).padStart(2, '0')}.webp${VER}`);  // con versión: nada viejo de caché
       return Promise.all(fr.map(src => new Promise((ok, ko) => { const im = new Image(); im.onload = ok; im.onerror = ko; im.src = src; })))
         .then(() => ({fr, dir, tint: ld && i > 0}))
         .catch(() => (i + 1 < dirs.length ? tryDir(i + 1) : null));
@@ -226,7 +277,7 @@ class McCullochRobCard extends HTMLElement {
       this._fr = got.fr; this._cur = -1;
       scene.classList.add('r3d');
       scene.classList.toggle('tint', got.tint);
-      this.shadowRoot.querySelector('.dock3d').src = got.dir + 'base_side.webp';
+      this.shadowRoot.querySelector('.dock3d').src = got.dir + 'base_side.webp' + VER;
       const led = this.shadowRoot.querySelector('.led');
       fetch(got.dir + 'meta.json' + VER).then(r => r.json()).then(m => {
         if (m.led) { led.style.left = m.led[0] + '%'; led.style.top = m.led[1] + '%'; }
@@ -264,12 +315,16 @@ class McCullochRobCard extends HTMLElement {
       this.shadowRoot.querySelector('.bot img').src = this._fr[f];
       this.shadowRoot.querySelector('.b3d').classList.toggle('back', f > 6 && f < 18);
     }
-    this._raf = requestAnimationFrame(() => this._tick());
+    // solo se sigue animando si hace falta (cortando, arrastrando o volviendo del giro): quieto, el móvil descansa
+    if (scene.dataset.s === 'mowing' || u.ang != null || u.on) this._raf = requestAnimationFrame(() => this._tick());
+    else this._raf = null;
   }
+
+  _wake() { if (this._fr && !this._raf && this.isConnected) this._raf = requestAnimationFrame(() => this._tick()); }
 
   connectedCallback() {
     // al volver a la pantalla, reanudar el bucle de fotogramas si estaba parado
-    if (this._fr && !this._raf && this.shadowRoot) this._raf = requestAnimationFrame(() => this._tick());
+    if (this.shadowRoot) this._wake();
   }
 
   static getConfigElement() { return document.createElement('mcculloch-rob-card-editor'); }
@@ -323,6 +378,7 @@ class McCullochRobCard extends HTMLElement {
       if (e.button > 0 || !this._fr) return;
       Object.assign(u, {on: true, x0: e.clientX, lx: e.clientX, lt: performance.now(), a0: u.ang ?? u.shown, vel: 0});
       scene.setPointerCapture?.(e.pointerId);
+      this._wake();
     });
     scene.addEventListener('pointermove', e => {
       if (!u.on) return;
@@ -334,6 +390,8 @@ class McCullochRobCard extends HTMLElement {
     const end = () => { if (!u.on) return; u.on = false; u.rel = performance.now(); if (performance.now() - u.lt > 80) u.vel = 0; };
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) scene.addEventListener(ev, end);
     root.getElementById('rbar').addEventListener('click', e => {
+      if (e.target.closest('input')) return;
+      if (e.target.closest('[data-pen]')) { e.stopPropagation(); this._rename(e.target.closest('button')); return; }
       const b = e.target.closest('button'); if (!b || b.dataset.e === this._sel) return;
       this._sel = b.dataset.e;
       try { localStorage.setItem('mcrob_sel_' + this._config.entity, this._sel); } catch (err) { /* sin almacenamiento */ }
@@ -408,23 +466,26 @@ class McCullochRobCard extends HTMLElement {
     const c = this._config, h = this._hass, r = this.shadowRoot;
     if (!this._robots().some(x => x.entity === this._sel)) this._sel = c.entity;
     const robots = this._robots();
-    const name = x => x.name || h.states[x.entity]?.attributes?.friendly_name || x.entity.split('.')[1];
-    // barra de robots: solo con dos; cada uno con su estado y su batería
+    // nombre: el que se le puso desde la tarjeta (registro de HA, igual en todos los móviles), si no el de la config
+    const name = x => h.entities?.[x.entity]?.name || x.name || h.states[x.entity]?.attributes?.friendly_name || x.entity.split('.')[1];
+    // barra de robots: solo con dos; cada uno con su foto, su color, su estado y su batería
     const bar = r.getElementById('rbar');
     bar.hidden = robots.length < 2;
-    if (robots.length > 1) {
+    if (robots.length > 1 && !this._renaming) {
       const key = robots.map(x => { const q = this._status(x.entity); return [x.entity, q.s, q.bat, name(x), x.entity === this._sel].join('|'); }).join(';');
       if (bar.dataset.k !== key) {
         bar.dataset.k = key;
         bar.replaceChildren(...robots.map(x => {
-          const q = this._status(x.entity), b = document.createElement('button');
+          const q = this._status(x.entity), b = document.createElement('button'), on = x.entity === this._sel;
           b.dataset.e = x.entity;
-          b.className = x.entity === this._sel ? 'on' : '';
-          b.innerHTML = '<i></i><span class="rtx"><b></b><small></small></span>';
+          b.className = (on ? 'on ' : '') + (q.kind === 'landroid' ? 'ld' : '');
+          b.innerHTML = `<img class="th" alt=""><span class="rtx"><b></b><small><i></i><span></span></small></span>`
+            + (on ? `<span class="pen" data-pen title="${this._t('rename')}"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/></svg></span>` : '');
+          b.querySelector('.th').src = `${BASE}${q.kind === 'landroid' ? 'rob3d_landroid' : 'rob3d'}/icono.webp${VER}`;
           b.querySelector('i').style.setProperty('--c', COLOR[q.s]);
           b.querySelector('b').textContent = name(x);
           const st = q.s === 'offline' && q.kind === 'landroid' ? this._t('noLink') : this._t(q.s);
-          b.querySelector('small').textContent = isNaN(q.bat) ? st : `${st} · ${q.bat}%`;
+          b.querySelector('small span').textContent = isNaN(q.bat) ? st : `${st} · ${q.bat}%`;
           return b;
         }));
       }
@@ -433,13 +494,21 @@ class McCullochRobCard extends HTMLElement {
     const q = this._status(this._sel), {s, bat, charging, offline, kind, mower} = q;
     r.getElementById('name').textContent = mower ? name(me) : this._t('noEntity');
     const scene = r.getElementById('scene');
-    if (scene.dataset.s !== s) { scene.classList.remove(...[...scene.classList].filter(k => k.startsWith('s-'))); scene.classList.add('s-' + s); scene.dataset.s = s; }
+    if (scene.dataset.s !== s) {
+      scene.classList.remove(...[...scene.classList].filter(k => k.startsWith('s-'))); scene.classList.add('s-' + s); scene.dataset.s = s;
+      this._wake();  // pone la vista que toca al nuevo estado (y sigue animando si corta)
+    }
     const pill = r.getElementById('pill');
     pill.style.setProperty('--c', COLOR[s]);
     pill.firstChild.innerHTML = ICON[s];
-    let label = s === 'offline' && kind === 'landroid' ? this._t('noLink') : this._t(s);
-    if (s === 'error') { const e = this._errText(kind, q.err); if (e) label += ': ' + e; }
-    pill.lastChild.textContent = label;
+    const label = s === 'offline' && kind === 'landroid' ? this._t('noLink') : this._t(s);
+    // la etiqueta, corta; la avería concreta, en el aviso de abajo
+    let detail = label;
+    if (s === 'error') { const e = this._errText(kind, q.err); if (e) detail = `${label}: ${e}`; }
+    if (pill.lastChild.textContent !== label) {
+      pill.lastChild.textContent = label;
+      pill.classList.remove('bump'); void pill.offsetWidth; pill.classList.add('bump');
+    }
     const batEl = r.getElementById('bat');
     batEl.hidden = isNaN(bat);
     if (!isNaN(bat)) {
@@ -449,13 +518,18 @@ class McCullochRobCard extends HTMLElement {
       fill.style.setProperty('--bc', bat < 20 ? '#ff3b30' : bat < 40 ? '#ffc20e' : '#47d35a');
     }
     const nx = q.st('next_start');
-    let nextTxt = this._t('none');
-    // horario: el de ahora si el robot está conectado; si no, el último guardado en este navegador
+    // sin conexión y sin nada guardado no se sabe el horario: nunca se dice «sin programación» a ciegas
+    let nextTxt = this._t(offline ? 'noneOff' : 'none');
+    // horario: el de ahora si el robot está conectado; si no, el último guardado en este navegador.
+    // Una lista vacía con tareas contadas es una lectura fallida: no vale ni borra la copia buena.
     const key = 'mcrob_tasks_' + this._sel;
     let tasks = q.st('schedule')?.attributes?.tareas, stale = false;
+    if (Array.isArray(tasks) && !tasks.length && Number(q.st('schedule')?.state) > 0) tasks = undefined;
     try {
-      if (Array.isArray(tasks)) localStorage.setItem(key, JSON.stringify(tasks));
-      else { tasks = JSON.parse(localStorage.getItem(key) || 'null'); stale = Array.isArray(tasks); }
+      if (Array.isArray(tasks)) {
+        const txt = JSON.stringify(tasks);
+        if (localStorage.getItem(key) !== txt) localStorage.setItem(key, txt);  // solo si cambió
+      } else { tasks = JSON.parse(localStorage.getItem(key) || 'null'); stale = Array.isArray(tasks); }
     } catch (e) { /* almacenamiento bloqueado: sin respaldo */ }
     const fromSchedule = Array.isArray(tasks) ? this._nextFromTasks(tasks) : null;
     // el sensor guarda el último valor: si ya pasó (robot lejos), vale más el horario
@@ -482,7 +556,7 @@ class McCullochRobCard extends HTMLElement {
       const rel = Math.abs(mins) < 120 ? rtf.format(Math.round(mins), 'minute') : Math.abs(mins) < 2880 ? rtf.format(Math.round(mins / 60), 'hour') : rtf.format(Math.round(mins / 1440), 'day');
       offTxt = `${this._t('lastSeen')}: ${rel}. ${offTxt}`;
     }
-    const [alCls, alTxt] = offline ? ['alert warn', offTxt] : ['upside', 'lifted', 'error'].includes(s) ? ['alert', label]
+    const [alCls, alTxt] = offline ? ['alert warn', offTxt] : ['upside', 'lifted', 'error'].includes(s) ? ['alert', detail]
       : q.rain ? ['alert info', this._t('rain')] : ['', ''];
     const alEl = r.getElementById('alert');
     // el texto viene de un sensor: siempre como texto, nunca como HTML
@@ -552,9 +626,18 @@ class McCullochRobCardEditor extends HTMLElement {
   }
 }
 
-if (!customElements.get('mcculloch-rob-card')) {
-  customElements.define('mcculloch-rob-card', McCullochRobCard);
-  customElements.define('mcculloch-rob-card-editor', McCullochRobCardEditor);
+// Algunas tarjetas de HACS cambian window.customElements por un polyfill de registros con ámbito después de que
+// esta se haya registrado: el registro nuevo no la conoce y HA pinta «Custom element doesn't exist». Se vuelve a
+// registrar (con una subclase, el mismo constructor no se puede definir dos veces) si desaparece.
+function register(){
+  for (const [tag, cls] of [['mcculloch-rob-card', McCullochRobCard], ['mcculloch-rob-card-editor', McCullochRobCardEditor]]) {
+    if (customElements.get(tag)) continue;
+    try { customElements.define(tag, class extends cls {}); } catch(e) { console.warn('mcculloch-rob-card:', e.message); }
+  }
+}
+register();
+[300, 1500, 5000, 15000].forEach(t => setTimeout(register, t));
+if (!(window.customCards || []).some(c => c.type === 'mcculloch-rob-card')) {
   window.customCards = window.customCards || [];
   window.customCards.push({
     type: 'mcculloch-rob-card', name: 'Robots cortacésped (McCulloch / Husqvarna / Landroid)',
