@@ -2,6 +2,66 @@
 
 Todas las versiones de la integración, la tarjeta y el panel web.
 
+## v0.3.4 · Giro 3D con el dedo, cada robot con su color y textos que no se cortan
+
+#### Novedades
+- **El robot se gira con el dedo**, en la app y en la tarjeta: arrastrando a los lados da la vuelta entera, con inercia, y a los 3 s vuelve solo a lo que estaba haciendo. El scroll vertical no se toca.
+- **Cada robot con su color y su icono**: amarillo el McCulloch, naranja el Landroid (botones, pestañas, anillo de batería, gráficas).
+- **Contraseña con teclado**: el robot bloqueado enseña un teclado numérico para abrirlo.
+- **Tirar hacia abajo para actualizar** la app.
+- Fundido corto al cambiar de robot.
+
+#### Correcciones
+- **Nunca se mezcla un robot con el otro**: mientras cargan sus vistas no se enseña nada (antes salía un momento el McCulloch con el nombre del Landroid), y la app arranca con el último robot visto y su aspecto.
+- **Textos que no se cortan**: la barra de robots va en dos líneas (nombre / estado · batería), las etiquetas de avería pasan a dos líneas en la app y en la tarjeta, y la tabla de «Todos los datos» parte los valores largos.
+- La pantalla de contraseña tenía el título partido en dos.
+- Sobre el robot aparecía un óvalo translúcido.
+- La app no se recarga sola a mitad de escribir una contraseña o con una ventana abierta.
+
+#### Repositorio
+- Título, textos, capturas completas y nombres (HACS, complemento y selector de tarjetas) con los dos robots.
+
+## v0.3.3 · Landroid en 3D, tarjeta con dos robots, contraseña por robot y averías en español
+
+#### Novedades
+- **Modelo 3D del Worx Landroid** hecho en Blender (`tools/blender/landroid_model.py`):
+  - capó naranja en U con faldón de aletas, chasis negro y batería PowerShare;
+  - ruedas de tacos con llanta de tres radios, mando de altura y pantalla con STOP;
+  - 24 vistas y su base de carga.
+- **Tarjeta con dos robots**: `entity_2` y `name_2` (también desde el editor).
+  - Barra arriba con el estado y la batería de cada robot.
+  - Cada robot con su modelo y sus órdenes; del Landroid, cortar solo los bordes y el aviso de lluvia.
+- **Nombre de cada robot** desde la barra de arriba del panel, guardado en el servidor e igual en todos los móviles.
+- **Contraseña por robot** (4 a 8 cifras): sin ella, en los demás móviles no se ven sus datos ni se le dan órdenes.
+  - Lo comprueba el servidor.
+  - Se copia entre las dos Pis.
+  - Tiene límite de intentos.
+- **Avisos push del Landroid**:
+  - avería solo con el robot conectado;
+  - 1 y 3 días sin conexión;
+  - aviso de cuando vuelve.
+  - Los avisos llevan el nombre que le hayas puesto al robot.
+
+#### Correcciones
+- **Averías en español**: los 160 códigos traducidos en HA (estados de los sensores *Error* y *Último aviso*), en el panel, en la tarjeta y en los avisos. Antes salía, por ejemplo, «wheel motor blocked rear left».
+  - El sensor de error añade el atributo `descripcion`.
+- **Vuelta a la base**: el robot se queda a medio entrar; ya no parece aparcado sin cargar.
+- El aviso de «sin conexión» ya no se repite cada 6 horas por la misma desconexión.
+
+## v0.3.2 · Varios robots en el panel: McCulloch y Worx Landroid
+
+#### Novedades
+- **Varios robots en la misma app**: barra arriba con cada robot (estado y batería) para cambiar de uno a otro, y ficha **Mis robots** al tocar el título. Recuerda el último que viste.
+- **Worx Landroid** (integración Landroid Cloud):
+  - estado, batería y horario guardado (solo para consultar);
+  - actividad de 24 h y de 7 días, error, lluvia, señal Wi-Fi y uso acumulado;
+  - sus interruptores y las órdenes Cortar, Pausa, A la base y Cortar solo los bordes.
+- Opción nueva `ROBOTS` (`prefijo:nombre:tipo`), también en el complemento como `robots`.
+
+#### Correcciones
+- Sin dato de batería, el panel mostraba «0 %»; ahora muestra «–».
+- Los interruptores quedan desactivados mientras el robot no está conectado.
+
 ## v0.3.1 · Vuelta al diseño anterior del robot
 
 #### Cambios

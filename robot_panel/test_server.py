@@ -66,11 +66,11 @@ async def main():
             assert r.status == 502 and "error" in await r.json(), (path, r.status)
         r = await c.get("/api/historial")
         assert r.status == 502
-        # con sesión: aquí no hay claves VAPID, así que suscribirse responde 503 y no rompe nada
+        # con sesión: sin pywebpush no hay clave (503); con él, py_vapid la crea y la suscripción sin https se rechaza
         r = await c.get("/api/push/key")
-        assert r.status == 200 and (await r.json())["key"] is None
+        assert r.status == 200 and "key" in await r.json()
         bad = {"subscription": {"endpoint": "http://no-https", "keys": {"p256dh": "a", "auth": "b"}}}
-        assert (await c.post("/api/push/subscribe", json=bad)).status == 503
+        assert (await c.post("/api/push/subscribe", json=bad)).status in (400, 503)
         cookie = c.session.cookie_jar.filter_cookies(c.make_url("/")).get(server.COOKIE).value
     # un PIN nuevo invalida las sesiones viejas
     os.environ["APP_PIN"] = "9999"
@@ -84,6 +84,47 @@ async def main():
         assert codes[:20] == [403] * 20 and codes[20] == 429, codes
         r = await c3.post("/api/login", json={"pin": "4321"}, headers={"CF-Connecting-IP": "10.9.9.9"})
         assert r.status == 429
+    # varios robots: el McCulloch siempre primero; las entradas mal escritas de ROBOTS se ignoran
+    os.environ["ROBOTS"] = "landroid:Landroid:landroid, Mal:Nombre:landroid,x:y:otro,robot_cortacesped:Repe:mcculloch"
+    async with TestClient(TestServer(server.make_app())) as c4:
+        await c4.post("/api/login", json={"pin": "4321"})
+        robots = await (await c4.get("/api/robots")).json()
+        assert [r["id"] for r in robots] == ["robot_cortacesped", "landroid"], robots
+        assert robots[1] == {"id": "landroid", "name": "Landroid", "kind": "landroid", "locked": False, "open": True}
+        ok = {"domain": "lawn_mower", "service": "dock", "entity_id": "lawn_mower.landroid"}
+        assert (await c4.post("/api/servicio", json=ok)).status == 502  # pasa el filtro; no hay HA
+        for e in ("lawn_mower.landroidx", "lawn_mower.landroid,lawn_mower.vecino", "switch.mal_eco"):
+            r = await c4.post("/api/servicio", json={**ok, "entity_id": e})
+            assert r.status == 403, e
+        assert (await c4.get("/api/historial?r=landroid&e=actividad")).status == 502
+        # nombre: se guarda y lo ven todos
+        assert (await c4.post("/api/robots/nombre", json={"id": "landroid", "name": "  Robot   de abajo "})).status == 200
+        assert (await c4.post("/api/robots/nombre", json={"id": "otro", "name": "x"})).status == 400
+        # contraseña del Landroid: quien la pone sigue dentro en su móvil
+        assert (await c4.post("/api/robots/clave", json={"id": "landroid", "nueva": "12"})).status == 400
+        assert (await c4.post("/api/robots/clave", json={"id": "landroid", "nueva": "2468"})).status == 200
+        assert (await c4.post("/api/servicio", json=ok)).status == 502
+    # otro móvil con el PIN de la app pero sin la contraseña del Landroid: ni lo ve ni lo toca
+    async with TestClient(TestServer(server.make_app())) as c5:
+        await c5.post("/api/login", json={"pin": "4321"})
+        robots = {r["id"]: r for r in await (await c5.get("/api/robots")).json()}
+        assert robots["landroid"]["name"] == "Robot de abajo" and robots["landroid"]["locked"] and not robots["landroid"]["open"]
+        assert robots["robot_cortacesped"]["open"]
+        assert (await c5.post("/api/servicio", json=ok)).status == 423
+        assert (await c5.get("/api/historial?r=landroid")).status == 423
+        assert (await c5.post("/api/robots/nombre", json={"id": "landroid", "name": "Mío"})).status == 423
+        assert (await c5.post("/api/robots/clave", json={"id": "landroid", "nueva": ""})).status == 403  # quitarla pide la actual
+        assert (await c5.post("/api/robots/abrir", json={"id": "landroid", "pin": "0000"})).status == 403
+        assert (await c5.post("/api/robots/abrir", json={"id": "landroid", "pin": "2468"})).status == 200
+        assert (await c5.post("/api/servicio", json=ok)).status == 502
+        assert (await c5.post("/api/robots/cerrar", json={"id": "landroid"})).status == 200
+        assert (await c5.post("/api/servicio", json=ok)).status == 423
+        # la copia entre Pis va firmada
+        assert (await c5.post("/api/robots/peer", data=b"{}", headers={"X-Peer-Sig": "falsa"})).status == 403
+        # quitarla con la actual
+        assert (await c5.post("/api/robots/clave", json={"id": "landroid", "actual": "2468", "nueva": ""})).status == 200
+        assert (await c5.post("/api/servicio", json=ok)).status == 502
+    del os.environ["ROBOTS"]
     print("servidor: todo OK")
 
 
