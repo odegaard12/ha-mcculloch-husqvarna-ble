@@ -2,6 +2,15 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.8 · Barra de robots más clara y nombres editables desde la tarjeta
+
+_Con dos robots, la barra de arriba muestra la foto y el color de cada uno, y el nombre se cambia desde la propia tarjeta._
+
+#### Tarjeta
+- **Barra de robots que se distingue**: cada robot con su foto y su color (amarillo McCulloch, naranja Landroid). El elegido va relleno; el otro, solo con el borde.
+- **Cambiar el nombre desde la tarjeta**: el lápiz del robot elegido abre un campo; Enter guarda y Esc cancela. Se guarda en el registro de entidades de Home Assistant, así que se ve igual en todos los móviles. Vacío vuelve al nombre de siempre. Hace falta un usuario administrador.
+
+
 ## v0.3.7 · El robot pisa el césped en la tarjeta
 
 _En la tarjeta el robot ya no flota sobre el horizonte: se coloca en el centro del césped._
