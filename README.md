@@ -5,16 +5,20 @@ Controla tu robot cortacésped **McCulloch ROB, Husqvarna Automower, Gardena SIL
 - **Integración** (`mcculloch_rob`): unas 50 entidades (batería, estado, actividad, próximo corte, errores, sensores de choque, levantado y volcado, estadísticas, ajustes), órdenes (cortar, pausa, a la base), cambio del horario y "cortar o aparcar durante X horas".
 - **Tarjeta de Lovelace** con el robot animado según su estado. Va dentro de la integración: no hay que instalar nada más.
 - **Panel web estilo app** (opcional), que se puede instalar en el móvil: como complemento de HA, en una Raspberry o en cualquier equipo con Docker.
+- **¿También tienes un Worx Landroid?** La tarjeta y el panel lo muestran junto al McCulloch (integración [Landroid Cloud](https://github.com/MTrab/landroid_cloud)): barra para cambiar de robot, nombre a tu gusto, **contraseña por robot** para que nadie más lo maneje, sus propias órdenes (cortar solo los bordes) y sus avisos. Ver [Varios robots](#varios-robots-en-la-misma-app).
 
 > 🇬🇧 *English summary at the bottom.*
 
 <p align="center">
-  <img src="docs/panel.png" alt="Panel web en el móvil: el robot cortando, batería, franja de corte y órdenes" width="300">
+  <img src="docs/panel.png" alt="Panel web en el móvil con dos robots: barra para cambiar entre el McCulloch y el Landroid" width="300">
   &nbsp;
-  <img src="docs/tarjeta.png" alt="Tarjeta de Lovelace en seis estados: cortando, cargando, volviendo, en la base, avería y fuera de alcance" width="520">
+  <img src="docs/tarjeta.png" alt="Tarjeta de Lovelace con dos robots: cortando, cargando y volviendo a la base" width="520">
+</p>
+<p align="center">
+  <img src="docs/landroid.png" alt="La tarjeta con el Worx Landroid: avería traducida, cortando, volviendo a la base" width="820">
 </p>
 
-El robot es un **modelo 3D propio hecho en Blender** (`tools/blender/rob_model.py`, sin logotipos), renderizado desde 24 ángulos. Se anima según su estado: al cortar cruza el césped, **gira en 3D** al final de cada pasada y deja una estela; se le ve cargar, volver a la base, levantado o **volcado** (da la vuelta en 3D). En *Datos* tienes la actividad y la batería de 24 h y las **horas cortadas por día** de la última semana.
+Los robots son **modelos 3D propios hechos en Blender** (`tools/blender/rob_model.py` y `landroid_model.py`, sin logotipos), renderizados desde 24 ángulos. Se anima según su estado: al cortar cruza el césped, **gira en 3D** al final de cada pasada y deja una estela; se le ve cargar, volver a la base, levantado o **volcado** (da la vuelta en 3D). En *Datos* tienes la actividad y la batería de 24 h y las **horas cortadas por día** de la última semana.
 
 ## ¿Qué la diferencia de la integración oficial "Husqvarna Automower BLE"?
 
@@ -105,6 +109,22 @@ Del Landroid se ven:
 - sus interruptores: modo fiesta, bloqueo, Off Limits y horario automático.
 
 Las órdenes Cortar, Pausa, A la base y Cortar solo los bordes también funcionan. Sin conexión se quedan sus últimos datos.
+
+**Nombre y contraseña de cada robot.**
+- El lápiz de la barra cambia el nombre del robot que ves. El nombre se guarda en el servidor, así que sale igual en todos los móviles y en los avisos.
+- En **Mis robots → Poner contraseña** (de 4 a 8 cifras) proteges un robot: en los demás móviles ni se ven sus datos ni se le pueden dar órdenes hasta escribirla.
+- Esto lo comprueba el servidor, no solo la pantalla.
+- Sus avisos solo llegan a los móviles que lo tenían desbloqueado al activarlos.
+
+**En la tarjeta de Lovelace** el segundo robot se añade desde el editor (*Segundo robot* y su nombre), o en YAML:
+
+```yaml
+type: custom:mcculloch-rob-card
+entity: lawn_mower.robot_cortacesped
+name: McCulloch
+entity_2: lawn_mower.landroid
+name_2: Landroid
+```
 
 ## Avisos al móvil
 

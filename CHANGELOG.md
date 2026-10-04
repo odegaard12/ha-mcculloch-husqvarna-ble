@@ -2,6 +2,33 @@
 
 Todas las versiones de la integración, la tarjeta y el panel web.
 
+## v0.3.3 · Landroid en 3D, tarjeta con dos robots, contraseña por robot y averías en español
+
+#### Novedades
+- **Modelo 3D del Worx Landroid** hecho en Blender (`tools/blender/landroid_model.py`):
+  - capó naranja en U con faldón de aletas, chasis negro y batería PowerShare;
+  - ruedas de tacos con llanta de tres radios, mando de altura y pantalla con STOP;
+  - 24 vistas y su base de carga.
+- **Tarjeta con dos robots**: `entity_2` y `name_2` (también desde el editor).
+  - Barra arriba con el estado y la batería de cada robot.
+  - Cada robot con su modelo y sus órdenes; del Landroid, cortar solo los bordes y el aviso de lluvia.
+- **Nombre de cada robot** desde la barra de arriba del panel, guardado en el servidor e igual en todos los móviles.
+- **Contraseña por robot** (4 a 8 cifras): sin ella, en los demás móviles no se ven sus datos ni se le dan órdenes.
+  - Lo comprueba el servidor.
+  - Se copia entre las dos Pis.
+  - Tiene límite de intentos.
+- **Avisos push del Landroid**:
+  - avería solo con el robot conectado;
+  - 1 y 3 días sin conexión;
+  - aviso de cuando vuelve.
+  - Los avisos llevan el nombre que le hayas puesto al robot.
+
+#### Correcciones
+- **Averías en español**: los 160 códigos traducidos en HA (estados de los sensores *Error* y *Último aviso*), en el panel, en la tarjeta y en los avisos. Antes salía, por ejemplo, «wheel motor blocked rear left».
+  - El sensor de error añade el atributo `descripcion`.
+- **Vuelta a la base**: el robot se queda a medio entrar; ya no parece aparcado sin cargar.
+- El aviso de «sin conexión» ya no se repite cada 6 horas por la misma desconexión.
+
 ## v0.3.2 · Varios robots en el panel: McCulloch y Worx Landroid
 
 #### Novedades

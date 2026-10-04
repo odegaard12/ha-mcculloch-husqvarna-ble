@@ -67,7 +67,25 @@ header.top h1{font-size:18px;margin:0;font-weight:750;flex:1}
 .rcard .st{display:flex;align-items:center;gap:6px;font-weight:650;font-size:14px;margin-top:4px}
 .rcard .bt{font-size:20px;font-weight:800;white-space:nowrap}
 /* el Landroid usa el mismo modelo 3D teñido a su naranja; lo que solo tiene el McCulloch se esconde */
-body[data-kind="landroid"] .tilt img,body[data-kind="landroid"] .dock3d,.rcard img.ld{filter:hue-rotate(-24deg) saturate(1.35)}
+/* sin renders propios del Landroid (aún no desplegados) se tiñe el del McCulloch */
+.stage.tint .tilt img,.stage.tint .dock3d,.rcard img.ld{filter:hue-rotate(-24deg) saturate(1.35)}
+.rbar .pen{display:inline-flex;width:26px;height:26px;margin:-4px -4px -4px 0;align-items:center;justify-content:center;border-radius:8px;background:rgba(0,0,0,.08)}
+.rbar .pen svg{width:15px;height:15px}
+.rwrap + .rwrap{margin-top:12px}
+.racts{margin-top:8px;padding:0 4px}
+.racts .chip{min-height:36px;padding:6px 12px;font-size:13px}
+.fld{display:block;margin:0 4px 12px}
+.fld span{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
+.fld input{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--card)}
+.dlgm{min-height:4px}
+.lockview{display:none;max-width:520px;margin:30px auto;text-align:center}
+.lockview .card{padding:28px 20px}
+.lockview h2{margin:12px 0 6px;font-size:20px}
+.lkicon{width:64px;height:64px;margin:0 auto;border-radius:20px;background:var(--brand-soft);display:flex;align-items:center;justify-content:center}
+.lkicon svg{width:34px;height:34px}
+body.rlocked .view,body.rlocked nav.tabs,body.rlocked footer{display:none!important}
+body.rlocked .lockview{display:block}
+body[data-kind="landroid"] .actions .main{background:#f38a12}
 body[data-kind="landroid"] .mc-only,body:not([data-kind="landroid"]) .ld-only{display:none!important}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;justify-content:center;background:var(--nav);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
 nav.tabs .in{display:grid;grid-template-columns:repeat(4,1fr);width:100%;max-width:520px;gap:4px}
@@ -280,10 +298,11 @@ details.all td:last-child{text-align:right;font-weight:560;overflow-wrap:anywher
 .stage.r3d.docked .bot,.stage.r3d.charging .bot{left:50%;bottom:17%;width:min(58%,300px)}
 .stage.r3d.docked .body3d{transform:none}
 .stage.r3d.homing .bot,.stage.r3d.leaving .bot{bottom:16.5%;width:min(58%,300px)}
-/* llegar: entra rodando y frena suave sobre la placa; salir: arranca marcha atrás y acelera */
+/* llegar: se acerca rodando y se queda a medio entrar (medio en la placa, medio fuera): nunca parece ya
+   aparcado, que eso solo lo dice «En la base»; salir: arranca marcha atrás y acelera */
 .stage.r3d.homing .bot{animation:home3d 6s cubic-bezier(.3,.1,.25,1) infinite}
 .stage.r3d.leaving .bot{animation:leave3d 6s cubic-bezier(.5,0,.7,.9) infinite}
-@keyframes home3d{0%{left:95%;opacity:0}12%{opacity:1}80%,100%{left:50%;opacity:1}}
+@keyframes home3d{0%{left:98%;opacity:0}14%{opacity:1}78%{left:64%;opacity:1}92%{left:63%;opacity:1}100%{left:63%;opacity:0}}
 @keyframes leave3d{0%,15%{left:50%;opacity:1}88%{opacity:1}100%{left:95%;opacity:0}}
 @keyframes bump{50%{transform:translateY(-1.5px) rotate(-.5deg)}}
 .stage.homing .bot{animation:home 5s ease-in-out infinite}
@@ -342,6 +361,16 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
   </header>
   <div class="rbar" id="rbar" hidden></div>
   <div class="sheet" id="sheet" hidden><div class="panel" role="dialog" aria-label="Mis robots"><h2>Mis robots<button id="sheetx" aria-label="Cerrar">✕</button></h2><div id="rlist"></div></div></div>
+  <div class="sheet" id="dlg" hidden><div class="panel" role="dialog" aria-labelledby="dlgt"><h2 id="dlgt"></h2><p class="muted" id="dlgp" style="margin:-4px 4px 12px;font-size:14px"></p><div id="dlgf"></div><div class="dlgm" id="dlgm"></div><div class="bar-actions"><button class="btn ghost" id="dlgc">Cancelar</button><span style="flex:1"></span><button class="btn" id="dlgo">Aceptar</button></div></div></div>
+  <!-- robot con contraseña y sin desbloquear en este móvil -->
+  <section class="lockview" id="lockview">
+    <div class="card">
+      <div class="lkicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="10" width="14" height="10" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+      <h2><span id="lkname"></span> tiene contraseña</h2>
+      <p class="muted">Sin ella no se ven sus datos ni se le pueden dar órdenes desde este móvil.</p>
+      <div class="chips" style="justify-content:center"><button class="btn" id="lkopen">Desbloquear</button><button class="chip" id="lkother" hidden></button></div>
+    </div>
+  </section>
 
   <nav class="tabs" aria-label="Secciones"><div class="in">
     <button data-v="inicio" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Inicio</button>
@@ -472,7 +501,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
         <div class="card"><h2>Ajustes del robot</h2><div id="toggles"></div></div>
         <div class="card">
           <h2>Avisos en este móvil</h2>
-          <p class="muted" style="margin:0 0 12px;font-size:14px">Te avisa si el robot tiene una avería, se vuelca, se queda levantado o parado, o lleva días sin conexión.<span class="ld-only"> Por ahora solo vigila al McCulloch.</span></p>
+          <p class="muted" style="margin:0 0 12px;font-size:14px">Te avisa si el robot tiene una avería, se vuelca, se queda levantado o parado, o lleva días sin conexión. Vale para los robots que ves en este móvil: si uno tiene contraseña, desbloquéalo antes de activarlos.</p>
           <div id="pushbox" class="chips"></div>
           <div id="pushmsg" class="muted" style="font-size:13px;margin-top:10px"></div>
         </div>
@@ -504,7 +533,14 @@ const MODE = {auto:'automático',manual:'manual',home:'aparcado siempre',demo:'d
 const ERR = {no_loop_signal:'Sin señal del cable',outside_working_area:'Fuera de la zona de trabajo',wrong_loop_signal:'Señal del cable incorrecta',trapped:'Atrapado',lifted:'Levantado',upside_down:'Volcado',low_battery:'Batería baja',empty_battery:'Batería vacía',stuck_in_charging_station:'Atascado en la base',collision_sensor_problem_front:'Sensor de choque delantero',collision_sensor_problem_rear:'Sensor de choque trasero',wheel_motor_blocked_left:'Rueda izquierda bloqueada',wheel_motor_blocked_right:'Rueda derecha bloqueada',cutting_system_blocked:'Cuchillas bloqueadas',mower_tilted:'Robot inclinado',no_drive:'No avanza',temporary_battery_problem:'Problema temporal de batería',alarm_mower_lifted:'Alarma: robot levantado',alarm_mower_switched_off:'Alarma: robot apagado',guide_1_not_found:'No encuentra el cable guía',charging_station_blocked:'Base bloqueada',ninguno:'Sin avisos',
   // códigos del Landroid
   no_error:'Sin errores',wire_missing:'Falta el cable perimetral',outside_wire:'Fuera del cable perimetral',rain_delay:'Esperando por la lluvia',close_door_to_mow:'Cierra la tapa para cortar',close_door_to_go_home:'Cierra la tapa para volver',blade_motor_blocked:'Motor de las cuchillas bloqueado',wheel_motor_blocked:'Motor de una rueda bloqueado',trapped_timeout:'Atrapado demasiado tiempo',battery_low:'Batería baja',reverse_wire:'Cable perimetral al revés',charge_error:'Error de carga',timeout_finding_home:'No encuentra la base'};
-const errText = c => c ? (ERR[c] || c.replaceAll('_',' ').replace(/^./, x => x.toUpperCase())) : '—';
+// textos de todas las averías (los mismos que la integración y la tarjeta); ERR queda de respaldo sin red
+let ERRS = {};
+fetch('static/errores_es.json?v=1', {cache: 'no-cache'}).then(r => r.json()).then(j => { ERRS = j; if (Object.keys(states).length) render(); }).catch(() => {});
+const errText = c => {
+  if (!c) return '—';
+  if (/^desconocido_\d+$/.test(c)) return 'Error desconocido (código ' + c.split('_')[1] + ')';
+  return (ERRS[KIND] || {})[c] || (ERRS.mcculloch || {})[c] || ERR[c] || c.replaceAll('_',' ').replace(/^./, x => x.toUpperCase());
+};
 const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'], DN = ['L','M','X','J','V','S','D'], DLONG = ['lunes','martes','miércoles','jueves','viernes','sábado','domingo'];
 const hm = m => { m = Math.round(m); return String(Math.floor(m / 60)).padStart(2,'0') + ':' + String(m % 60).padStart(2,'0'); };
 const toMin = s => { const [h, m] = String(s || '0:0').split(':').map(Number); return h * 60 + m; };
@@ -604,8 +640,11 @@ const st = (dom, key) => states[`${dom}.${P}${key ? '_' + key : ''}`];
 const val = (dom, key) => { const s = st(dom, key); return s && !['unknown','unavailable'].includes(s.state) ? s.state : null; };
 const on = (dom, key) => val(dom, key) === 'on';
 function setLive(ok, txt){ const l = $('#live'); l.classList.toggle('off', !ok); l.lastChild.textContent = txt || (ok ? 'en directo' : 'sin conexión'); }
+let pollN = 0;
 async function poll(){
   if (locked) return;
+  // cada minuto, también nombres y contraseñas (los pueden cambiar desde otro móvil)
+  if (++pollN % 12 === 0) await loadRobots(true);
   try {
     const r = await api('api/estado', {cache:'no-store'});
     const j = await r.json();
@@ -619,6 +658,7 @@ async function svc(domain, service, entity_id, label){
   toast('Hablando con el robot…');
   try {
     const r = await api('api/servicio', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({domain, service, entity_id})});
+    if (r.status === 423) afterRobotsChange();  // le han puesto contraseña desde otro móvil
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
     toast(label + ' ✓'); setTimeout(poll, 2500);
   } catch(e) { if (!locked) toast('No se pudo: ' + e.message); }
@@ -638,7 +678,10 @@ $('nav.tabs').onclick = e => { const b = e.target.closest('button'); if (b) show
 /* ---------- varios robots ---------- */
 const LMS = {mowing:'Cortando', edgecut:'Cortando bordes', returning:'Volviendo a la base', docked:'En la base', paused:'En pausa', error:'Error'};
 // resumen de cualquier robot (no solo el que se ve) para la barra y «Mis robots»
+const curRobot = () => ROBOTS.find(r => r.id === P) || ROBOTS[0];
+const isLocked = r => !!(r && r.locked && !r.open);
 function summary(r){
+  if (isLocked(r)) return {txt: 'Con contraseña', col: '#8a8f92', bat: null, seen: null};
   const g = (dom, key) => states[`${dom}.${r.id}${key ? '_' + key : ''}`];
   const v = (dom, key) => { const s = g(dom, key); return s && !['unknown','unavailable'].includes(s.state) ? s.state : null; };
   const lm = g('lawn_mower'), off = !lm || lm.state === 'unavailable';
@@ -660,17 +703,22 @@ function renderRobots(){
   $('#rbar').hidden = !many;
   if (!many) return;
   $('#rbar').style.setProperty('--n', ROBOTS.length);
-  $('#rbar').innerHTML = ROBOTS.map(r => { const s = summary(r); return `<button data-r="${esc(r.id)}" class="${r.id === P ? 'on' : ''}" aria-pressed="${r.id === P}"><span class="dotc" style="--c:${s.col}"></span><b>${esc(r.name)}</b><small>${s.bat != null ? esc(s.bat) + ' %' : '—'}</small></button>`; }).join('');
+  // el robot que se ve lleva un lápiz para cambiarle el nombre ahí mismo; el que tiene contraseña, un candado
+  const PEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/></svg>';
+  $('#rbar').innerHTML = ROBOTS.map(r => { const s = summary(r), on = r.id === P; return `<button data-r="${esc(r.id)}" class="${on ? 'on' : ''}" aria-pressed="${on}"><span class="dotc" style="--c:${s.col}"></span><b>${esc(r.name)}</b><small>${isLocked(r) ? '🔒' : s.bat != null ? esc(s.bat) + ' %' : '—'}</small>${on && !isLocked(r) ? `<span class="pen" data-edit="${esc(r.id)}" role="button" aria-label="Cambiar el nombre">${PEN}</span>` : ''}</button>`; }).join('');
   if (!$('#sheet').hidden) drawSheet();
 }
 function drawSheet(){
   $('#rlist').innerHTML = ROBOTS.map(r => {
-    const s = summary(r), ld = r.kind === 'landroid';
-    return `<button class="rcard${r.id === P ? ' on' : ''}" data-r="${esc(r.id)}">
-      <img src="static/rob3d/turn_00.webp?v=1" class="${ld ? 'ld' : ''}" alt="" onerror="this.onerror=null;this.src='static/robot.webp?v=6'">
-      <span class="tx"><b>${esc(r.name)}</b><small>${ld ? 'Worx Landroid · Wi-Fi' : 'McCulloch ROB · Bluetooth'}</small>
+    const s = summary(r), ld = r.kind === 'landroid', lk = isLocked(r), id = esc(r.id);
+    const acts = lk ? `<button class="chip" data-open="${id}">🔓 Desbloquear</button>`
+      : `<button class="chip" data-edit="${id}">✎ Nombre</button><button class="chip" data-pass="${id}">🔒 ${r.locked ? 'Cambiar o quitar contraseña' : 'Poner contraseña'}</button>${r.locked ? `<button class="chip" data-close="${id}">Bloquear ya</button>` : ''}`;
+    return `<div class="rwrap"><button class="rcard${r.id === P ? ' on' : ''}" data-r="${id}">
+      <img src="static/${ld ? 'rob3d_landroid' : 'rob3d'}/turn_00.webp?v=2" alt="" onerror="this.onerror=null;this.src='static/rob3d/turn_00.webp?v=1';this.classList.add('ld')">
+      <span class="tx"><b>${esc(r.name)}${r.locked ? ' 🔒' : ''}</b><small>${ld ? 'Worx Landroid · Wi-Fi' : 'McCulloch ROB · Bluetooth'}</small>
       <span class="st"><span class="dotc" style="--c:${s.col}"></span>${esc(s.txt)}${s.seen ? ' · ' + esc(s.seen) : ''}</span></span>
-      <span class="bt">${s.bat != null ? esc(s.bat) + '%' : '–'}</span></button>`;
+      <span class="bt">${s.bat != null ? esc(s.bat) + '%' : '–'}</span></button>
+      <div class="racts chips">${acts}</div></div>`;
   }).join('');
 }
 function pickRobot(id){
@@ -679,16 +727,96 @@ function pickRobot(id){
   P = r.id; KIND = r.kind; document.body.dataset.kind = KIND;
   try { localStorage.setItem('robot', P); } catch(e) {}
   $('#sheet').hidden = true;
-  if (!changed) return renderRobots();
+  if (!changed) { applyLock(); return renderRobots(); }
   editing = false; mowed24 = null;
   ['#tl','#wbars','#spark'].forEach(s => $(s).innerHTML = ''); $('#legend').textContent = ''; $('#weekmowtot').textContent = ''; $('#sparkinfo').textContent = '';
-  if (Object.keys(states).length) { render(); renderRobots(); }
+  window.robot3d && window.robot3d.load(KIND);
+  if (Object.keys(states).length) { render(); renderRobots(); } else applyLock();
   loadHistory();
+}
+// robot con contraseña y sin desbloquear en este móvil: en vez de sus pestañas, la pantalla para desbloquearlo
+function applyLock(){
+  const r = curRobot(), lk = isLocked(r);
+  document.body.classList.toggle('rlocked', lk);
+  if (!lk) return false;
+  $('#lkname').textContent = r.name;
+  const other = ROBOTS.find(x => x.id !== r.id && !isLocked(x));
+  $('#lkother').hidden = !other;
+  if (other) { $('#lkother').textContent = 'Ver ' + other.name; $('#lkother').dataset.r = other.id; }
+  setLive(true, 'con contraseña');
+  return true;
+}
+
+/* ---------- ventana para escribir (nombre, contraseñas) ---------- */
+function ask({title, text = '', fields, ok = 'Aceptar'}){
+  return new Promise(res => {
+    $('#dlgt').textContent = title; $('#dlgp').textContent = text; $('#dlgo').textContent = ok; $('#dlgm').textContent = '';
+    $('#dlgf').innerHTML = fields.map(f => `<label class="fld"><span>${esc(f.label)}</span><input data-k="${f.k}" type="${f.type || 'text'}" ${f.num ? 'inputmode="numeric" pattern="[0-9]*" autocomplete="off"' : ''} maxlength="${f.max || 30}" value="${esc(f.value || '')}"></label>`).join('');
+    $('#dlg').hidden = false;
+    setTimeout(() => $('#dlgf input')?.focus(), 60);
+    const done = v => { $('#dlg').hidden = true; $('#dlgo').onclick = $('#dlgc').onclick = $('#dlgf').onkeydown = null; res(v); };
+    $('#dlgc').onclick = () => done(null);
+    $('#dlgo').onclick = () => done(Object.fromEntries([...$('#dlgf').querySelectorAll('input')].map(i => [i.dataset.k, i.value.trim()])));
+    $('#dlgf').onkeydown = e => { if (e.key === 'Enter') $('#dlgo').click(); };
+  });
+}
+const postJSON = (url, body) => api(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+async function errorOf(r){ return (await r.json().catch(() => ({}))).error || 'No se pudo'; }
+async function afterRobotsChange(){ await loadRobots(true); renderRobots(); if (!applyLock()) { poll(); loadHistory(); } }
+async function renameRobot(id){
+  const r = ROBOTS.find(x => x.id === id); if (!r) return;
+  const v = await ask({title: 'Nombre del robot', text: 'Así sale en la app, en los avisos y en todos los móviles.', fields: [{k: 'name', label: 'Nombre', value: r.name, max: 30}], ok: 'Guardar'});
+  if (!v || !v.name) return;
+  const res = await postJSON('api/robots/nombre', {id, name: v.name});
+  toast(res.ok ? 'Nombre guardado ✓' : await errorOf(res));
+  if (res.ok) afterRobotsChange();
+}
+async function passRobot(id){
+  const r = ROBOTS.find(x => x.id === id); if (!r) return;
+  const fields = r.locked
+    ? [{k: 'actual', label: 'Contraseña actual', type: 'password', num: true, max: 8}, {k: 'nueva', label: 'Nueva (déjala vacía para quitarla)', type: 'password', num: true, max: 8}]
+    : [{k: 'nueva', label: 'Contraseña (4 a 8 cifras)', type: 'password', num: true, max: 8}, {k: 'otra', label: 'Repítela', type: 'password', num: true, max: 8}];
+  const v = await ask({title: `Contraseña de ${r.name}`,
+    text: r.locked ? '' : 'Sin ella, en los demás móviles no se ve ni se puede manejar este robot. En este móvil se queda desbloqueado.',
+    fields, ok: 'Guardar'});
+  if (!v) return;
+  if (!r.locked && v.nueva !== v.otra) return toast('Las dos contraseñas no coinciden');
+  const res = await postJSON('api/robots/clave', {id, actual: v.actual || '', nueva: v.nueva || ''});
+  if (!res.ok) return toast(await errorOf(res));
+  toast(v.nueva ? 'Contraseña guardada ✓ · si quieres sus avisos aquí, vuelve a activarlos en Ajustes' : 'Contraseña quitada ✓');
+  afterRobotsChange();
+}
+async function openRobot(id){
+  const r = ROBOTS.find(x => x.id === id); if (!r) return;
+  const v = await ask({title: `Desbloquear ${r.name}`, fields: [{k: 'pin', label: 'Contraseña', type: 'password', num: true, max: 8}], ok: 'Desbloquear'});
+  if (!v) return;
+  const res = await postJSON('api/robots/abrir', {id, pin: v.pin});
+  if (!res.ok) return toast(await errorOf(res));
+  toast('Desbloqueado ✓');
+  afterRobotsChange();
+}
+async function closeRobot(id){
+  await postJSON('api/robots/cerrar', {id});
+  toast('Bloqueado en este móvil');
+  afterRobotsChange();
 }
 $('#pick').onclick = () => { if (ROBOTS.length > 1) { drawSheet(); $('#sheet').hidden = false; } };
 $('#sheetx').onclick = () => { $('#sheet').hidden = true; };
-$('#sheet').onclick = e => { if (e.target === e.currentTarget) $('#sheet').hidden = true; const b = e.target.closest('[data-r]'); if (b) pickRobot(b.dataset.r); };
-$('#rbar').onclick = e => { const b = e.target.closest('[data-r]'); if (b) pickRobot(b.dataset.r); };
+$('#sheet').onclick = e => {
+  if (e.target === e.currentTarget) { $('#sheet').hidden = true; return; }
+  const t = e.target.closest('[data-edit],[data-pass],[data-open],[data-close],[data-r]'); if (!t) return;
+  if (t.dataset.edit) renameRobot(t.dataset.edit);
+  else if (t.dataset.pass) passRobot(t.dataset.pass);
+  else if (t.dataset.open) openRobot(t.dataset.open);
+  else if (t.dataset.close) closeRobot(t.dataset.close);
+  else pickRobot(t.dataset.r);
+};
+$('#rbar').onclick = e => {
+  const pen = e.target.closest('[data-edit]'); if (pen) { e.stopPropagation(); renameRobot(pen.dataset.edit); return; }
+  const b = e.target.closest('[data-r]'); if (b) pickRobot(b.dataset.r);
+};
+$('#lkopen').onclick = () => openRobot(P);
+$('#lkother').onclick = e => pickRobot(e.currentTarget.dataset.r);
 
 /* ---------- órdenes ---------- */
 async function durante(accion, horas){
@@ -777,6 +905,7 @@ function readLandroid(){
 }
 function render(){
   document.body.dataset.kind = KIND;
+  if (applyLock()) return;  // con contraseña: el servidor no manda sus datos y no hay nada que pintar
   const d = KIND === 'landroid' ? readLandroid() : readMcCulloch(), flags = d.flags, bat = flags.battery, a = flags.activity;
   setLive(!flags.offline, flags.offline ? (KIND === 'landroid' ? 'sin conexión' : 'fuera de alcance') : null);
   $('#bat').textContent = isNaN(bat) ? '–' : bat + '%';
@@ -1042,17 +1171,22 @@ $('#logout').onclick = async () => { await fetch('api/logout', {method:'POST'});
   poll(); loadHistory(); pushRender().catch(() => {});
 })();
 // qué robots hay y cuál se veía la última vez
-async function loadRobots(){
+// keep: tras renombrar o desbloquear se sigue en el mismo robot
+async function loadRobots(keep){
   try {
     const r = await api('api/robots', {cache: 'no-store'});
     if (r.ok) { const j = await r.json(); if (Array.isArray(j) && j.length) ROBOTS = j; }
   } catch(e) {}
-  let saved = null; try { saved = localStorage.getItem('robot'); } catch(e) {}
+  let saved = keep ? P : null;
+  if (!keep) try { saved = localStorage.getItem('robot'); } catch(e) {}
   const r = ROBOTS.find(x => x.id === saved) || ROBOTS[0];
+  const changed = r.kind !== KIND;
   P = r.id; KIND = r.kind; document.body.dataset.kind = KIND;
+  if (changed || !keep) window.robot3d && window.robot3d.load(KIND);
   renderRobots();
+  applyLock();
 }
-addEventListener('robot3d-ready', () => { if (Object.keys(states).length) render(); });
+addEventListener('robot3d-ready', () => { window.robot3d.load(KIND); if (Object.keys(states).length) render(); });
 setInterval(() => { if (!document.hidden) poll(); }, 5000);
 setInterval(loadHistory, 10 * 60 * 1000);
 // iOS no respeta user-scalable=no: el pellizco se corta aquí (el doble toque ya lo quita touch-action)
@@ -1134,26 +1268,37 @@ setInterval(loadHistory, 10 * 60 * 1000);
   scene.addEventListener('pointerleave', () => { target = null; });
   addEventListener('deviceorientation', e => { if (e.gamma == null) return; target = [Math.max(-12, Math.min(12, (e.beta - 40) * -.4)), Math.max(-28, Math.min(28, e.gamma * 1.1))]; lastInput = performance.now(); });
   // Robot 3D renderizado en Blender: 24 vistas (cada 15°). Si cargan todas, sustituyen a la foto.
-  const FR = Array.from({length: 24}, (_, k) => `static/rob3d/turn_${String(k).padStart(2, '0')}.webp?v=1`);
+  // Cada tipo de robot tiene su modelo (rob3d = McCulloch, rob3d_landroid = Landroid); si faltan los del
+  // Landroid, se usa el del McCulloch teñido de naranja.
   const imgEl = tilt.querySelector('img'), b3 = document.getElementById('body3d'), botEl = stage.querySelector('.bot');
-  let r3d = false, curFrame = -1;
+  let r3d = false, curFrame = -1, FR = [], want = null;
   const showFrame = f => {
     f = ((Math.round(f) % 24) + 24) % 24;
-    if (f === curFrame) return;
+    if (f === curFrame || !FR.length) return;
     curFrame = f; imgEl.src = FR[f];
     b3.classList.toggle('back', f > 6 && f < 18);  // de espaldas: estela y recortes al otro lado
   };
-  Promise.all(FR.map(src => new Promise((ok, ko) => { const i = new Image(); i.onload = ok; i.onerror = ko; i.src = src; })))
-    .then(() => {
+  const frames = dir => Array.from({length: 24}, (_, k) => `static/${dir}/turn_${String(k).padStart(2, '0')}.webp?v=${dir === 'rob3d' ? 1 : 2}`);
+  const preload = list => Promise.all(list.map(src => new Promise((ok, ko) => { const i = new Image(); i.onload = ok; i.onerror = ko; i.src = src; })));
+  function load(kind){
+    if (want === kind) return;
+    want = kind;
+    const dirs = kind === 'landroid' ? ['rob3d_landroid', 'rob3d'] : ['rob3d'];
+    const tryDir = i => preload(frames(dirs[i])).then(() => dirs[i]).catch(() => (i + 1 < dirs.length ? tryDir(i + 1) : null));
+    tryDir(0).then(dir => {
+      if (!dir || want !== kind) return;  // sin renders (sigue la foto) o ya se cambió de robot
+      FR = frames(dir); curFrame = -1;
       r3d = true; imgEl.onerror = null; stage.classList.add('r3d'); showFrame(0);
-      document.getElementById('dock3d').src = 'static/rob3d/base_side.webp?v=2';
+      stage.classList.toggle('tint', kind === 'landroid' && dir === 'rob3d');
+      document.getElementById('dock3d').src = `static/${dir}/base_side.webp?v=${dir === 'rob3d' ? 2 : 1}`;
       // posición del LED dentro de la imagen de la base (la calcula to_web.py)
-      fetch('static/rob3d/meta.json?v=2').then(r => r.json()).then(m => {
+      fetch(`static/${dir}/meta.json?v=${dir === 'rob3d' ? 2 : 1}`).then(r => r.json()).then(m => {
         const led = document.getElementById('led');
         if (m.led) { led.style.left = m.led[0] + '%'; led.style.top = m.led[1] + '%'; }
       }).catch(() => {});
-    })
-    .catch(() => {});  // sin renders: sigue la foto con el giro CSS
+    });
+  }
+  window.robot3d.load = load;
   const has = c => stage.classList.contains(c);
   function frame3d(){
     if (has('mowing')) {

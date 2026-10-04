@@ -28,6 +28,7 @@ from . import RobConfigEntry
 from .automower_ble.error_codes import ErrorCodes
 from .automower_ble.protocol import ModeOfOperation, MowerActivity, MowerState, OverrideAction
 from .entity import RobEntity
+from .errores import texto
 
 LOGGER = logging.getLogger(__name__)
 DIAG = EntityCategory.DIAGNOSTIC
@@ -117,7 +118,8 @@ SENSORS: tuple[RobSensorDescription, ...] = (
        value_fn=lambda d: _enum(ModeOfOperation, d.get("GetMode"))),
     _d("GetError", "error", "Error",
        value_fn=lambda d: "ninguno" if not d.get("GetError") else _enum(ErrorCodes, d.get("GetError"), strict=False),
-       attrs_fn=lambda d: {"codigo": d.get("GetError")}),
+       attrs_fn=lambda d: {"codigo": d.get("GetError"), "descripcion": texto(
+           "ninguno" if not d.get("GetError") else _enum(ErrorCodes, d.get("GetError"), strict=False))}),
     _d("GetRestrictionReason", "restriction", "Motivo de restricción", entity_category=DIAG),
     _d("GetNextStartTime", "next_start", "Próximo arranque", device_class=SensorDeviceClass.TIMESTAMP,
        value_fn=lambda d: _local_ts(d.get("GetNextStartTime"))),
@@ -180,7 +182,8 @@ SENSORS: tuple[RobSensorDescription, ...] = (
            "total": d.get("GetNumberOfMessages"),
            "avisos": [
                {"fecha": _local_ts(m["time"]), "codigo": m["code"],
-                "texto": _enum(ErrorCodes, m["code"], strict=False), "gravedad": m["severity"]}
+                "texto": _enum(ErrorCodes, m["code"], strict=False),
+                "descripcion": texto(_enum(ErrorCodes, m["code"], strict=False)), "gravedad": m["severity"]}
                for m in d.get("messages", [])
            ],
        }),

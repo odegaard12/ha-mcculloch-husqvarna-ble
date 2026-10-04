@@ -1,27 +1,35 @@
-// Tarjeta de Lovelace del robot McCulloch / Husqvarna (integración mcculloch_rob).
+// Tarjeta de Lovelace del robot McCulloch / Husqvarna (integración mcculloch_rob), y de un segundo robot
+// (otro McCulloch o un Worx Landroid de la integración Landroid Cloud) en la misma tarjeta.
 // La sirve la propia integración: no hay que instalar nada aparte, solo añadir la tarjeta.
 const BASE = new URL('.', import.meta.url).pathname;
+const VER = new URL(import.meta.url).search;  // ?v=<versión>: HA sirve www con caché larga, así cambia con cada versión
 
 const T = {
   es: {
     mowing: 'Cortando', homing: 'Volviendo a la base', leaving: 'Saliendo de la base', charging: 'Cargando',
     docked: 'En la base', paused: 'En pausa', idle: 'Parado', offline: 'Fuera de alcance', error: 'Avería',
     lifted: 'Levantado', upside: 'Volcado', start: 'Cortar', pause: 'Pausa', dock: 'A la base',
-    mow1: 'Cortar 1 h', mow3: 'Cortar 3 h', parkNext: 'Aparcar hasta el próximo turno', resume: 'Volver al horario',
+    mow1: 'Cortar 1 h', mow3: 'Cortar 3 h', parkNext: 'Aparcar hasta el próximo turno', resume: 'Volver al horario', edgecut: 'Cortar solo los bordes',
     next: 'Próximo corte', today: 'hoy', tomorrow: 'mañana', none: 'sin programación', battery: 'Batería', lastData: 'último dato', lastSeen: 'Última conexión',
     offlineMsg: 'El robot no está al alcance del Bluetooth. Se reconecta solo al volver cerca del receptor.',
-    pick: 'Elige el robot (entidad lawn_mower)', name: 'Nombre (opcional)', noEntity: 'No encuentro la entidad',
-    image: 'Foto propia (opcional): URL de un PNG/WebP transparente, p. ej. /local/robot.webp',
+    offlineLd: 'El Landroid no llega a la nube de Worx (sin Wi-Fi o apagado). Se reconecta solo.',
+    rain: 'Llueve: espera a que se seque el césped', noLink: 'Sin conexión',
+    pick: 'Robot (entidad lawn_mower)', name: 'Nombre que se ve (opcional)', noEntity: 'No encuentro la entidad',
+    pick2: 'Segundo robot (opcional): otro McCulloch o un Landroid', name2: 'Nombre del segundo robot (opcional)',
+    image: 'Foto propia del primer robot (opcional): URL de un PNG/WebP transparente',
   },
   en: {
     mowing: 'Mowing', homing: 'Going home', leaving: 'Leaving the dock', charging: 'Charging',
     docked: 'Docked', paused: 'Paused', idle: 'Stopped', offline: 'Out of range', error: 'Error',
     lifted: 'Lifted', upside: 'Upside down', start: 'Mow', pause: 'Pause', dock: 'Dock',
-    mow1: 'Mow 1 h', mow3: 'Mow 3 h', parkNext: 'Park until next run', resume: 'Resume schedule',
+    mow1: 'Mow 1 h', mow3: 'Mow 3 h', parkNext: 'Park until next run', resume: 'Resume schedule', edgecut: 'Cut edges only',
     next: 'Next run', today: 'today', tomorrow: 'tomorrow', none: 'no schedule', battery: 'Battery', lastData: 'last known', lastSeen: 'Last seen',
     offlineMsg: 'The mower is out of Bluetooth range. It reconnects by itself when it comes back near the receiver.',
-    pick: 'Pick the mower (lawn_mower entity)', name: 'Name (optional)', noEntity: 'Entity not found',
-    image: 'Own photo (optional): URL of a transparent PNG/WebP, e.g. /local/robot.webp',
+    offlineLd: 'The Landroid cannot reach the Worx cloud (no Wi-Fi or switched off). It reconnects by itself.',
+    rain: 'Raining: waiting for the lawn to dry', noLink: 'Offline',
+    pick: 'Mower (lawn_mower entity)', name: 'Display name (optional)', noEntity: 'Entity not found',
+    pick2: 'Second mower (optional): another McCulloch or a Landroid', name2: 'Second mower name (optional)',
+    image: 'Own photo of the first mower (optional): URL of a transparent PNG/WebP',
   },
 };
 
@@ -37,9 +45,20 @@ const ICON = {
 const COLOR = {mowing: '#47d35a', homing: '#47d35a', leaving: '#47d35a', charging: '#3fa9ff', docked: '#ffc20e',
   paused: '#ffc20e', idle: '#ffc20e', error: '#ff3b30', upside: '#ff3b30', lifted: '#ff9f0a', offline: '#8a8f92'};
 
+// textos de las averías (los mismos que el panel y la integración); se cargan una vez para todas las tarjetas
+let ERRS = null;
+const errsReady = fetch(BASE + 'errores_es.json' + VER).then(r => r.json()).then(j => { ERRS = j; }).catch(() => { ERRS = {}; });
+
 const CSS = `
 :host{display:block}
 ha-card{overflow:hidden}
+.rbar{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:6px;background:var(--secondary-background-color,rgba(127,127,127,.12))}
+.rbar[hidden]{display:none}
+.rbar button{display:flex;align-items:center;gap:7px;min-width:0;border:0;border-radius:10px;padding:7px 10px;cursor:pointer;background:none;color:var(--primary-text-color);font:600 13px system-ui,sans-serif}
+.rbar button.on{background:var(--card-background-color,#fff);box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.rbar b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rbar small{margin-left:auto;opacity:.7;white-space:nowrap}
+.rbar i{width:8px;height:8px;border-radius:50%;flex:none;background:var(--c,#8a8f92)}
 .scene{position:relative;height:190px;overflow:hidden;background:radial-gradient(90% 75% at 50% 30%,#3a3d40 0%,#232527 55%,#17191a 100%)}
 .ground{position:absolute;left:-40%;right:-40%;bottom:-6%;height:64%;perspective:380px;perspective-origin:50% -30%;-webkit-mask:linear-gradient(to bottom,transparent,#000 38%);mask:linear-gradient(to bottom,transparent,#000 38%)}
 .plane{position:absolute;inset:-40% 0 0;transform:rotateX(64deg);transform-origin:50% 100%;animation:roll 1.6s linear infinite paused;
@@ -56,6 +75,8 @@ ha-card{overflow:hidden}
 .r3d.s-mowing .b3d{animation:none}            /* con renders el giro lo hacen los fotogramas */
 .b3d.back .fx{transform:scaleX(-1)}           /* de espaldas: recortes al otro lado */
 .r3d .bot img{filter:drop-shadow(0 10px 12px rgba(0,0,0,.35))}
+/* Landroid sin renders propios: el modelo del McCulloch teñido de naranja */
+.tint .bot img,.tint .dockw img{filter:hue-rotate(-24deg) saturate(1.35) drop-shadow(0 10px 12px rgba(0,0,0,.35))}
 /* tamaño por la altura de la escena (190 px), no por el ancho: en tarjetas anchas no se sale por arriba */
 .r3d .bot{width:min(64%,240px);bottom:5%}.r3d .bot .sh{display:none}  /* el render trae su sombra */
 .r3d.s-lifted .bot{bottom:16%}
@@ -86,10 +107,10 @@ ha-card{overflow:hidden}
 @keyframes ledblink{50%{opacity:.15}}
 .r3d.s-docked .bot,.r3d.s-charging .bot{left:50%;bottom:5%}
 .r3d.s-docked .b3d{transform:none}
-/* llegar a la base: entra rodando y frena; salir: marcha atrás */
+/* llegar a la base: se acerca y se queda a medio entrar (aparcado solo lo dice «En la base»); salir: marcha atrás */
 .r3d.s-homing .bot{animation:home3d 6s cubic-bezier(.3,.1,.25,1) infinite;bottom:5%}
 .r3d.s-leaving .bot{animation:leave3d 6s cubic-bezier(.5,0,.7,.9) infinite;bottom:5%}
-@keyframes home3d{0%{left:100%;opacity:0}12%{opacity:1}78%,100%{left:50%;opacity:1}}
+@keyframes home3d{0%{left:100%;opacity:0}14%{opacity:1}78%{left:65%;opacity:1}92%{left:64%;opacity:1}100%{left:64%;opacity:0}}
 @keyframes leave3d{0%,18%{left:50%;opacity:1}85%{opacity:1}100%{left:100%;opacity:0}}
 .s-lifted .bot{bottom:24%;animation:float 2.4s ease-in-out infinite}
 .s-offline .bot{filter:grayscale(1) brightness(.75);opacity:.55}.s-offline .ground{filter:grayscale(.9) brightness(.6)}
@@ -98,8 +119,9 @@ ha-card{overflow:hidden}
 .fx b{position:absolute;bottom:6%;width:3px;height:7px;border-radius:2px;background:#8fdc6f;opacity:0;animation:clip 1s linear infinite}
 .s-mowing .fx b{display:block}.fx b{display:none}
 @keyframes clip{0%{opacity:0;transform:none}12%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(260deg)}}
-.pill{position:absolute;left:12px;top:10px;z-index:3;display:inline-flex;align-items:center;gap:7px;font:700 13px/1 system-ui,sans-serif;color:#fff;padding:7px 12px;border-radius:99px;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);border-left:3px solid var(--c)}
-.pill svg{width:15px;height:15px;fill:none;stroke:var(--c);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.pill{position:absolute;left:12px;top:10px;z-index:3;display:inline-flex;align-items:center;gap:7px;font:700 13px/1 system-ui,sans-serif;color:#fff;padding:7px 12px;border-radius:99px;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);border-left:3px solid var(--c);max-width:calc(100% - 120px)}
+.pill span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill svg{width:15px;height:15px;flex:none;fill:none;stroke:var(--c);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .bat{position:absolute;right:12px;top:10px;z-index:3;display:flex;align-items:center;gap:6px;font:700 13px/1 system-ui,sans-serif;color:#fff;padding:7px 10px;border-radius:99px;background:rgba(0,0,0,.5)}
 .bat i{position:relative;width:22px;height:11px;border:2px solid rgba(255,255,255,.8);border-radius:3px}
 .bat i::after{content:"";position:absolute;right:-5px;top:2px;width:2px;height:4px;background:rgba(255,255,255,.8);border-radius:1px}
@@ -109,9 +131,10 @@ ha-card{overflow:hidden}
 .title b{font-size:17px}.title span{color:var(--secondary-text-color);font-size:13px}
 .alert{margin:10px 0 0;padding:8px 10px;border-radius:10px;font-size:13px;background:rgba(255,59,48,.12);color:var(--error-color,#ff3b30)}
 .alert.warn{background:rgba(255,159,10,.12);color:var(--warning-color,#ff9f0a)}
+.alert.info{background:rgba(63,169,255,.12);color:var(--info-color,#3fa9ff)}
 .acts{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:8px;padding:12px 16px 8px}
 .acts button,.chips button{font:600 14px system-ui,sans-serif;border:0;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;color:var(--primary-text-color);background:var(--secondary-background-color,rgba(127,127,127,.15));padding:11px 6px;white-space:nowrap}
-.acts button.main{background:#ffc20e;color:#111}
+.acts button.main{background:var(--accent,#ffc20e);color:#111}
 .acts button:disabled,.chips button:disabled{opacity:.45;cursor:default}
 .acts svg{width:18px;height:18px}
 .chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 14px}
@@ -122,6 +145,7 @@ ha-card{overflow:hidden}
 
 const HTML = `
 <ha-card>
+  <div class="rbar" id="rbar" hidden></div>
   <div class="scene" id="scene">
     <div class="ground"><div class="plane"></div></div>
     <div class="dockw"><img class="dock3d" alt="" draggable="false"><i class="led"></i></div>
@@ -140,88 +164,132 @@ const HTML = `
   </div>
   <div class="chips">
     <button data-b="mow_1h"></button><button data-b="mow_3h"></button>
-    <button data-b="park_next"></button><button data-b="resume_schedule"></button>
+    <button data-b="park_next"></button><button data-b="resume_schedule"></button><button data-b="edgecut"></button>
   </div>
 </ha-card>`;
+
+// entidades del McCulloch creadas antes de tener translation_key: se reconocen por su id en español
+const SLUG = {bateria: 'battery', actividad: 'activity', estado: 'state', error: 'error', proximo_arranque: 'next_start',
+  cargando: 'charging', averia: 'problem', en_la_base: 'in_station', levantado: 'lifted', volcado: 'upside_down',
+  cortar_1_hora: 'mow_1h', cortar_3_horas: 'mow_3h', aparcar_hasta_el_proximo_turno: 'park_next',
+  volver_a_la_programacion: 'resume_schedule', programacion_tareas: 'schedule', ultima_conexion: 'last_seen'};
 
 class McCullochRobCard extends HTMLElement {
   setConfig(config) {
     if (!config || !config.entity || !config.entity.startsWith('lawn_mower.')) throw new Error('entity: lawn_mower.xxx');
+    if (config.entity_2 && !config.entity_2.startsWith('lawn_mower.')) throw new Error('entity_2: lawn_mower.xxx');
     const imageChanged = this._config && this._config.image !== config.image;
     this._config = config;
-    this._ids = null;
+    this._idsBy = {};
+    if (!this._robots().some(r => r.entity === this._sel)) {
+      let saved = null;
+      try { saved = localStorage.getItem('mcrob_sel_' + config.entity); } catch (e) { /* sin almacenamiento */ }
+      this._sel = this._robots().some(r => r.entity === saved) ? saved : config.entity;
+    }
     if (imageChanged && this.shadowRoot) this._setImage();  // el editor cambia la foto sin recargar
   }
 
-  // foto: la de la opción `image` (sobrevive a las actualizaciones), si no robot.webp junto a la tarjeta, y si no el dibujo
+  _robots() {
+    const c = this._config;
+    return [{entity: c.entity, name: c.name}, c.entity_2 ? {entity: c.entity_2, name: c.name_2} : null].filter(Boolean);
+  }
+
+  _kind(entity) { return this._hass?.entities?.[entity]?.platform === 'landroid_cloud' ? 'landroid' : 'mcculloch'; }
+
+  // foto: la de la opción `image` (solo primer robot), si no los renders 3D de su modelo, y si no el dibujo
   _setImage() {
     const img = this.shadowRoot.querySelector('.bot img');  // la del robot (antes en el HTML va la de la base)
-    const srcs = [this._config.image, BASE + 'rob3d/turn_00.webp', BASE + 'robot.webp', BASE + 'robot.svg'].filter(Boolean);
+    const ld = this._kind(this._sel) === 'landroid', own = this._sel === this._config.entity && this._config.image;
+    const srcs = [own, BASE + (ld ? 'rob3d_landroid/' : 'rob3d/') + 'turn_00.webp', BASE + 'rob3d/turn_00.webp', BASE + 'robot.webp', BASE + 'robot.svg'].filter(Boolean);
     img.onerror = () => { srcs.shift(); if (srcs.length) img.src = srcs[0]; else img.onerror = null; };
     img.src = srcs[0];
-    if (!this._config.image) this._load3d(img);
+    if (!own) this._load3d(ld); else { this._fr = null; this.shadowRoot.getElementById('scene').classList.remove('r3d', 'tint'); }
   }
 
   // Robot renderizado en Blender: 24 vistas cada 15°. Al cortar, el giro del final de cada pasada es real.
-  _load3d(img) {
-    if (this._frames) return;
-    const fr = Array.from({length: 24}, (_, k) => `${BASE}rob3d/turn_${String(k).padStart(2, '0')}.webp`);
-    Promise.all(fr.map(src => new Promise((ok, ko) => { const i = new Image(); i.onload = ok; i.onerror = ko; i.src = src; })))
-      .then(() => {
-        this._frames = fr;
-        const scene = this.shadowRoot.getElementById('scene'), bot = this.shadowRoot.querySelector('.bot'), b3d = this.shadowRoot.querySelector('.b3d');
-        scene.classList.add('r3d');
-        this.shadowRoot.querySelector('.dock3d').src = BASE + 'rob3d/base_side.webp';
-        fetch(BASE + 'rob3d/meta.json').then(r => r.json()).then(m => {
-          const led = this.shadowRoot.querySelector('.led');
-          if (m.led) { led.style.left = m.led[0] + '%'; led.style.top = m.led[1] + '%'; }
-        }).catch(() => {});
-        let cur = -1;
-        const tick = () => {
-          if (!this.isConnected) { this._raf = null; return; }  // tarjeta fuera de la pantalla: se para
-          let f = 0;
-          if (scene.dataset.s === 'mowing') {
-            const an = bot.getAnimations().find(a => a.animationName === 'mowpass');
-            const ph = an && an.currentTime != null ? (an.currentTime % 14000) / 14000 : 0;
-            f = ph < .4 ? 0 : ph < .5 ? (ph - .4) / .1 * 12 : ph < .9 ? 12 : 12 + (ph - .9) / .1 * 12;
-          }
-          f = ((Math.round(f) % 24) + 24) % 24;
-          if (f !== cur) { cur = f; img.src = fr[f]; b3d.classList.toggle('back', f > 6 && f < 18); }
-          this._raf = requestAnimationFrame(tick);
-        };
-        this._raf = requestAnimationFrame(tick);
-      })
-      .catch(() => {});  // sin renders: queda la imagen fija con el giro CSS
+  _load3d(ld) {
+    const dirs = ld ? ['rob3d_landroid/', 'rob3d/'] : ['rob3d/'];
+    const scene = this.shadowRoot.getElementById('scene');
+    const tryDir = i => {
+      const dir = BASE + dirs[i];
+      const fr = Array.from({length: 24}, (_, k) => `${dir}turn_${String(k).padStart(2, '0')}.webp`);
+      return Promise.all(fr.map(src => new Promise((ok, ko) => { const im = new Image(); im.onload = ok; im.onerror = ko; im.src = src; })))
+        .then(() => ({fr, dir, tint: ld && i > 0}))
+        .catch(() => (i + 1 < dirs.length ? tryDir(i + 1) : null));
+    };
+    const want = this._sel;
+    tryDir(0).then(got => {
+      if (!got || want !== this._sel) return;  // sin renders, o ya se cambió de robot
+      this._fr = got.fr; this._cur = -1;
+      scene.classList.add('r3d');
+      scene.classList.toggle('tint', got.tint);
+      this.shadowRoot.querySelector('.dock3d').src = got.dir + 'base_side.webp';
+      const led = this.shadowRoot.querySelector('.led');
+      fetch(got.dir + 'meta.json' + VER).then(r => r.json()).then(m => {
+        if (m.led) { led.style.left = m.led[0] + '%'; led.style.top = m.led[1] + '%'; }
+      }).catch(() => {});
+      if (!this._raf) this._raf = requestAnimationFrame(() => this._tick());
+    });
+  }
+
+  _tick() {
+    if (!this.isConnected || !this._fr) { this._raf = null; return; }  // tarjeta fuera de la pantalla: se para
+    const scene = this.shadowRoot.getElementById('scene'), bot = this.shadowRoot.querySelector('.bot');
+    let f = 0;
+    if (scene.dataset.s === 'mowing') {
+      const an = bot.getAnimations().find(a => a.animationName === 'mowpass');
+      const ph = an && an.currentTime != null ? (an.currentTime % 14000) / 14000 : 0;
+      f = ph < .4 ? 0 : ph < .5 ? (ph - .4) / .1 * 12 : ph < .9 ? 12 : 12 + (ph - .9) / .1 * 12;
+    }
+    f = ((Math.round(f) % 24) + 24) % 24;
+    if (f !== this._cur) {
+      this._cur = f;
+      this.shadowRoot.querySelector('.bot img').src = this._fr[f];
+      this.shadowRoot.querySelector('.b3d').classList.toggle('back', f > 6 && f < 18);
+    }
+    this._raf = requestAnimationFrame(() => this._tick());
   }
 
   connectedCallback() {
     // al volver a la pantalla, reanudar el bucle de fotogramas si estaba parado
-    if (this._frames && !this._raf && this.shadowRoot) { this._frames = null; this._setImage(); }
+    if (this._fr && !this._raf && this.shadowRoot) this._raf = requestAnimationFrame(() => this._tick());
   }
 
   static getConfigElement() { return document.createElement('mcculloch-rob-card-editor'); }
 
   static getStubConfig(hass) {
-    const e = Object.values(hass.entities || {}).find(x => x.platform === 'mcculloch_rob' && x.entity_id.startsWith('lawn_mower.'))
+    const ents = Object.values(hass.entities || {});
+    const e = ents.find(x => x.platform === 'mcculloch_rob' && x.entity_id.startsWith('lawn_mower.'))
       || {entity_id: Object.keys(hass.states).find(id => id.startsWith('lawn_mower.')) || 'lawn_mower.robot'};
-    return {entity: e.entity_id};
+    const ld = ents.find(x => x.platform === 'landroid_cloud' && x.entity_id.startsWith('lawn_mower.'));
+    return ld && ld.entity_id !== e.entity_id ? {entity: e.entity_id, entity_2: ld.entity_id} : {entity: e.entity_id};
   }
 
   getCardSize() { return 6; }
   getGridOptions() { return {columns: 12, min_columns: 6, rows: 'auto'}; }
 
   set hass(hass) {
+    const first = !this._hass;
     this._hass = hass;
     if (!this.shadowRoot) this._build();
+    else if (first) this._setImage();
     this._update();
   }
 
   _t(k) { const l = (this._hass?.locale?.language || this._hass?.language || 'en').slice(0, 2); return (T[l] || T.en)[k]; }
 
+  _errText(kind, code) {
+    if (!code || ['ninguno', 'none', 'no_error', 'unknown', 'unavailable'].includes(code)) return '';
+    const es = (this._hass?.locale?.language || 'es').startsWith('es');
+    const tx = es && ERRS ? (ERRS[kind] || {})[code] || (ERRS.mcculloch || {})[code] : null;
+    return tx || code.replace(/_/g, ' ').replace(/^./, x => x.toUpperCase());
+  }
+
   _build() {
     const root = this.attachShadow({mode: 'open'});
     root.innerHTML = `<style>${CSS}</style>${HTML}`;
     this._setImage();
+    errsReady.then(() => this._hass && this._update());
     const fx = root.getElementById('fx');
     for (let i = 0; i < 14; i++) {
       const b = document.createElement('b');
@@ -231,79 +299,110 @@ class McCullochRobCard extends HTMLElement {
       b.style.animationDelay = (Math.random()) + 's';
       fx.appendChild(b);
     }
+    root.getElementById('rbar').addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b || b.dataset.e === this._sel) return;
+      this._sel = b.dataset.e;
+      try { localStorage.setItem('mcrob_sel_' + this._config.entity, this._sel); } catch (err) { /* sin almacenamiento */ }
+      this._fr = null;
+      root.getElementById('scene').classList.remove('r3d', 'tint');
+      root.getElementById('scene').dataset.s = '';
+      this._setImage();
+      this._update();
+    });
     root.querySelector('.acts').addEventListener('click', e => {
       const b = e.target.closest('button'); if (!b) return;
       const svc = {start: 'start_mowing', pause: 'pause', dock: 'dock'}[b.dataset.a];
-      this._hass.callService('lawn_mower', svc, {entity_id: this._config.entity});
+      this._hass.callService('lawn_mower', svc, {entity_id: this._sel});
     });
     root.querySelector('.chips').addEventListener('click', e => {
-      const b = e.target.closest('button'); const id = b && this._ids[b.dataset.b];
+      const b = e.target.closest('button'); const id = b && this._ids(this._sel)[b.dataset.b];
       if (id) this._hass.callService('button', 'press', {entity_id: id});
     });
   }
 
-  // Las entidades hermanas se buscan por dispositivo y clave, así funciona con cualquier nombre o idioma
-  _resolve() {
-    const ents = this._hass.entities || {}, me = ents[this._config.entity];
-    const ids = {};
-    const prefix = this._config.entity.split('.')[1] + '_';
-    // entidades creadas antes de tener translation_key: se reconocen por su id en español
-    const SLUG = {bateria: 'battery', actividad: 'activity', estado: 'state', error: 'error', proximo_arranque: 'next_start',
-      cargando: 'charging', averia: 'problem', en_la_base: 'in_station', levantado: 'lifted', volcado: 'upside_down',
-      cortar_1_hora: 'mow_1h', cortar_3_horas: 'mow_3h', aparcar_hasta_el_proximo_turno: 'park_next',
-      volver_a_la_programacion: 'resume_schedule', programacion_tareas: 'schedule'};
+  // Entidades hermanas del robot, por dispositivo: el McCulloch por su clave de traducción; el Landroid por
+  // clase de dispositivo y por el final del id (Landroid Cloud no usa las mismas claves en todas las versiones)
+  _ids(entity) {
+    const h = this._hass;
+    if (h.entities !== this._entsRef) { this._idsBy = {}; this._entsRef = h.entities; }
+    if (this._idsBy[entity]) return this._idsBy[entity];
+    const ents = h.entities || {}, me = ents[entity], ids = {};
+    const ld = this._kind(entity) === 'landroid', prefix = entity.split('.')[1] + '_';
     if (me && me.device_id) {
       for (const e of Object.values(ents)) {
         if (e.device_id !== me.device_id) continue;
-        const key = e.translation_key || SLUG[e.entity_id.split('.')[1].replace(prefix, '')];
+        const [dom, obj] = e.entity_id.split('.'), dc = h.states[e.entity_id]?.attributes?.device_class;
+        let key;
+        if (!ld) key = e.translation_key || SLUG[obj.replace(prefix, '')];
+        else if (dom === 'sensor' && dc === 'battery') key = 'battery';
+        else if (dom === 'binary_sensor' && dc === 'battery_charging') key = 'charging';
+        else if (dom === 'binary_sensor' && dc === 'moisture') key = 'rain';
+        else if (dom === 'sensor' && /(^|_)error$/.test(obj)) key = 'error';
+        else if (dom === 'sensor' && /(proximo_horario|next_schedule)$/.test(obj)) key = 'next_start';
+        else if (dom === 'sensor' && /(ultima_actualizacion|last_update)$/.test(obj)) key = 'last_seen';
+        else if (dom === 'button' && /(corte_de_bordes|edge_?cut|border_?cut)$/.test(obj)) key = 'edgecut';
         if (key && !ids[key]) ids[key] = e.entity_id;
       }
     }
-    this._ids = ids;
+    return (this._idsBy[entity] = ids);
   }
 
-  // próximo arranque según las franjas del robot (lunes = 0), en la hora del navegador
-  _nextFromTasks(tasks) {
-    const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-    const now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes(), today = (now.getDay() + 6) % 7;
-    for (let k = 0; k < 8; k++) {
-      const d = (today + k) % 7;
-      const m = tasks.filter(t => t['on_' + DAYS[d]]).map(t => t.start_time_in_minutes).filter(x => k > 0 || x > nowMin).sort((a, b) => a - b)[0];
-      if (m == null) continue;
-      const hm = String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
-      const day = k === 0 ? this._t('today') : k === 1 ? this._t('tomorrow')
-        : new Date(now.getTime() + k * 864e5).toLocaleDateString(this._hass.locale?.language, {weekday: 'short'});
-      return day + ' ' + hm;
-    }
-    return null;
+  // estado resumido de un robot (el que se ve y los de la barra)
+  _status(entity) {
+    const h = this._hass, ids = this._ids(entity), st = k => (ids[k] ? h.states[ids[k]] : undefined);
+    const on = k => st(k)?.state === 'on', mower = h.states[entity], kind = this._kind(entity);
+    const val = k => { const s = st(k)?.state; return s && !['unknown', 'unavailable'].includes(s) ? s : null; };
+    const act = val('activity'), state = val('state'), bat = val('battery') == null ? NaN : Number(val('battery'));
+    const offline = !mower || mower.state === 'unavailable';
+    const err = val('error');
+    const ldErr = kind === 'landroid' && err && !['no_error', 'unknown', 'rain_delay'].includes(err);
+    const charging = on('charging');
+    const lifted = on('lifted') || (kind === 'landroid' && err === 'lifted');
+    const upside = on('upside_down') || (kind === 'landroid' && err === 'upside_down');
+    const error = on('problem') || state === 'error' || state === 'fatal_error' || mower?.state === 'error' || (ldErr && !lifted && !upside);
+    const moving = ['mowing', 'going_out', 'going_home'].includes(act) || (!act && ['mowing', 'edgecut'].includes(mower?.state));
+    const s = offline ? 'offline' : upside ? 'upside' : lifted ? 'lifted' : error ? 'error' : charging ? 'charging'
+      : act === 'going_home' || mower?.state === 'returning' ? 'homing' : act === 'going_out' ? 'leaving'
+      : moving ? 'mowing' : (on('in_station') || act === 'parked' || act === 'charging' || mower?.state === 'docked') ? 'docked'
+      : state === 'paused' || mower?.state === 'paused' ? 'paused' : 'idle';
+    const rain = kind === 'landroid' && (on('rain') || err === 'rain_delay');
+    return {s, bat, charging, offline, err, kind, rain, mower, ids, st};
   }
-
-  _st(key) { const id = this._ids[key]; return id ? this._hass.states[id] : undefined; }
-  _on(key) { const s = this._st(key); return !!s && s.state === 'on'; }
 
   _update() {
     const c = this._config, h = this._hass, r = this.shadowRoot;
-    // solo se vuelve a buscar cuando cambia el registro de entidades (HA lo sustituye entero), no en cada estado
-    if (!this._ids || h.entities !== this._entsRef) { this._resolve(); this._entsRef = h.entities; }
-    const mower = h.states[c.entity];
-    r.getElementById('name').textContent = c.name || (mower && mower.attributes.friendly_name) || this._t('noEntity');
-    const act = this._st('activity')?.state, state = this._st('state')?.state;
-    const bat = Number(this._st('battery')?.state);
-    const offline = !mower || mower.state === 'unavailable';
-    const charging = this._on('charging'), lifted = this._on('lifted'), upside = this._on('upside_down');
-    const error = this._on('problem') || state === 'error' || state === 'fatal_error' || mower?.state === 'error';
-    const moving = ['mowing', 'going_out', 'going_home'].includes(act) || (!act && mower?.state === 'mowing');
-    const s = offline ? 'offline' : upside ? 'upside' : lifted ? 'lifted' : error ? 'error' : charging ? 'charging'
-      : act === 'going_home' || mower?.state === 'returning' ? 'homing' : act === 'going_out' ? 'leaving'
-      : moving ? 'mowing' : (this._on('in_station') || act === 'parked' || act === 'charging' || mower?.state === 'docked') ? 'docked'
-      : state === 'paused' || mower?.state === 'paused' ? 'paused' : 'idle';
+    if (!this._robots().some(x => x.entity === this._sel)) this._sel = c.entity;
+    const robots = this._robots();
+    const name = x => x.name || h.states[x.entity]?.attributes?.friendly_name || x.entity.split('.')[1];
+    // barra de robots: solo con dos; cada uno con su estado y su batería
+    const bar = r.getElementById('rbar');
+    bar.hidden = robots.length < 2;
+    if (robots.length > 1) {
+      const key = robots.map(x => { const q = this._status(x.entity); return [x.entity, q.s, q.bat, name(x), x.entity === this._sel].join('|'); }).join(';');
+      if (bar.dataset.k !== key) {
+        bar.dataset.k = key;
+        bar.replaceChildren(...robots.map(x => {
+          const q = this._status(x.entity), b = document.createElement('button');
+          b.dataset.e = x.entity;
+          b.className = x.entity === this._sel ? 'on' : '';
+          b.innerHTML = '<i></i><b></b><small></small>';
+          b.querySelector('i').style.setProperty('--c', COLOR[q.s]);
+          b.querySelector('b').textContent = name(x);
+          b.querySelector('small').textContent = isNaN(q.bat) ? '–' : q.bat + '%';
+          return b;
+        }));
+      }
+    }
+    const me = robots.find(x => x.entity === this._sel);
+    const q = this._status(this._sel), {s, bat, charging, offline, kind, mower} = q;
+    r.getElementById('name').textContent = mower ? name(me) : this._t('noEntity');
     const scene = r.getElementById('scene');
-    if (scene.dataset.s !== s) { scene.className = 'scene s-' + s; scene.dataset.s = s; }
+    if (scene.dataset.s !== s) { scene.classList.remove(...[...scene.classList].filter(k => k.startsWith('s-'))); scene.classList.add('s-' + s); scene.dataset.s = s; }
     const pill = r.getElementById('pill');
     pill.style.setProperty('--c', COLOR[s]);
     pill.firstChild.innerHTML = ICON[s];
-    let label = this._t(s);
-    if (s === 'error') { const e = this._st('error')?.state; if (e && e !== 'ninguno' && e !== 'none') label += ': ' + e.replace(/_/g, ' '); }
+    let label = s === 'offline' && kind === 'landroid' ? this._t('noLink') : this._t(s);
+    if (s === 'error') { const e = this._errText(kind, q.err); if (e) label += ': ' + e; }
     pill.lastChild.textContent = label;
     const batEl = r.getElementById('bat');
     batEl.hidden = isNaN(bat);
@@ -313,11 +412,11 @@ class McCullochRobCard extends HTMLElement {
       fill.style.width = Math.max(4, bat * .17) + 'px';
       fill.style.setProperty('--bc', bat < 20 ? '#ff3b30' : bat < 40 ? '#ffc20e' : '#47d35a');
     }
-    const nx = this._st('next_start');
+    const nx = q.st('next_start');
     let nextTxt = this._t('none');
     // horario: el de ahora si el robot está conectado; si no, el último guardado en este navegador
-    const key = 'mcrob_tasks_' + c.entity;
-    let tasks = this._st('schedule')?.attributes?.tareas, stale = false;
+    const key = 'mcrob_tasks_' + this._sel;
+    let tasks = q.st('schedule')?.attributes?.tareas, stale = false;
     try {
       if (Array.isArray(tasks)) localStorage.setItem(key, JSON.stringify(tasks));
       else { tasks = JSON.parse(localStorage.getItem(key) || 'null'); stale = Array.isArray(tasks); }
@@ -338,18 +437,19 @@ class McCullochRobCard extends HTMLElement {
         : d.toLocaleDateString(lang, {weekday: 'short', day: 'numeric', timeZone: tz})) + ' ' + tm;
     }
     r.getElementById('next').textContent = nextTxt;
-    // el texto viene de un sensor: siempre como texto, nunca como HTML
-    // fuera de alcance: cuándo se supo de él por última vez (sensor «Última conexión», siempre disponible)
-    let offTxt = this._t('offlineMsg');
-    const seen = new Date(this._st('last_seen')?.state);
+    // fuera de alcance: cuándo se supo de él por última vez (sensor siempre disponible)
+    let offTxt = this._t(kind === 'landroid' ? 'offlineLd' : 'offlineMsg');
+    const seen = new Date(q.st('last_seen')?.state);
     if (offline && !isNaN(seen)) {
       const mins = (seen - Date.now()) / 6e4;
       const rtf = new Intl.RelativeTimeFormat(h.locale?.language || 'es', {numeric: 'auto'});
       const rel = Math.abs(mins) < 120 ? rtf.format(Math.round(mins), 'minute') : Math.abs(mins) < 2880 ? rtf.format(Math.round(mins / 60), 'hour') : rtf.format(Math.round(mins / 1440), 'day');
       offTxt = `${this._t('lastSeen')}: ${rel}. ${offTxt}`;
     }
-    const [alCls, alTxt] = offline ? ['alert warn', offTxt] : (upside || lifted || error) ? ['alert', label] : ['', ''];
+    const [alCls, alTxt] = offline ? ['alert warn', offTxt] : ['upside', 'lifted', 'error'].includes(s) ? ['alert', label]
+      : q.rain ? ['alert info', this._t('rain')] : ['', ''];
     const alEl = r.getElementById('alert');
+    // el texto viene de un sensor: siempre como texto, nunca como HTML
     if (alEl.dataset.k !== alCls + alTxt) {
       alEl.dataset.k = alCls + alTxt;
       alEl.replaceChildren();
@@ -359,12 +459,30 @@ class McCullochRobCard extends HTMLElement {
       b.lastChild.textContent = this._t(b.dataset.a);
       b.disabled = offline;
     });
-    const chipText = {mow_1h: 'mow1', mow_3h: 'mow3', park_next: 'parkNext', resume_schedule: 'resume'};
+    r.querySelector('.acts .main').style.setProperty('--accent', kind === 'landroid' ? '#f38a12' : '#ffc20e');
+    // cada robot con sus órdenes: el McCulloch sus botones de horas/turno, el Landroid el corte de bordes
+    const chipText = {mow_1h: 'mow1', mow_3h: 'mow3', park_next: 'parkNext', resume_schedule: 'resume', edgecut: 'edgecut'};
     r.querySelectorAll('.chips button').forEach(b => {
       b.textContent = this._t(chipText[b.dataset.b]);
-      b.hidden = !this._ids[b.dataset.b];
+      b.hidden = !q.ids[b.dataset.b];
       b.disabled = offline;
     });
+  }
+
+  // próximo arranque según las franjas del robot (lunes = 0), en la hora del navegador
+  _nextFromTasks(tasks) {
+    const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes(), today = (now.getDay() + 6) % 7;
+    for (let k = 0; k < 8; k++) {
+      const d = (today + k) % 7;
+      const m = tasks.filter(t => t['on_' + DAYS[d]]).map(t => t.start_time_in_minutes).filter(x => k > 0 || x > nowMin).sort((a, b) => a - b)[0];
+      if (m == null) continue;
+      const hm = String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+      const day = k === 0 ? this._t('today') : k === 1 ? this._t('tomorrow')
+        : new Date(now.getTime() + k * 864e5).toLocaleDateString(this._hass.locale?.language, {weekday: 'short'});
+      return day + ' ' + hm;
+    }
+    return null;
   }
 }
 
@@ -377,15 +495,19 @@ class McCullochRobCardEditor extends HTMLElement {
       this._form = document.createElement('ha-form');
       this._form.computeLabel = s => {
         const l = (this._hass.locale?.language || 'en').slice(0, 2), t = T[l] || T.en;
-        return s.name === 'entity' ? t.pick : s.name === 'image' ? t.image : t.name;
+        return {entity: t.pick, name: t.name, entity_2: t.pick2, name_2: t.name2, image: t.image}[s.name];
       };
       this._form.schema = [
         {name: 'entity', required: true, selector: {entity: {domain: 'lawn_mower'}}},
         {name: 'name', selector: {text: {}}},
+        {name: 'entity_2', selector: {entity: {domain: 'lawn_mower'}}},
+        {name: 'name_2', selector: {text: {}}},
         {name: 'image', selector: {text: {}}},
       ];
       this._form.addEventListener('value-changed', e => {
-        this.dispatchEvent(new CustomEvent('config-changed', {detail: {config: e.detail.value}, bubbles: true, composed: true}));
+        const cfg = {...e.detail.value};
+        for (const k of ['entity_2', 'name', 'name_2', 'image']) if (!cfg[k]) delete cfg[k];
+        this.dispatchEvent(new CustomEvent('config-changed', {detail: {config: cfg}, bubbles: true, composed: true}));
       });
       this.appendChild(this._form);
     }
@@ -400,7 +522,7 @@ if (!customElements.get('mcculloch-rob-card')) {
   window.customCards = window.customCards || [];
   window.customCards.push({
     type: 'mcculloch-rob-card', name: 'McCulloch / Husqvarna robot',
-    description: 'Estado, batería, próximo corte y órdenes del robot cortacésped', preview: true,
+    description: 'Estado, batería, próximo corte y órdenes del robot cortacésped (y de un segundo robot, también Landroid)', preview: true,
     documentationURL: 'https://github.com/odegaard12/ha-mcculloch-husqvarna-ble',
   });
 }

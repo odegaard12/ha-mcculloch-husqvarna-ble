@@ -12,6 +12,7 @@ if [ -d /data ]; then
   [ -s /data/vapid_private.pem ] || /usr/bin/python3 -c "from py_vapid import Vapid01; v = Vapid01(); v.generate_keys(); v.save_key('/data/vapid_private.pem')"
   [ -e /data/push_subs.json ] || echo '[]' > /data/push_subs.json
   [ -e /data/push_state.json ] || echo '{}' > /data/push_state.json
-  for f in .app_secret vapid_private.pem push_subs.json push_state.json; do ln -sf /data/$f /app/$f; done
+  [ -e /data/robots_cfg.json ] || echo '{}' > /data/robots_cfg.json   # nombre y contraseña de cada robot
+  for f in .app_secret vapid_private.pem push_subs.json push_state.json robots_cfg.json; do ln -sf /data/$f /app/$f; done
 fi
 exec /usr/bin/python3 /app/server.py
