@@ -13,7 +13,9 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ADDRESS, CONF_CLIENT_ID, CONF_PIN, Platform
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from homeassistant.core import CoreState, Event, HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
-from homeassistant.exceptions import ConfigEntryAuthFailed, ServiceValidationError
+from bleak.exc import BleakError
+from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError, ServiceValidationError
+from homeassistant.helpers.update_coordinator import UpdateFailed
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
@@ -63,7 +65,7 @@ def _minutes(hhmm: str) -> int:
     try:
         h, m = (int(x) for x in hhmm.strip().split(":"))
     except ValueError as err:
-        raise ServiceValidationError(f"Hora no valida: {hhmm!r} (usa HH:MM)") from err
+        raise ServiceValidationError(f"Hora no válida: {hhmm!r} (usa HH:MM)") from err
     if not (0 <= h <= 24 and 0 <= m < 60) or (h == 24 and m):
         raise ServiceValidationError(f"Hora fuera de rango: {hhmm!r}")
     return h * 60 + m
@@ -74,7 +76,7 @@ def _to_task(item: dict[str, Any]) -> TaskInformation:
     if start >= 24 * 60:
         raise ServiceValidationError("El inicio tiene que ser antes de las 24:00")
     if end <= start:
-        raise ServiceValidationError(f"El fin ({item['end']}) tiene que ser despues del inicio ({item['start']})")
+        raise ServiceValidationError(f"El fin ({item['end']}) tiene que ser después del inicio ({item['start']})")
     days = set(item["days"])
     return TaskInformation(start, end - start, *(d in days for d in DAYS))
 
@@ -95,7 +97,7 @@ def _coordinator(hass: HomeAssistant, entry_id: str | None) -> RobCoordinator:
         if entry_id in (None, e.entry_id)
     ]
     if not entries:
-        raise ServiceValidationError("No hay ningun robot cargado")
+        raise ServiceValidationError("No hay ningún robot cargado")
     return entries[0].runtime_data
 
 
@@ -150,6 +152,23 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
             hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _on_started)
 
+    def friendly(handler):
+        """Los fallos del robot salen como un mensaje claro en HA, no como un error interno con traza."""
+        async def wrapped(call: ServiceCall):
+            try:
+                return await handler(call)
+            except HomeAssistantError:
+                raise
+            except ConfigEntryAuthFailed as err:
+                raise HomeAssistantError("El robot no acepta el PIN: vuelve a configurarlo en la integración") from err
+            except UpdateFailed as err:
+                raise HomeAssistantError(f"No se pudo hablar con el robot: {err}") from err
+            except (BleakError, TimeoutError) as err:
+                raise HomeAssistantError(f"Se cortó la conexión Bluetooth con el robot: {err or type(err).__name__}") from err
+            except (RuntimeError, ValueError, TypeError) as err:
+                raise HomeAssistantError(f"El robot no aceptó la orden: {err}") from err
+        return wrapped
+
     async def send_command(call: ServiceCall) -> ServiceResponse:
         """Envia cualquier comando del protocolo y devuelve la respuesta cruda."""
         coordinator = _coordinator(hass, call.data.get("config_entry_id"))
@@ -185,7 +204,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             await coordinator.ensure_connected()
             result = await coordinator.mower.mower_override(float(call.data["hours"]))
         if getattr(result, "name", "OK") != "OK":
-            raise ServiceValidationError(f"El robot respondio {result.name}")
+            raise ServiceValidationError(f"El robot respondió {result.name}")
         await coordinator.async_request_refresh()
 
     async def park_for(call: ServiceCall) -> None:
@@ -195,23 +214,23 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             await coordinator.ensure_connected()
             result, _ = await coordinator.read("SetOverridePark", duration=int(float(call.data["hours"]) * 3600))
         if result.name != "OK":
-            raise ServiceValidationError(f"El robot respondio {result.name}")
+            raise ServiceValidationError(f"El robot respondió {result.name}")
         await coordinator.async_request_refresh()
 
     hours_schema = lambda hi: vol.Schema({vol.Required("hours"): vol.All(vol.Coerce(float), vol.Range(min=0.5, max=hi)),
                                           vol.Optional("config_entry_id"): cv.string})
-    hass.services.async_register(DOMAIN, "mow_for", mow_for, hours_schema(24))
-    hass.services.async_register(DOMAIN, "park_for", park_for, hours_schema(168))
+    hass.services.async_register(DOMAIN, "mow_for", friendly(mow_for), hours_schema(24))
+    hass.services.async_register(DOMAIN, "park_for", friendly(park_for), hours_schema(168))
     hass.services.async_register(
-        DOMAIN, "set_schedule", set_schedule, SET_SCHEDULE_SCHEMA, SupportsResponse.OPTIONAL
+        DOMAIN, "set_schedule", friendly(set_schedule), SET_SCHEDULE_SCHEMA, SupportsResponse.OPTIONAL
     )
     hass.services.async_register(
-        DOMAIN, "send_command", send_command, SEND_COMMAND_SCHEMA, SupportsResponse.ONLY
+        DOMAIN, "send_command", friendly(send_command), SEND_COMMAND_SCHEMA, SupportsResponse.ONLY
     )
     hass.services.async_register(
         DOMAIN,
         "probe",
-        probe,
+        friendly(probe),
         vol.Schema({vol.Optional("config_entry_id"): cv.string}),
         SupportsResponse.OPTIONAL,
     )

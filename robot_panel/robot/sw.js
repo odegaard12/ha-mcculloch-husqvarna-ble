@@ -1,7 +1,7 @@
 // Service worker de «Mi robot»: guarda la carcasa de la app para que abra al instante y
 // sin red; los datos (api/) van siempre a la red y nunca se sirven de caché.
 // Rutas relativas al ámbito del worker: funciona en la raíz (Pi) y bajo el ingress de HA.
-const CACHE = 'mi-robot-v20';
+const CACHE = 'mi-robot-v21';
 const SHELL = ['./', 'static/manifest.webmanifest', 'static/icon-192.png?v=6', 'static/icon-512.png?v=6',
                'static/robot.svg', 'static/robot.webp?v=6'];
 const SCOPE = new URL(self.registration.scope).pathname;

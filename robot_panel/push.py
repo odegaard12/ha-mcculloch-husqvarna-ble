@@ -55,8 +55,20 @@ def public_key(pem: Path) -> str | None:
         return None
 
 
+# solo los servicios push de verdad (Apple, Google, Mozilla, Microsoft): la Pi nunca manda nada a otra dirección
+PUSH_HOSTS = ("push.apple.com", "fcm.googleapis.com", "android.googleapis.com", "push.services.mozilla.com",
+              "notify.windows.com")
+
+
+def _push_host(url: str) -> bool:
+    from urllib.parse import urlsplit
+    host = (urlsplit(url).hostname or "").lower()
+    return any(host == h or host.endswith("." + h) for h in PUSH_HOSTS)
+
+
 def _valid_sub(s) -> bool:
     return (isinstance(s, dict) and isinstance(s.get("endpoint"), str) and s["endpoint"].startswith("https://")
+            and _push_host(s["endpoint"])
             and len(s["endpoint"]) < 1000 and isinstance(s.get("keys"), dict)
             and all(isinstance(s["keys"].get(k), str) and len(s["keys"][k]) < 200 for k in ("p256dh", "auth"))
             and (s.get("robots") is None or (isinstance(s["robots"], list) and all(isinstance(x, str) for x in s["robots"]))))
@@ -104,12 +116,15 @@ def setup_push(app: web.Application, here: Path, ha: str, token: str, robots: li
         target = {"endpoint": sub["endpoint"], "keys": sub["keys"]}
         try:
             webpush(subscription_info=target, data=json.dumps(data), vapid_private_key=str(pem),
-                    vapid_claims={"sub": claim}, ttl=12 * 3600)
+                    vapid_claims={"sub": claim}, ttl=12 * 3600, timeout=10)
             return True
         except WebPushException as e:
             code = e.response.status_code if e.response is not None else 0
             LOG.warning("Aviso no entregado (%s): %s", code, str(e)[:120])
             return code not in (404, 410)
+        except Exception as e:  # noqa: BLE001 - red caída, tiempo agotado...: ese móvil sigue suscrito y no frena al resto
+            LOG.warning("Aviso no entregado (%s): %s", type(e).__name__, str(e)[:120])
+            return True
 
     def may_see(sub: dict, rid: str) -> bool:
         # suscripciones de antes de las contraseñas: solo los robots que hoy no tienen contraseña
@@ -182,7 +197,7 @@ def setup_push(app: web.Application, here: Path, ha: str, token: str, robots: li
 
     async def from_peer(req):
         body = await req.read()
-        if not hmac.compare_digest(req.headers.get("X-Peer-Sig", ""), sign(body)):
+        if not hmac.compare_digest(req.headers.get("X-Peer-Sig", "").encode(errors="replace"), sign(body).encode()):
             return web.json_response({"error": "firma"}, status=403)
         data = json.loads(body)
         subs[:] = [s for s in data if _valid_sub(s)][-20:]
@@ -259,7 +274,14 @@ def setup_push(app: web.Application, here: Path, ha: str, token: str, robots: li
             out.update({f"{rid}:{cid}": v for cid, v in rule.items()})
         return out
 
+    notify_lock = asyncio.Lock()
+
     async def notify(cid: str, text: str) -> None:
+        # de uno en uno: dos avisos a la vez no se pisan el registro de enfriamiento ni el tope diario
+        async with notify_lock:
+            await _notify(cid, text)
+
+    async def _notify(cid: str, text: str) -> None:
         rid = cid.split(":", 1)[0]
         mem = _load(state_file, {})
         now = time.time()

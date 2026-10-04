@@ -17,6 +17,7 @@ Como complemento de HA (ingress) no hace falta nada: el supervisor da la URL y e
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
 import json
@@ -158,7 +159,7 @@ def make_app() -> web.Application:
             body = await req.json()
         except ValueError:
             body = {}
-        if not pin or not hmac.compare_digest(str(body.get("pin", "")), pin):
+        if not pin or not hmac.compare_digest(str(body.get("pin", "")).encode(), pin.encode()):
             failed(ip)
             return web.json_response({"error": "PIN incorrecto"}, status=403)
         fails.pop(ip, None)
@@ -169,32 +170,64 @@ def make_app() -> web.Application:
         return resp
 
     # ---------- robots: nombre que se ve y contraseña propia (p. ej. para que otro de la casa no lo toque) ----------
-    # robots_cfg.json: {id: {"name": str, "pin": hash pbkdf2}}; se copia a la otra Pi como las suscripciones push
+    # robots_cfg.json: {"v": marca de tiempo, "robots": {id: {"name": str, "pin": hash pbkdf2}}}. Se copia a la otra
+    # Pi: gana siempre la versión más nueva (una copia vieja reenviada no pisa nada), se reintenta si la otra no
+    # contesta y al arrancar se sincronizan las dos (la que estaba apagada recoge los cambios).
     cfg_file = HERE / "robots_cfg.json"
+    cfg: dict = {}
+    cfg_v = [0.0]
+
+    def adopt(data) -> None:
+        raw = data.get("robots", data) if isinstance(data, dict) else {}  # formato antiguo: sin "v"
+        cfg.clear()
+        cfg.update({k: v for k, v in raw.items() if k in ids and isinstance(v, dict)})
+        cfg_v[0] = float(data.get("v", 0)) if isinstance(data, dict) and "robots" in data else 0.0
+
     try:
-        cfg: dict = {k: v for k, v in json.loads(cfg_file.read_text(encoding="utf-8")).items() if k in ids and isinstance(v, dict)}
+        adopt(json.loads(cfg_file.read_text(encoding="utf-8")))
     except (OSError, ValueError):
-        cfg = {}
+        pass
     peer = os.environ.get("PEER_URL", "").rstrip("/")
 
-    def save_cfg() -> None:
-        cfg_file.write_text(json.dumps(cfg, ensure_ascii=False), encoding="utf-8")
+    def cfg_blob() -> bytes:
+        return json.dumps({"v": cfg_v[0], "robots": cfg}, ensure_ascii=False).encode()
+
+    def save_cfg(bump: bool = True) -> None:
+        if bump:
+            cfg_v[0] = max(time.time(), cfg_v[0] + 0.001)
+        cfg_file.write_bytes(cfg_blob())
         cfg_file.chmod(0o600)
 
     def peer_sig(body: bytes) -> str:
         return hmac.new(secret, b"robots-peer:" + body, hashlib.sha256).hexdigest()
 
-    async def replicate_cfg() -> None:
+    def sig_ok(got: str, body: bytes) -> bool:
+        return hmac.compare_digest(got.encode(errors="replace"), peer_sig(body).encode())
+
+    async def replicate_cfg(tries: int = 10) -> None:
+        """Manda la configuración a la otra Pi; si la de allí es más nueva, se queda con la suya."""
         if not peer:
             return
-        body = json.dumps(cfg).encode()
-        try:
-            async with ClientSession(timeout=ClientTimeout(total=5)) as s, \
-                    s.post(f"{peer}/api/robots/peer", data=body, headers={"X-Peer-Sig": peer_sig(body)}) as r:
-                if r.status != 200:
+        for n in range(tries):
+            body = cfg_blob()
+            try:
+                async with ClientSession(timeout=ClientTimeout(total=5)) as s, \
+                        s.post(f"{peer}/api/robots/peer", data=body, headers={"X-Peer-Sig": peer_sig(body)}) as r:
+                    reply = await r.read()
+                    if r.status == 200:
+                        theirs = json.loads(reply or b"{}")
+                        if theirs.get("robots") is not None and sig_ok(r.headers.get("X-Peer-Sig", ""), reply) \
+                                and float(theirs.get("v", 0)) > cfg_v[0]:
+                            adopt(theirs)
+                            save_cfg(bump=False)
+                        return
                     LOG.warning("La otra Pi no aceptó la configuración de robots: %s", r.status)
-        except (ClientError, TimeoutError) as e:
-            LOG.warning("No llego a la otra Pi para copiar la configuración de robots: %s", e)
+            except (ClientError, TimeoutError, ValueError) as e:
+                LOG.warning("No llego a la otra Pi para copiar la configuración de robots (%s/%s): %s", n + 1, tries, e)
+            await asyncio.sleep(min(60, 5 * 2 ** n))
+
+    def replicate_soon() -> None:
+        asyncio.get_running_loop().create_task(replicate_cfg())
 
     def rname(rid: str) -> str:
         return (cfg.get(rid) or {}).get("name") or next(r["name"] for r in robots if r["id"] == rid)
@@ -252,7 +285,7 @@ def make_app() -> web.Application:
             return locked_resp()
         cfg.setdefault(rid, {})["name"] = name
         save_cfg()
-        await replicate_cfg()
+        replicate_soon()
         return web.json_response({"ok": True, "name": name})
 
     async def clave(req):
@@ -272,7 +305,7 @@ def make_app() -> web.Application:
         else:
             cfg.setdefault(rid, {}).pop("pin", None)
         save_cfg()
-        await replicate_cfg()
+        replicate_soon()
         if nueva:
             await req.app["push"]["forget_robot"](rid)  # sus avisos, solo a quien los vuelva a activar desbloqueado
         resp = web.json_response({"ok": True, "locked": bool(nueva)})
@@ -305,13 +338,20 @@ def make_app() -> web.Application:
 
     async def cfg_from_peer(req):
         body = await req.read()
-        if not hmac.compare_digest(req.headers.get("X-Peer-Sig", ""), peer_sig(body)):
+        if not sig_ok(req.headers.get("X-Peer-Sig", ""), body):
             return web.json_response({"error": "firma"}, status=403)
-        data = json.loads(body)
-        cfg.clear()
-        cfg.update({k: v for k, v in data.items() if k in ids and isinstance(v, dict)})
-        save_cfg()
-        return web.json_response({"ok": True})
+        try:
+            data = json.loads(body)
+            theirs = float(data.get("v", 0))
+        except (ValueError, TypeError, AttributeError):
+            return web.json_response({"error": "datos"}, status=400)
+        if "robots" in data and theirs > cfg_v[0]:
+            adopt(data)
+            save_cfg(bump=False)
+            return web.json_response({"ok": True})
+        # la mía es igual o más nueva: se la devuelvo (firmada) para que la otra Pi se ponga al día
+        mine = cfg_blob()
+        return web.Response(body=mine, content_type="application/json", headers={"X-Peer-Sig": peer_sig(mine)})
 
     async def logout(_):
         resp = web.json_response({"ok": True})
@@ -322,6 +362,7 @@ def make_app() -> web.Application:
 
     async def on_startup(app):
         app["http"] = ClientSession(timeout=ClientTimeout(total=20), headers=headers)
+        replicate_soon()  # al arrancar, ponerse al día con la otra Pi (nombres y contraseñas)
 
     async def on_cleanup(app):
         await app["http"].close()
@@ -330,7 +371,12 @@ def make_app() -> web.Application:
         return web.json_response({"error": "Falta HA_TOKEN en robot_app.env"}, status=503)
 
     async def index(_):
-        return web.FileResponse(HERE / "robot" / "index.html", headers={"Cache-Control": "no-cache"})
+        # la página lleva dentro su versión: si una copia guardada sin red es vieja, al volver la red se recarga sola
+        try:
+            html = (HERE / "robot" / "index.html").read_text(encoding="utf-8").replace("__APP_VERSION__", version)
+        except OSError:  # (devuelto, no lanzado: así también lleva las cabeceras de seguridad)
+            return web.Response(status=404, text="No encontrado")
+        return web.Response(text=html, content_type="text/html", headers={"Cache-Control": "no-cache"})
 
     async def estado(req):
         if not token:

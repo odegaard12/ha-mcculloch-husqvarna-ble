@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="app-version" content="__APP_VERSION__">
 <meta name="theme-color" content="#16181a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -93,7 +94,16 @@ body[data-kind="landroid"]{--brand:#f38a12;--brand-soft:#ffe8d0}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) body[data-kind="landroid"]{--brand-soft:#3a2510}}
 /* al cambiar de robot: la escena y las pestañas entran con un fundido corto */
 .app.swap .hero,.app.swap .view.on{animation:swapin .32s cubic-bezier(.2,.7,.2,1)}
+/* recién cambiado o desbloqueado, sin sus datos aún: no se enseña nada que pueda ser del otro robot */
+body.stale .hero .body,body.stale #alerts,body.stale .view:not(#v-inicio),body.stale .quick,body.stale .sstate,body.stale .caption{visibility:hidden}
 @keyframes swapin{from{opacity:0;transform:translateY(6px)}}
+/* pestañas: la nueva entra con un fundido corto; la etiqueta de estado salta un poco cuando cambia */
+.view.on{animation:viewin .26s cubic-bezier(.2,.7,.2,1)}
+@keyframes viewin{from{opacity:0;transform:translateY(4px)}}
+.sstate.bump{animation:pillin .4s cubic-bezier(.2,.8,.2,1)}
+@keyframes pillin{from{opacity:0;transform:translateY(-5px) scale(.97)}}
+.sstate{transition:border-color .4s}
+@media (prefers-reduced-motion:reduce){.view.on,.sstate.bump,.app.swap .hero{animation:none}}
 /* el 3D se gira con el dedo (el desplazamiento vertical sigue siendo de la página) */
 .scene{touch-action:pan-y;cursor:grab}
 .scene.grab{cursor:grabbing}
@@ -239,19 +249,35 @@ details.all td:last-child{text-align:right;font-weight:560;overflow-wrap:anywher
 .facts div{background:rgba(255,255,255,.07);border-radius:14px;padding:8px 10px}
 .facts b{display:block;font-size:15px}.facts small{opacity:.7;font-size:11.5px}
 /* escena con la foto oficial: cada estado es una clase en .stage */
-.stage{position:absolute;inset:0;overflow:hidden;perspective:900px;background:radial-gradient(90% 75% at 50% 30%,#3a3d40 0%,#232527 55%,#17191a 100%)}
-/* césped en perspectiva: franjas de corte + grano de hierba; al cortar se desplaza bajo el robot */
-.ground{position:absolute;left:-40%;right:-40%;bottom:-6%;height:64%;perspective:380px;perspective-origin:50% -30%;-webkit-mask:linear-gradient(to bottom,transparent 0,#000 38%);mask:linear-gradient(to bottom,transparent 0,#000 38%);transition:filter .5s}
+/* jardín: cielo (de noche, más oscuro y con estrellas), setos al fondo y césped con franjas de corte */
+.stage{position:absolute;inset:0;overflow:hidden;perspective:900px;transition:background .8s;
+  background:linear-gradient(to bottom,#26323d 0%,#2f3b41 34%,#3a4636 52%,#1c2617 78%,#141b11 100%)}
+.stage.night{background:linear-gradient(to bottom,#0a1120 0%,#131c2a 36%,#1c2a20 54%,#0f160d 80%,#0b100a 100%)}
+.stage::before{content:"";position:absolute;left:-4%;right:-4%;top:33%;height:22%;z-index:0;pointer-events:none;filter:blur(.6px);opacity:.95;
+  background:
+    radial-gradient(34px 30px at 50% 100%,#1d3519 64%,transparent 66%) 0 100%/52px 70% repeat-x,
+    radial-gradient(46px 40px at 50% 100%,#24421f 64%,transparent 66%) 18px 100%/74px 88% repeat-x,
+    radial-gradient(28px 26px at 50% 100%,#2b4d25 64%,transparent 66%) 40px 100%/46px 56% repeat-x,
+    linear-gradient(to top,#1a2f16 0 26%,transparent 26%)}
+.stage.night::after{content:"";position:absolute;inset:0 0 55% 0;z-index:0;pointer-events:none;opacity:.8;
+  background:radial-gradient(1px 1px at 12% 22%,#fff,transparent),radial-gradient(1px 1px at 28% 12%,#dfe8ff,transparent),radial-gradient(1.2px 1.2px at 47% 30%,#fff,transparent),
+    radial-gradient(1px 1px at 63% 16%,#fff,transparent),radial-gradient(1px 1px at 78% 26%,#cfe0ff,transparent),radial-gradient(1.3px 1.3px at 90% 10%,#fff,transparent);animation:twinkle 4s ease-in-out infinite alternate}
+@keyframes twinkle{to{opacity:.45}}
+/* césped en perspectiva: franjas anchas de corte + grano de hierba; al cortar se desplaza bajo el robot */
+.ground{position:absolute;left:-40%;right:-40%;bottom:-6%;height:64%;perspective:380px;perspective-origin:50% -30%;-webkit-mask:linear-gradient(to bottom,transparent 0,#000 30%);mask:linear-gradient(to bottom,transparent 0,#000 30%);transition:filter .5s}
 .plane{position:absolute;inset:-40% 0 0;transform:rotateX(64deg);transform-origin:50% 100%;
   background:
-    radial-gradient(circle at 30% 40%,rgba(200,245,150,.13) 0 .8px,transparent 1.3px) 0 0/5px 7px,
-    radial-gradient(circle at 70% 60%,rgba(0,0,0,.22) 0 .9px,transparent 1.5px) 0 0/4px 5px,
-    linear-gradient(90deg,#2b5126 0%,#376630 25%,#2b5126 50%,#376630 75%,#2b5126 100%) 0 0/360px 100%;
+    radial-gradient(circle at 30% 40%,rgba(214,252,160,.16) 0 .8px,transparent 1.3px) 0 0/5px 7px,
+    radial-gradient(circle at 70% 60%,rgba(0,0,0,.26) 0 .9px,transparent 1.5px) 0 0/4px 5px,
+    repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 2px,transparent 2px 9px) 0 0/9px 100%,
+    linear-gradient(90deg,#2d5627 0 50%,#3b7033 50% 100%) 0 0/150px 100%;
   animation:roll 1.6s linear infinite;animation-play-state:paused}
 .stage.homing .plane{animation-play-state:running}
 .stage.leaving .plane{animation-play-state:running;animation-direction:reverse}
-@keyframes roll{to{background-position:20px 0,20px 0,360px 0}}
-.ground::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgba(23,25,26,.9) 0,rgba(23,25,26,0) 55%),radial-gradient(70% 90% at 50% 100%,transparent 50%,rgba(10,12,12,.55))}
+@keyframes roll{to{background-position:20px 0,20px 0,18px 0,150px 0}}
+/* foco de luz bajo el robot y bordes que se oscurecen */
+.ground::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(38% 62% at 50% 86%,rgba(255,244,206,.13),transparent 70%)}
+.ground::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgba(20,27,17,.85) 0,rgba(20,27,17,0) 50%),radial-gradient(70% 90% at 50% 100%,transparent 50%,rgba(8,12,8,.55))}
 /* estela de césped cortado: dentro del robot, a su espalda (gira con él) */
 .trail{position:absolute;left:62%;width:130%;bottom:-2%;height:22%;border-radius:40% 0 0 40%;opacity:0;transform-origin:0 50%;transform:scaleX(.2);transition:opacity .6s,transform 1.2s ease-out;z-index:0;
   background:linear-gradient(90deg,rgba(170,230,120,.42),rgba(170,230,120,.14) 55%,transparent);filter:blur(3px)}
@@ -260,7 +286,7 @@ details.all td:last-child{text-align:right;font-weight:560;overflow-wrap:anywher
 .body3d{position:relative;transform-style:preserve-3d;transition:transform .9s cubic-bezier(.45,0,.25,1)}
 .blades{position:absolute;left:0;right:0;bottom:0;height:20%;pointer-events:none;z-index:4}
 .blades svg{width:100%;height:100%;display:block}
-.blades path{transform-box:fill-box;transform-origin:50% 100%;animation:sway var(--d,3s) ease-in-out infinite alternate}
+.blades path,.blades g[style]{transform-box:fill-box;transform-origin:50% 100%;animation:sway var(--d,3s) ease-in-out infinite alternate}
 @keyframes sway{from{transform:rotate(-4deg)}to{transform:rotate(5deg)}}
 .stage.mowing .blades path{animation-duration:calc(var(--d,3s) / 2.5)}
 .dock{position:absolute;width:96%;left:2%;bottom:3%;opacity:0;transform:translateY(10px);transition:.5s}
@@ -625,7 +651,9 @@ async function pushRender(){
 }
 
 /* ---------- siempre la última versión: si el servidor cambió, la app se recarga sola ---------- */
-let appVer = null;
+// versión con la que se sirvió esta página (el servidor la escribe dentro): una copia vieja guardada sin red se
+// detecta en cuanto vuelve la red, no solo cuando cambia algo después de abrirla
+let appVer = (v => /^[0-9a-f]{12}$/.test(v) ? v : null)(document.querySelector('meta[name="app-version"]')?.content || '');
 async function checkVersion(){
   try {
     const v = (await (await fetch('api/version', {cache: 'no-store'})).json()).v;
@@ -682,8 +710,11 @@ const st = (dom, key) => states[`${dom}.${P}${key ? '_' + key : ''}`];
 const val = (dom, key) => { const s = st(dom, key); return s && !['unknown','unavailable'].includes(s.state) ? s.state : null; };
 const on = (dom, key) => val(dom, key) === 'on';
 function setLive(ok, txt){ const l = $('#live'); l.classList.toggle('off', !ok); l.lastChild.textContent = txt || (ok ? 'en directo' : 'sin conexión'); }
-let pollN = 0;
-async function poll(){
+let pollN = 0, polling = null;
+// una sola lectura a la vez: si llegan varias peticiones (cada 5 s, tras una orden, al tirar hacia abajo)
+// se espera a la que está en marcha; así una respuesta lenta y vieja nunca pisa una nueva
+function poll(){ if (!polling) polling = pollOnce().finally(() => { polling = null; }); return polling; }
+async function pollOnce(){
   if (locked) return;
   // cada minuto, también nombres y contraseñas (los pueden cambiar desde otro móvil)
   if (++pollN % 12 === 0) await loadRobots(true);
@@ -693,6 +724,7 @@ async function poll(){
     if (!r.ok) { setLive(false, 'sin datos'); $('#alerts').innerHTML = `<div class="alert warn">${esc(j.error || 'Home Assistant no responde')}</div>`; return; }
     states = {}; for (const x of j) states[x.entity_id] = x;
     render(); renderRobots();
+    document.body.classList.remove('stale');
   } catch(e) { if (!locked) setLive(false); }
 }
 async function svc(domain, service, entity_id, label){
@@ -726,7 +758,7 @@ function summary(r){
   if (isLocked(r)) return {txt: 'Con contraseña', col: '#8a8f92', bat: null, seen: null};
   const g = (dom, key) => states[`${dom}.${r.id}${key ? '_' + key : ''}`];
   const v = (dom, key) => { const s = g(dom, key); return s && !['unknown','unavailable'].includes(s.state) ? s.state : null; };
-  const lm = g('lawn_mower'), off = !lm || lm.state === 'unavailable';
+  const lm = g('lawn_mower'), off = !lm || ['unavailable', 'unknown'].includes(lm.state);
   let txt, col;
   if (off) { txt = 'Sin conexión'; col = '#8a8f92'; }
   else if (r.kind === 'landroid') { txt = LMS[lm.state] || lm.state; col = {mowing:'#47d35a', edgecut:'#47d35a', returning:'#47d35a', error:'#ff3b30'}[lm.state] || '#ffc20e'; }
@@ -778,6 +810,7 @@ function pickRobot(id){
   $('#sheet').hidden = true;
   if (!changed) { applyLock(); return renderRobots(); }
   const app = $('.app'); app.classList.remove('swap'); void app.offsetWidth; app.classList.add('swap');
+  document.body.classList.add('stale');  // hasta pintar este robot, nada del anterior a la vista
   lkBuf = ''; drawLkPins(); $('#lkmsg').textContent = '';
   editing = false; mowed24 = null;
   ['#tl','#wbars','#spark'].forEach(s => $(s).innerHTML = ''); $('#legend').textContent = ''; $('#weekmowtot').textContent = ''; $('#sparkinfo').textContent = '';
@@ -813,7 +846,22 @@ function ask({title, text = '', fields, ok = 'Aceptar'}){
 }
 const postJSON = (url, body) => api(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
 async function errorOf(r){ return (await r.json().catch(() => ({}))).error || 'No se pudo'; }
-async function afterRobotsChange(){ await loadRobots(true); renderRobots(); if (!applyLock()) { poll(); loadHistory(); } }
+async function afterRobotsChange(){
+  const wasLocked = document.body.classList.contains('rlocked');
+  await loadRobots(true); renderRobots();
+  if (!applyLock()) {
+    if (wasLocked) document.body.classList.add('stale');  // recién desbloqueado: nada a la vista hasta sus datos
+    poll(); loadHistory();
+  }
+  resubscribePush();
+}
+// los avisos de cada móvil son de los robots que ve: al desbloquear o bloquear uno, la suscripción se pone al día
+async function resubscribePush(){
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration(); const sub = await reg?.pushManager?.getSubscription();
+    if (sub) await postJSON('api/push/subscribe', {subscription: sub.toJSON()});
+  } catch(e) {}
+}
 async function renameRobot(id){
   const r = ROBOTS.find(x => x.id === id); if (!r) return;
   const v = await ask({title: 'Nombre del robot', text: 'Así sale en la app, en los avisos y en todos los móviles.', fields: [{k: 'name', label: 'Nombre', value: r.name, max: 30}], ok: 'Guardar'});
@@ -831,7 +879,9 @@ async function passRobot(id){
     text: r.locked ? '' : 'Sin ella, en los demás móviles no se ve ni se puede manejar este robot. En este móvil se queda desbloqueado.',
     fields, ok: 'Guardar'});
   if (!v) return;
+  if (!r.locked && !/^\d{4,8}$/.test(v.nueva || '')) return toast('Escribe una contraseña de 4 a 8 cifras');
   if (!r.locked && v.nueva !== v.otra) return toast('Las dos contraseñas no coinciden');
+  if (r.locked && v.nueva && !/^\d{4,8}$/.test(v.nueva)) return toast('La nueva tiene que ser de 4 a 8 cifras');
   const res = await postJSON('api/robots/clave', {id, actual: v.actual || '', nueva: v.nueva || ''});
   if (!res.ok) return toast(await errorOf(res));
   toast(v.nueva ? 'Contraseña guardada ✓ · si quieres sus avisos aquí, vuelve a activarlos en Ajustes' : 'Contraseña quitada ✓');
@@ -949,7 +999,7 @@ function readMcCulloch(){
 
   const al = [];
   if (offline && st('lawn_mower')) al.push(`<div class="alert warn">El robot no está al alcance del Bluetooth. Se reconecta solo al volver cerca del receptor.</div>`);
-  if (on('binary_sensor','averia')) al.push(`<div class="alert">⚠ ${esc(errText(val('sensor','error')))}</div>`);
+  if (on('binary_sensor','averia')) al.push(`<div class="alert"><span><b>⚠ ${esc(errText(val('sensor','error')))}</b><br><small>Revisa el robot y confírmalo en su teclado; luego pulsa Cortar o A la base.</small></span></div>`);
   if (on('binary_sensor','levantado')) al.push(`<div class="alert warn">El robot está levantado.</div>`);
   if (on('binary_sensor','volcado')) al.push(`<div class="alert">El robot está volcado.</div>`);
   const clock = val('sensor','reloj_del_robot');
@@ -962,7 +1012,7 @@ const ldTasks = () => (st('sensor','proximo_horario')?.attributes?.slots || [])
   .filter(s => DAYS.includes(s.day) && (s.duration_extended || s.duration) > 0)
   .map(s => ({start_time_in_minutes: toMin(s.start), duration_in_minutes: s.duration_extended || s.duration, ['on_' + s.day]: true}));
 function readLandroid(){
-  const lm = st('lawn_mower'), ls = lm?.state, offline = !lm || ls === 'unavailable';
+  const lm = st('lawn_mower'), ls = lm?.state, offline = !lm || ['unavailable', 'unknown'].includes(ls);
   const bat = num('sensor','bateria'), charging = on('binary_sensor','cargando');
   const err = val('sensor','error'), rain = on('binary_sensor','sensor_de_lluvia') || err === 'rain_delay';
   const errOn = !!err && !['no_error', 'unknown', 'rain_delay'].includes(err);
@@ -973,7 +1023,7 @@ function readLandroid(){
   const seen = val('sensor','ultima_actualizacion');
   const al = [];
   if (offline) al.push(`<div class="alert warn">${esc(curRobot().name)} no llega a la nube de Worx (sin Wi-Fi o apagado).${seen ? ` Datos de ${esc(ago(seen))}.` : ''}</div>`);
-  else if (errOn) al.push(`<div class="alert">⚠ ${esc(errText(err))}</div>`);
+  else if (errOn) al.push(`<div class="alert"><span><b>⚠ ${esc(errText(err))}</b><br><small>Revísalo y pulsa OK en el robot; luego Cortar o A la base.</small></span></div>`);
   const wait = Number(val('sensor','retraso_por_lluvia_restante'));
   if (!offline && rain) al.push(`<div class="alert info">Llueve: el robot espera${wait > 0 ? ` unas ${h1(wait)} h` : ''} a que se seque el césped.</div>`);
   const prog = val('sensor','progreso_diario'), zone = val('select','zona');
@@ -1004,7 +1054,7 @@ function render(){
   if (mowingNow && run) { $('#statelbl').textContent = 'cortando'; $('#state').textContent = 'Hasta las ' + hm(run.start_time_in_minutes + run.duration_in_minutes); }
   else if (run) { $('#statelbl').textContent = 'franja de ahora'; $('#state').textContent = `${hm(run.start_time_in_minutes)}–${hm(run.start_time_in_minutes + run.duration_in_minutes)}`; }
   else if (nx) { $('#statelbl').textContent = 'próximo corte'; $('#state').textContent = (nx.k === 0 ? 'Hoy' : nx.k === 1 ? 'Mañana' : DLONG[nx.d][0].toUpperCase() + DLONG[nx.d].slice(1)) + ' ' + hm(nx.m); }
-  else { $('#statelbl').textContent = 'próximo corte'; $('#state').textContent = 'Sin horario'; }
+  else { $('#statelbl').textContent = 'próximo corte'; $('#state').textContent = flags.offline ? 'Se sabrá al conectar' : 'Sin horario'; }
   $('#detail').textContent = d.detail.filter(Boolean).join(' · ') || ' ';
   weekMin = tasks.reduce((acc, t) => acc + t.duration_in_minutes * DAYS.filter(dd => t['on_' + dd]).length, 0);
   renderFacts();
@@ -1013,6 +1063,7 @@ function render(){
   renderDatos(); renderRobot();
   const upd = st('sensor','bateria')?.last_updated;
   $('#foot').textContent = d.foot + (upd ? ' · última lectura ' + ago(upd) : '');
+  if (st('lawn_mower')) document.body.classList.remove('stale');
 }
 
 // tres datos útiles bajo la batería; los que no tienen valor no se muestran
@@ -1114,8 +1165,9 @@ function renderDatosLandroid(){
   const n = (k, u, dec) => { const v = val('sensor', k); return v == null || isNaN(v) ? null : (dec ? h1(v) : Math.round(Number(v)).toLocaleString('es-ES')) + u; };
   const ls = st('lawn_mower')?.state, err = val('sensor','error');
   const pitch = val('sensor','cabeceo'), roll = val('sensor','alabeo');
-  $('#sensors').innerHTML = row('Estado', ls === 'unavailable' ? 'Sin conexión' : LMS[ls] || ls)
-    + row(ls === 'unavailable' ? 'Último error' : 'Error', err ? errText(err) : null)
+  const lsOff = !ls || ['unavailable', 'unknown'].includes(ls);
+  $('#sensors').innerHTML = row('Estado', lsOff ? 'Sin conexión' : LMS[ls] || ls)
+    + row(lsOff ? 'Último error' : 'Error', err ? errText(err) : null)
     + row('Cargando', yn('cargando')) + row('Lloviendo', yn('sensor_de_lluvia'))
     + row('Espera por lluvia', n('retraso_por_lluvia_restante', ' h', true))
     + row('Hecho hoy', n('progreso_diario', ' %')) + row('Zona', val('select','zona'))
@@ -1148,7 +1200,7 @@ function renderDatos(){
     + row('Levantado', yn('levantado')) + row('Choque ahora', yn('choque')) + row('Volcado', yn('volcado'))
     + row('Orden manual', val('sensor','orden_manual'));
   // casillas sin dato (el robot no lo da) no se pintan
-  const num = k => Number(val('sensor', k) || 0).toLocaleString('es-ES');
+  const num = k => val('sensor', k) == null ? null : Number(val('sensor', k)).toLocaleString('es-ES');  // sin dato: no se pinta (nunca un 0 falso)
   const cut = Number(val('sensor','tiempo_total_cortando')), cycles = Number(val('sensor','ciclos_de_carga'));
   $('#stats').innerHTML = stat(fmtH(val('sensor','tiempo_total_cortando')),'cortando') + stat(fmtH(val('sensor','tiempo_total_en_marcha')),'en marcha')
     + stat(fmtH(val('sensor','tiempo_total_cargando')),'cargando') + stat(fmtH(val('sensor','tiempo_total_buscando_la_base')),'buscando la base')
@@ -1300,13 +1352,24 @@ setInterval(loadHistory, 10 * 60 * 1000);
   // recortes de hierba: salen por detrás del robot (a la derecha, el morro mira a la izquierda)
   // posiciones relativas al robot: salen de su parte trasera (derecha de la foto) y giran con él
   for (let i = 0; i < 18; i++) { const b = document.createElement('b'); b.style.left = (70 + Math.random() * 20) + '%'; b.style.setProperty('--dx', (20 + Math.random() * 70) + 'px'); b.style.setProperty('--dy', -(30 + Math.random() * 60) + 'px'); b.style.animationDelay = (Math.random() * 1) + 's'; fx.appendChild(b); }
-  // hierba en primer plano para dar profundidad
-  let blades = '';
-  for (let i = 0; i < 70; i++) {
-    const x = i * 1000 / 70 + Math.random() * 10, h = 40 + Math.random() * 60, w = 4 + Math.random() * 5, c = ['#1d3a19', '#24461f', '#2c5326'][i % 3];
-    blades += `<path d="M${x - w} 100 Q${x - w / 3} ${100 - h * .6} ${x + w * .6} ${100 - h} Q${x + w / 4} ${100 - h * .5} ${x + w} 100Z" fill="${c}" style="--d:${(2.4 + Math.random() * 2).toFixed(2)}s;animation-delay:-${(Math.random() * 3).toFixed(2)}s"/>`;
+  // hierba en primer plano para dar profundidad: dos capas (detrás más baja y oscura), cada brizna con su
+  // degradado de la base a la punta, inclinaciones distintas y alguna florecilla
+  const blade = (x, h, w, lean, g, d) => `<path d="M${x - w} 100 Q${x - w / 3 + lean * .3} ${100 - h * .6} ${x + w * .6 + lean} ${100 - h} Q${x + w / 4 + lean * .2} ${100 - h * .5} ${x + w} 100Z" fill="url(#${g})" style="--d:${d}s;animation-delay:-${(Math.random() * 3).toFixed(2)}s"/>`;
+  let back = '', front = '', flowers = '';
+  for (let i = 0; i < 60; i++) back += blade(i * 1000 / 60 + Math.random() * 14, 26 + Math.random() * 30, 3 + Math.random() * 4, (Math.random() - .5) * 14, 'gb', (3 + Math.random() * 2).toFixed(2));
+  for (let i = 0; i < 80; i++) front += blade(i * 1000 / 80 + Math.random() * 10, 40 + Math.random() * 60, 4 + Math.random() * 5, (Math.random() - .5) * 18, ['ga', 'gc', 'ga'][i % 3], (2.2 + Math.random() * 2).toFixed(2));
+  for (let i = 0; i < 6; i++) {
+    const x = 80 + Math.random() * 840, h = 34 + Math.random() * 30, c = ['#f4f1e6', '#ffd75e', '#f4f1e6'][i % 3];
+    flowers += `<g style="--d:${(2.6 + Math.random() * 2).toFixed(2)}s"><path d="M${x} 100 Q${x + 2} ${100 - h / 2} ${x + 1} ${100 - h}" stroke="#2c5326" stroke-width="2" fill="none"/><circle cx="${x + 1}" cy="${100 - h}" r="4.2" fill="${c}"/><circle cx="${x + 1}" cy="${100 - h}" r="1.6" fill="#e0a92a"/></g>`;
   }
-  document.getElementById('blades').innerHTML = `<svg viewBox="0 0 1000 100" preserveAspectRatio="none">${blades}</svg>`;
+  document.getElementById('blades').innerHTML = `<svg viewBox="0 0 1000 100" preserveAspectRatio="none"><defs>
+    <linearGradient id="ga" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#16300f"/><stop offset="1" stop-color="#3f7a2f"/></linearGradient>
+    <linearGradient id="gc" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#1b3714"/><stop offset="1" stop-color="#5d9a3f"/></linearGradient>
+    <linearGradient id="gb" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#11240c"/><stop offset="1" stop-color="#2b5124"/></linearGradient>
+  </defs><g opacity=".85">${back}</g>${flowers}${front}</svg>`;
+  // de noche el cielo se oscurece y salen estrellas (hora del móvil)
+  const nightTick = () => { const h = new Date().getHours(); stage.classList.toggle('night', h < 7 || h >= 21); };
+  nightTick(); setInterval(nightTick, 10 * 60 * 1000);
   const ICON = {
     mow: '<path d="M3 20h18"/><path d="M6 20c0-4 1-7 3-9M12 20c0-5 0-8 1-11M18 20c0-4-1-6-3-8"/>',
     bolt: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>', home: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>',
@@ -1340,7 +1403,7 @@ setInterval(loadHistory, 10 * 60 * 1000);
     const cap = cls.offline ? ['off', s.lastSeen ? `Sin conexión desde ${s.lastSeen} · se reconecta solo` : ld ? 'Se reconecta solo al volver a tener Wi-Fi' : 'Se reconecta solo al acercarse al receptor']
       : cls.upside ? ['warn', 'Dale la vuelta y confirma en el robot']
       : cls.lifted ? ['up', 'Déjalo en el césped para que siga']
-      : cls.error ? ['warn', ld ? 'Revísalo y pulsa OK en el robot' : 'Revisa el robot y confírmalo en su teclado']
+      : cls.error ? ['warn', s.errorText && s.errorText !== '—' ? s.errorText : ld ? 'Revísalo y pulsa OK en el robot' : 'Revisa el robot y confírmalo en su teclado']
       : s.rain && cls.docked ? ['pause', 'Llueve: espera en la base a que se seque']
       : cls.charging ? ['bolt', s.chargeMin ? `Cargada en ~${s.chargeMin} min${pct}` : `Cargando${pct}` + (s.next ? ` · corta ${s.next}` : '')]
       : cls.homing ? ['home', (s.battery < 30 ? 'Va a la base a cargar' : 'Vuelve a la base') + pct]
@@ -1353,10 +1416,11 @@ setInterval(loadHistory, 10 * 60 * 1000);
     if (cap) { document.getElementById('capic').innerHTML = `<svg viewBox="0 0 24 24">${ICON[cap[0]]}</svg>`; document.getElementById('captxt').textContent = cap[1]; }
     // la etiqueta sale de las mismas clases que la escena: nunca dicen cosas distintas
     const [lbl, col, ic] = cls.offline ? [ld ? 'Sin conexión' : 'Fuera de alcance', '#8a8f92', 'off'] : cls.upside ? ['Volcado', '#ff3b30', 'warn']
-      : cls.lifted ? ['Levantado', '#ff9f0a', 'up'] : cls.error ? ['Avería' + (s.errorText ? ': ' + s.errorText : ''), '#ff3b30', 'warn']
+      : cls.lifted ? ['Levantado', '#ff9f0a', 'up'] : cls.error ? ['Avería', '#ff3b30', 'warn']
       : cls.charging ? ['Cargando', '#3fa9ff', 'bolt'] : cls.mowing ? ['Cortando', '#47d35a', 'mow']
       : cls.homing ? ['Volviendo a la base', '#47d35a', 'home'] : cls.leaving ? ['Saliendo de la base', '#47d35a', 'out']
       : cls.docked ? ['En la base', 'var(--brand)', 'home'] : cls.paused ? ['En pausa', 'var(--brand)', 'pause'] : ['Parado', 'var(--brand)', 'idle'];
+    if (pill.lastChild.textContent !== lbl) { pill.classList.remove('bump'); void pill.offsetWidth; pill.classList.add('bump'); }
     pill.lastChild.textContent = lbl; pill.style.setProperty('--c', col); pill.firstChild.innerHTML = ICON[ic];
   }};
   // Girarlo con el dedo: arrastrar a los lados lo da la vuelta entera (360°), con inercia al soltar;

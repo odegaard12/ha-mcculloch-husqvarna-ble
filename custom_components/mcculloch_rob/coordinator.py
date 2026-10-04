@@ -86,8 +86,18 @@ class RobCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self.data is not None:
             await self._store.async_save(self._stored())
         await super().async_shutdown()
-        if self.mower.is_connected():
+        await self._drop_link()
+
+    async def _drop_link(self) -> None:
+        """Cierra el enlace y su «mantener vivo» aunque el robot ya lo hubiera cortado por su lado
+        (si no, la tarea de mantener vivo seguiría dando vueltas tras descargar la integración)."""
+        task = getattr(self.mower, "task", None)
+        if task is not None and not task.done():
+            task.cancel()
+        try:
             await self.mower.disconnect()
+        except Exception as err:  # noqa: BLE001 - ya estaba cerrado o a medio cerrar
+            LOGGER.debug("Al cerrar el enlace: %s", err)
 
     async def ensure_connected(self) -> None:
         if self.mower.is_connected():
@@ -97,15 +107,17 @@ class RobCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self.hass, self.address, connectable=True
         )
         if device is None:
-            raise UpdateFailed(f"{self.address} no esta al alcance de ningun receptor BLE")
+            raise UpdateFailed(f"{self.address} no está al alcance de ningún receptor Bluetooth: acerca el robot o el receptor")
         try:
             result = await self.mower.connect(device)
         except (BleakError, TimeoutError) as err:
             await close_stale_connections_by_address(self.address)
             raise UpdateFailed(f"No conecta: {err or type(err).__name__}") from err
-        if result is ResponseResult.INVALID_PIN:
-            raise ConfigEntryAuthFailed("PIN incorrecto")
         if result is not ResponseResult.OK:
+            # sin cerrar, el enlace se quedaba abierto y la reautenticación no podía volver a conectar
+            await self._drop_link()
+            if result is ResponseResult.INVALID_PIN:
+                raise ConfigEntryAuthFailed("PIN incorrecto")
             raise UpdateFailed(f"No conecta: {result.name}")
         if self.model is None:
             try:
@@ -137,13 +149,19 @@ class RobCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             for v in values:
                 result, value = await self.read(name, **{param: v})
                 report[f"{name}[{v}]"] = {"result": result.name, "value": value}
-        self.probe_report = report
         # OK con valor None = el robot responde pero sin datos (p.ej. GetBatteryCurrent
         # en el S800): no crear entidad.
-        self.supported = {
+        found = {
             n for n, r in report.items()
             if r["result"] == "OK" and r["value"] is not None and "[" not in n
         }
+        lost = sum(r["result"] == "UNKNOWN_ERROR" for r in report.values())
+        if not self.mower.is_connected() or lost > max(5, len(report) // 4):
+            # el enlace se cayó a mitad: este sondeo no vale, y no se pisa el bueno que había (se perderían entidades)
+            raise UpdateFailed(f"Sondeo incompleto ({lost} lecturas sin respuesta): se repetirá")
+        self.probe_report = report
+        # lo que respondió antes y ahora no contesta por un fallo puntual se conserva
+        self.supported = found | {n for n in self.supported if report.get(n, {}).get("result") == "UNKNOWN_ERROR"}
         await self._store.async_save(self._stored())
         LOGGER.info(
             "Sondeo: %d de %d lecturas responden", len(self.supported), len(report)
@@ -162,8 +180,13 @@ class RobCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         messages.sort(key=lambda m: m["time"], reverse=True)
         return messages
 
-    async def _read_tasks(self) -> list[dict[str, Any]]:
-        return [vars(t) for t in await self.mower.get_tasks()]
+    async def _read_tasks(self, expected: int | None = None) -> list[dict[str, Any]]:
+        tasks = [vars(t) for t in await self.mower.get_tasks()]
+        # la librería devuelve [] si falla una sola franja: con franjas contadas, eso es una lectura fallida,
+        # no «sin horario» (y no debe borrar el horario bueno que ya se tenía)
+        if not tasks and expected:
+            raise ValueError(f"no se pudieron leer las {expected} franjas")
+        return tasks
 
     async def async_set_schedule(self, tasks: list[TaskInformation]) -> list[dict[str, Any]]:
         """Sustituye la programacion semanal del robot y devuelve la que queda grabada."""
@@ -202,13 +225,13 @@ class RobCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     failures += 1
                     if failures >= 3:  # sin respuesta: el canal esta muerto
                         await self.mower.disconnect()
-                        raise UpdateFailed("El robot dejo de responder")
+                        raise UpdateFailed("El robot dejó de responder")
             if slow:
                 if "GetNumberOfMessages" in self.supported:
                     data["messages"] = await self._read_messages()
                 if "GetNumberOfTasks" in self.supported:
                     try:
-                        data["tasks"] = await self._read_tasks()
+                        data["tasks"] = await self._read_tasks(data.get("GetNumberOfTasks"))
                     except ValueError as err:  # un turno ilegible no debe tirar todo el ciclo
                         LOGGER.debug("Programación no interpretable: %s", err)
                 self._last_slow = monotonic()
