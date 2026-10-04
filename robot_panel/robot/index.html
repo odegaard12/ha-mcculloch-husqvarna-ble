@@ -35,7 +35,7 @@ body{background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-syste
 button,input{font:inherit;color:inherit}
 .app{max-width:1120px;margin:0 auto;padding:max(12px,env(safe-area-inset-top)) 16px calc(96px + env(safe-area-inset-bottom))}
 header.top{display:flex;align-items:center;gap:10px;margin:2px 2px 12px}
-header.top img{width:34px;height:34px;border-radius:10px}
+header.top img{width:38px;height:38px;border-radius:11px;object-fit:contain;background:radial-gradient(90% 80% at 50% 35%,#3a3d40,#17191a);padding:3px;transition:opacity .25s}
 header.top h1{font-size:18px;margin:0;font-weight:750;flex:1}
 .live{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:5px 10px;border-radius:99px;background:var(--ok-soft);color:var(--ok);font-weight:650}
 .live i{width:7px;height:7px;border-radius:50%;background:currentColor}
@@ -46,10 +46,13 @@ header.top h1{font-size:18px;margin:0;font-weight:750;flex:1}
 .pick .cnt{font-size:12px;font-weight:700;padding:3px 8px;border-radius:99px;background:var(--brand-soft);color:var(--ink);white-space:nowrap}
 .rbar{display:grid;grid-template-columns:repeat(var(--n,2),1fr);gap:6px;padding:4px;margin:0 0 12px;border-radius:16px;background:var(--card);border:1px solid var(--line)}
 .rbar[hidden]{display:none}
-.rbar button{display:flex;align-items:center;gap:8px;border:0;background:none;border-radius:12px;padding:8px 10px;cursor:pointer;min-width:0;min-height:44px}
+/* cada robot en dos líneas (nombre / estado · batería): el nombre cabe entero aunque sea largo */
+.rbar button{display:flex;align-items:center;gap:9px;border:0;background:none;border-radius:12px;padding:8px 10px;cursor:pointer;min-width:0;min-height:52px;text-align:left;transition:background .25s,color .25s,transform .15s}
+.rbar button:active{transform:scale(.97)}
 .rbar button.on{background:var(--brand);color:var(--brand-ink)}
-.rbar b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rbar small{margin-left:auto;font-size:12px;font-weight:650;opacity:.75;white-space:nowrap}
+.rbar .rtx{display:flex;flex-direction:column;min-width:0;flex:1}
+.rbar b{font-size:14.5px;line-height:1.15;overflow-wrap:anywhere}
+.rbar small{font-size:12px;font-weight:600;opacity:.72;line-height:1.25;margin-top:2px}
 .dotc{width:9px;height:9px;border-radius:50%;flex:none;background:var(--c,#8a8f92);box-shadow:0 0 0 2px rgba(255,255,255,.5)}
 .sheet{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
 .sheet[hidden]{display:none}
@@ -80,12 +83,38 @@ header.top h1{font-size:18px;margin:0;font-weight:750;flex:1}
 .dlgm{min-height:4px}
 .lockview{display:none;max-width:520px;margin:30px auto;text-align:center}
 .lockview .card{padding:28px 20px}
-.lockview h2{margin:12px 0 6px;font-size:20px}
+.lockview .card h2{display:block;margin:14px 0 6px;font-size:20px;text-transform:none;letter-spacing:0;color:var(--ink);font-weight:750}
 .lkicon{width:64px;height:64px;margin:0 auto;border-radius:20px;background:var(--brand-soft);display:flex;align-items:center;justify-content:center}
 .lkicon svg{width:34px;height:34px}
 body.rlocked .view,body.rlocked nav.tabs,body.rlocked footer{display:none!important}
 body.rlocked .lockview{display:block}
-body[data-kind="landroid"] .actions .main{background:#f38a12}
+/* cada robot con su color: amarillo McCulloch, naranja Landroid (botones, pestañas, anillo, gráficas) */
+body[data-kind="landroid"]{--brand:#f38a12;--brand-soft:#ffe8d0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) body[data-kind="landroid"]{--brand-soft:#3a2510}}
+/* al cambiar de robot: la escena y las pestañas entran con un fundido corto */
+.app.swap .hero,.app.swap .view.on{animation:swapin .32s cubic-bezier(.2,.7,.2,1)}
+@keyframes swapin{from{opacity:0;transform:translateY(6px)}}
+/* el 3D se gira con el dedo (el desplazamiento vertical sigue siendo de la página) */
+.scene{touch-action:pan-y;cursor:grab}
+.scene.grab{cursor:grabbing}
+.tilt img{transition:opacity .25s}
+.stage.loading .tilt img,.stage.loading .dock3d{opacity:0}
+.stage.r3d .shine{display:none}  /* el brillo era para la foto plana; el render ya trae su luz */
+.spinhint{position:absolute;right:12px;bottom:50px;z-index:6;font-size:12px;font-weight:650;color:#fff;background:rgba(0,0,0,.45);padding:6px 10px;border-radius:99px;opacity:0;transition:opacity .4s;pointer-events:none}
+.spinhint.show{opacity:1}
+/* tirar hacia abajo para recargar */
+.ptr{position:fixed;left:50%;top:max(8px,env(safe-area-inset-top));z-index:35;transform:translate(-50%,-60px);background:var(--card);color:var(--ink);border:1px solid var(--line);box-shadow:var(--shadow);font-size:13px;font-weight:650;padding:8px 14px;border-radius:99px;transition:transform .2s}
+.ptr.on{transform:translate(-50%,0)}
+/* teclado de la contraseña de un robot */
+.lkpins{display:flex;gap:10px;justify-content:center;margin:16px 0 6px;min-height:14px}
+.lkpins i{width:13px;height:13px;border-radius:50%;border:2px solid var(--muted)}
+.lkpins i.f{background:var(--brand);border-color:var(--brand)}
+.lkpad{display:grid;grid-template-columns:repeat(3,72px);gap:10px;justify-content:center;margin:14px auto 10px}
+.lkpad button{height:56px;border-radius:16px;border:1px solid var(--line);background:var(--bg);font-size:22px;font-weight:650;cursor:pointer}
+.lkpad button:active{background:var(--brand);color:var(--brand-ink)}
+.lkpad button.ok{background:var(--brand);color:var(--brand-ink);font-size:16px;border-color:transparent}
+.lkmsg{min-height:20px;color:var(--bad);font-size:14px;font-weight:600}
+.lkpins.shake{animation:shake .35s}
 body[data-kind="landroid"] .mc-only,body:not([data-kind="landroid"]) .ld-only{display:none!important}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;justify-content:center;background:var(--nav);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
 nav.tabs .in{display:grid;grid-template-columns:repeat(4,1fr);width:100%;max-width:520px;gap:4px}
@@ -110,9 +139,9 @@ nav.tabs button.on{color:var(--brand-ink);background:var(--brand);font-weight:70
 .scene canvas{display:block;width:100%!important;height:100%!important;touch-action:pan-y}
 .scene .fallback{position:absolute;inset:0;display:grid;place-items:center}
 .scene .fallback svg{width:60%;max-width:260px}
-.sstate{position:absolute;left:12px;top:10px;display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;padding:6px 12px;border-radius:99px;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:#fff}
+.sstate{position:absolute;left:12px;top:10px;display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;padding:6px 12px;border-radius:18px;max-width:calc(100% - 24px);line-height:1.25;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:#fff}
 .sstate{z-index:5;border-left:3px solid var(--c,#ffc20e)}
-.sstate svg{width:16px;height:16px;fill:none;stroke:var(--c,#ffc20e);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.sstate svg{width:16px;height:16px;flex:none;fill:none;stroke:var(--c,#ffc20e);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 @keyframes beat{70%{box-shadow:0 0 0 8px transparent}}
 .scene .hint{position:absolute;right:12px;top:10px;font-size:11px;opacity:.75;background:rgba(255,255,255,.1);padding:3px 8px;border-radius:99px}
 .hero .body{padding:2px 18px 16px;display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center}
@@ -194,8 +223,9 @@ button:disabled{opacity:.5;cursor:wait}
 .sw input:checked+span{background:var(--ok)}.sw input:checked+span::after{transform:translateX(20px)}
 details.all summary{cursor:pointer;font-weight:650;list-style:none;display:flex;justify-content:space-between}
 details.all summary::after{content:"▾";color:var(--muted)} details.all[open] summary::after{content:"▴"}
-details.all table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13.5px}
-details.all td{padding:7px 4px;border-top:1px solid var(--line);vertical-align:top}
+details.all table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13.5px;table-layout:fixed}
+details.all td{padding:7px 4px;border-top:1px solid var(--line);vertical-align:top;overflow-wrap:anywhere}
+details.all td:first-child{width:58%}
 details.all td:last-child{text-align:right;font-weight:560;overflow-wrap:anywhere}
 .toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(16px);background:var(--ink);color:var(--bg);padding:11px 16px;border-radius:14px;opacity:0;transition:.2s;pointer-events:none;max-width:90vw;z-index:30}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -244,7 +274,7 @@ details.all td:last-child{text-align:right;font-weight:560;overflow-wrap:anywher
 .caption{position:absolute;left:0;right:0;bottom:0;transform:translateY(8px);display:flex;align-items:center;justify-content:center;gap:9px;padding:26px 16px 12px;
   background:linear-gradient(to bottom,transparent,rgba(8,9,10,.78) 55%);color:#fff;font-weight:700;font-size:14.5px;line-height:1.25;text-align:center;opacity:0;transition:.4s;z-index:5;pointer-events:none}
 .caption .ic{display:inline-flex}
-.caption .ic svg{width:17px;height:17px;fill:none;stroke:#ffc20e;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.caption .ic svg{width:17px;height:17px;fill:none;stroke:var(--brand);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .stage.cap .caption{opacity:1;transform:none}
 .stage.cap .blades{opacity:.55}
 .stage.homing .ic{animation:nudge 1.2s ease-in-out infinite}.stage.leaving .ic{animation:nudge 1.2s ease-in-out infinite reverse}
@@ -355,7 +385,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
 
 <div class="app">
   <header class="top">
-    <img src="static/icon-192.png?v=6" alt="">
+    <img id="ricon" src="static/icon-192.png?v=6" alt="">
     <button class="pick" id="pick" aria-label="Mis robots"><h1 id="rname">Mi robot</h1><span class="cnt" id="rcnt" hidden></span></button>
     <span class="live off" id="live"><i></i><span>conectando</span></span>
   </header>
@@ -367,8 +397,14 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
     <div class="card">
       <div class="lkicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="10" width="14" height="10" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
       <h2><span id="lkname"></span> tiene contraseña</h2>
-      <p class="muted">Sin ella no se ven sus datos ni se le pueden dar órdenes desde este móvil.</p>
-      <div class="chips" style="justify-content:center"><button class="btn" id="lkopen">Desbloquear</button><button class="chip" id="lkother" hidden></button></div>
+      <p class="muted" style="margin:0">Sin ella no se ven sus datos ni se le pueden dar órdenes desde este móvil.</p>
+      <div class="lkpins" id="lkpins"></div>
+      <div class="lkmsg" id="lkmsg"></div>
+      <div class="lkpad" id="lkpad">
+        <button>1</button><button>2</button><button>3</button><button>4</button><button>5</button><button>6</button><button>7</button><button>8</button><button>9</button>
+        <button data-k="del" aria-label="Borrar">⌫</button><button>0</button><button class="ok" data-k="ok">Abrir</button>
+      </div>
+      <div class="chips" style="justify-content:center"><button class="chip" id="lkother" hidden></button></div>
     </div>
   </section>
 
@@ -385,7 +421,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
       <div class="stack">
         <div class="hero">
           <div class="scene" id="scene">
-            <div class="stage" id="stage">
+            <div class="stage loading" id="stage">
               <div class="ground"><div class="plane"></div></div>
               <div class="caption" id="caption"><span class="ic" id="capic"></span><span id="captxt"></span></div>
               <!-- base de carga renderizada en Blender: misma cámara y encuadre que el robot, así encaja debajo -->
@@ -403,6 +439,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
               <div class="blades" id="blades"></div>
             </div>
             <span class="sstate" id="sstate"><svg viewBox="0 0 24 24" aria-hidden="true"></svg><span>—</span></span>
+            <span class="spinhint" id="hint">↔ Desliza para girarlo</span>
           </div>
           <div class="body">
             <div class="ring">
@@ -425,7 +462,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
         <div class="card quick ld-only">
           <h2>Órdenes rápidas</h2>
           <div class="chips"><button class="chip" data-btn="corte_de_bordes">Cortar solo los bordes</button></div>
-          <p class="muted" style="font-size:13px;margin:12px 0 0">El Landroid va por Wi-Fi y la nube de Worx: si el robot no tiene cobertura, verás sus últimos datos.</p>
+          <p class="muted" style="font-size:13px;margin:12px 0 0">Este robot va por Wi-Fi y la nube de Worx: si no tiene cobertura, verás sus últimos datos.</p>
         </div>
         <div class="card quick mc-only">
           <h2>Órdenes rápidas</h2>
@@ -448,7 +485,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
       </div>
       <div class="card ld-only">
         <h2>Editar horario</h2>
-        <p class="muted" style="margin:0">El horario del Landroid se cambia desde la app de Worx; aquí se ve tal como lo tiene guardado.</p>
+        <p class="muted" style="margin:0">Este horario se cambia desde la app de Worx; aquí se ve tal como lo tiene guardado el robot.</p>
       </div>
       <div class="card mc-only">
         <h2>Editar horario <span class="dirty" id="dirty" hidden>sin guardar</span></h2>
@@ -519,10 +556,14 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
   <footer id="foot"></footer>
 </div>
 <div class="toast" id="toast"></div>
+<div class="ptr" id="ptr">↓ Suelta para actualizar</div>
 
 <script>
 // robot que se está viendo: P es el prefijo de sus entidades; la lista sale de /api/robots
 let P = 'robot_cortacesped', KIND = 'mcculloch', ROBOTS = [{id: P, name: 'Mi robot', kind: 'mcculloch'}];
+// arranca ya con el último robot visto (y su tipo): sin un instante con la pantalla del otro
+try { const p = localStorage.getItem('robot'), k = localStorage.getItem('robotKind'); if (p && /^[a-z0-9_]+$/.test(p)) { P = p; KIND = k === 'landroid' ? 'landroid' : 'mcculloch'; } } catch(e) {}
+document.body.dataset.kind = KIND;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const STATE = {off:'Apagado',wait_for_safetypin:'Esperando PIN',stopped:'Parado',fatal_error:'Error grave',pending_start:'Arrancando',paused:'En pausa',in_operation:'Trabajando',restricted:'En espera',error:'Error'};
@@ -588,7 +629,8 @@ let appVer = null;
 async function checkVersion(){
   try {
     const v = (await (await fetch('api/version', {cache: 'no-store'})).json()).v;
-    if (appVer && v !== appVer && !editing) {
+    // no recarga a mitad de algo: editando el horario, con una ventana abierta o escribiendo una contraseña
+    if (appVer && v !== appVer && !editing && $('#dlg').hidden && $('#sheet').hidden && !lkBuf) {
       const reg = await navigator.serviceWorker?.getRegistration();
       await reg?.update();
       location.reload();
@@ -699,13 +741,20 @@ function summary(r){
 function renderRobots(){
   const many = ROBOTS.length > 1;
   $('#rname').textContent = many ? 'Mis robots' : 'Mi robot';
+  // el icono de arriba es el robot que se ve (su propio modelo), nunca el del otro
+  const icon = `static/${KIND === 'landroid' ? 'rob3d_landroid/turn_03.webp?v=2' : 'rob3d/turn_03.webp?v=1'}`;
+  if ($('#ricon').getAttribute('src') !== icon) $('#ricon').src = icon;
   $('#rcnt').hidden = !many; $('#rcnt').textContent = ROBOTS.length + ' ▾';
   $('#rbar').hidden = !many;
   if (!many) return;
   $('#rbar').style.setProperty('--n', ROBOTS.length);
   // el robot que se ve lleva un lápiz para cambiarle el nombre ahí mismo; el que tiene contraseña, un candado
   const PEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/></svg>';
-  $('#rbar').innerHTML = ROBOTS.map(r => { const s = summary(r), on = r.id === P; return `<button data-r="${esc(r.id)}" class="${on ? 'on' : ''}" aria-pressed="${on}"><span class="dotc" style="--c:${s.col}"></span><b>${esc(r.name)}</b><small>${isLocked(r) ? '🔒' : s.bat != null ? esc(s.bat) + ' %' : '—'}</small>${on && !isLocked(r) ? `<span class="pen" data-edit="${esc(r.id)}" role="button" aria-label="Cambiar el nombre">${PEN}</span>` : ''}</button>`; }).join('');
+  $('#rbar').innerHTML = ROBOTS.map(r => {
+    const s = summary(r), on = r.id === P;
+    const sub = isLocked(r) ? '🔒 Con contraseña' : [s.txt, s.bat != null ? s.bat + ' %' : null].filter(Boolean).join(' · ');
+    return `<button data-r="${esc(r.id)}" class="${on ? 'on' : ''}" aria-pressed="${on}"><span class="dotc" style="--c:${s.col}"></span><span class="rtx"><b>${esc(r.name)}</b><small>${esc(sub)}</small></span>${on && !isLocked(r) ? `<span class="pen" data-edit="${esc(r.id)}" role="button" aria-label="Cambiar el nombre">${PEN}</span>` : ''}</button>`;
+  }).join('');
   if (!$('#sheet').hidden) drawSheet();
 }
 function drawSheet(){
@@ -725,9 +774,11 @@ function pickRobot(id){
   const r = ROBOTS.find(x => x.id === id) || ROBOTS[0];
   const changed = r.id !== P;
   P = r.id; KIND = r.kind; document.body.dataset.kind = KIND;
-  try { localStorage.setItem('robot', P); } catch(e) {}
+  try { localStorage.setItem('robot', P); localStorage.setItem('robotKind', KIND); } catch(e) {}
   $('#sheet').hidden = true;
   if (!changed) { applyLock(); return renderRobots(); }
+  const app = $('.app'); app.classList.remove('swap'); void app.offsetWidth; app.classList.add('swap');
+  lkBuf = ''; drawLkPins(); $('#lkmsg').textContent = '';
   editing = false; mowed24 = null;
   ['#tl','#wbars','#spark'].forEach(s => $(s).innerHTML = ''); $('#legend').textContent = ''; $('#weekmowtot').textContent = ''; $('#sparkinfo').textContent = '';
   window.robot3d && window.robot3d.load(KIND);
@@ -743,7 +794,7 @@ function applyLock(){
   const other = ROBOTS.find(x => x.id !== r.id && !isLocked(x));
   $('#lkother').hidden = !other;
   if (other) { $('#lkother').textContent = 'Ver ' + other.name; $('#lkother').dataset.r = other.id; }
-  setLive(true, 'con contraseña');
+  setLive(false, 'con contraseña');
   return true;
 }
 
@@ -807,7 +858,7 @@ $('#sheet').onclick = e => {
   const t = e.target.closest('[data-edit],[data-pass],[data-open],[data-close],[data-r]'); if (!t) return;
   if (t.dataset.edit) renameRobot(t.dataset.edit);
   else if (t.dataset.pass) passRobot(t.dataset.pass);
-  else if (t.dataset.open) openRobot(t.dataset.open);
+  else if (t.dataset.open) pickRobot(t.dataset.open);  // su pantalla de bloqueo, con el teclado
   else if (t.dataset.close) closeRobot(t.dataset.close);
   else pickRobot(t.dataset.r);
 };
@@ -815,7 +866,34 @@ $('#rbar').onclick = e => {
   const pen = e.target.closest('[data-edit]'); if (pen) { e.stopPropagation(); renameRobot(pen.dataset.edit); return; }
   const b = e.target.closest('[data-r]'); if (b) pickRobot(b.dataset.r);
 };
-$('#lkopen').onclick = () => openRobot(P);
+// teclado de la contraseña del robot (4 a 8 cifras; «Abrir» la manda)
+let lkBuf = '';
+function drawLkPins(){ $('#lkpins').innerHTML = Array.from({length: Math.max(4, lkBuf.length)}, (_, i) => `<i class="${i < lkBuf.length ? 'f' : ''}"></i>`).join(''); }
+async function lkSend(){
+  if (lkBuf.length < 4) { $('#lkmsg').textContent = 'Son de 4 a 8 cifras'; return; }
+  const res = await postJSON('api/robots/abrir', {id: P, pin: lkBuf});
+  lkBuf = ''; drawLkPins();
+  if (!res.ok) {
+    $('#lkmsg').textContent = await errorOf(res);
+    $('#lkpins').classList.add('shake'); setTimeout(() => $('#lkpins').classList.remove('shake'), 400);
+    return;
+  }
+  $('#lkmsg').textContent = ''; toast('Desbloqueado ✓');
+  afterRobotsChange();
+}
+function lkKey(k){
+  if (k === 'del') lkBuf = lkBuf.slice(0, -1);
+  else if (k === 'ok') return lkSend();
+  else if (/^\d$/.test(k) && lkBuf.length < 8) lkBuf += k;
+  $('#lkmsg').textContent = '';
+  drawLkPins();
+}
+$('#lkpad').onclick = e => { const b = e.target.closest('button'); if (b) lkKey(b.dataset.k || b.textContent); };
+addEventListener('keydown', e => {
+  if (!document.body.classList.contains('rlocked') || locked || !$('#dlg').hidden) return;
+  if (/^\d$/.test(e.key)) lkKey(e.key); else if (e.key === 'Backspace') lkKey('del'); else if (e.key === 'Enter') lkKey('ok');
+});
+drawLkPins();
 $('#lkother').onclick = e => pickRobot(e.currentTarget.dataset.r);
 
 /* ---------- órdenes ---------- */
@@ -894,7 +972,7 @@ function readLandroid(){
     error: ls === 'error' || (errOn && !['lifted', 'upside_down'].includes(err)), inBase: ls === 'docked', errorText: errText(err)};
   const seen = val('sensor','ultima_actualizacion');
   const al = [];
-  if (offline) al.push(`<div class="alert warn">El Landroid no llega a la nube de Worx (sin Wi-Fi o apagado).${seen ? ` Datos de ${esc(ago(seen))}.` : ''}</div>`);
+  if (offline) al.push(`<div class="alert warn">${esc(curRobot().name)} no llega a la nube de Worx (sin Wi-Fi o apagado).${seen ? ` Datos de ${esc(ago(seen))}.` : ''}</div>`);
   else if (errOn) al.push(`<div class="alert">⚠ ${esc(errText(err))}</div>`);
   const wait = Number(val('sensor','retraso_por_lluvia_restante'));
   if (!offline && rain) al.push(`<div class="alert info">Llueve: el robot espera${wait > 0 ? ` unas ${h1(wait)} h` : ''} a que se seque el césped.</div>`);
@@ -911,7 +989,7 @@ function render(){
   $('#bat').textContent = isNaN(bat) ? '–' : bat + '%';
   $('#batsub').textContent = flags.charging ? 'cargando' : 'batería';
   $('#ringfg').style.strokeDashoffset = 326.7 * (1 - (isNaN(bat) ? 0 : bat) / 100);
-  $('#ringfg').style.stroke = bat < 20 ? '#ff6b5b' : '#ffc20e';
+  $('#ringfg').style.stroke = bat < 20 ? '#ff6b5b' : 'var(--brand)';
   $('#alerts').innerHTML = d.alerts.join('');
 
   const tasks = d.tasks;
@@ -1182,6 +1260,7 @@ async function loadRobots(keep){
   const r = ROBOTS.find(x => x.id === saved) || ROBOTS[0];
   const changed = r.kind !== KIND;
   P = r.id; KIND = r.kind; document.body.dataset.kind = KIND;
+  try { localStorage.setItem('robotKind', KIND); } catch(e) {}
   if (changed || !keep) window.robot3d && window.robot3d.load(KIND);
   renderRobots();
   applyLock();
@@ -1189,6 +1268,27 @@ async function loadRobots(keep){
 addEventListener('robot3d-ready', () => { window.robot3d.load(KIND); if (Object.keys(states).length) render(); });
 setInterval(() => { if (!document.hidden) poll(); }, 5000);
 setInterval(loadHistory, 10 * 60 * 1000);
+// tirar hacia abajo desde arriba del todo: actualiza datos, robots, historial y versión de la app
+(() => {
+  let y0 = null, pulled = 0, busy = false;
+  const ptr = $('#ptr');
+  addEventListener('touchstart', e => { y0 = scrollY <= 0 && !busy && $('#dlg').hidden && $('#sheet').hidden ? e.touches[0].clientY : null; pulled = 0; }, {passive: true});
+  addEventListener('touchmove', e => {
+    if (y0 == null) return;
+    pulled = e.touches[0].clientY - y0;
+    ptr.classList.toggle('on', pulled > 30);
+    ptr.textContent = pulled > 80 ? '↻ Suelta para actualizar' : '↓ Tira para actualizar';
+  }, {passive: true});
+  addEventListener('touchend', async () => {
+    if (y0 == null) return;
+    y0 = null;
+    if (pulled <= 80) { ptr.classList.remove('on'); return; }
+    busy = true; ptr.textContent = 'Actualizando…';
+    try { await loadRobots(true); await poll(); loadHistory(); checkVersion(); } finally {
+      ptr.textContent = 'Actualizado ✓'; setTimeout(() => { ptr.classList.remove('on'); busy = false; }, 700);
+    }
+  });
+})();
 // iOS no respeta user-scalable=no: el pellizco se corta aquí (el doble toque ya lo quita touch-action)
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), {passive: false}));
 </script>
@@ -1252,21 +1352,47 @@ setInterval(loadHistory, 10 * 60 * 1000);
     stage.classList.toggle('cap', !!cap);
     if (cap) { document.getElementById('capic').innerHTML = `<svg viewBox="0 0 24 24">${ICON[cap[0]]}</svg>`; document.getElementById('captxt').textContent = cap[1]; }
     // la etiqueta sale de las mismas clases que la escena: nunca dicen cosas distintas
-    const [lbl, col, ic] = cls.offline ? ['Fuera de línea', '#8a8f92', 'off'] : cls.upside ? ['Volcado', '#ff3b30', 'warn']
+    const [lbl, col, ic] = cls.offline ? [ld ? 'Sin conexión' : 'Fuera de alcance', '#8a8f92', 'off'] : cls.upside ? ['Volcado', '#ff3b30', 'warn']
       : cls.lifted ? ['Levantado', '#ff9f0a', 'up'] : cls.error ? ['Avería' + (s.errorText ? ': ' + s.errorText : ''), '#ff3b30', 'warn']
       : cls.charging ? ['Cargando', '#3fa9ff', 'bolt'] : cls.mowing ? ['Cortando', '#47d35a', 'mow']
       : cls.homing ? ['Volviendo a la base', '#47d35a', 'home'] : cls.leaving ? ['Saliendo de la base', '#47d35a', 'out']
-      : cls.docked ? ['En la base', '#ffc20e', 'home'] : cls.paused ? ['En pausa', '#ffc20e', 'pause'] : ['Parado', '#ffc20e', 'idle'];
+      : cls.docked ? ['En la base', 'var(--brand)', 'home'] : cls.paused ? ['En pausa', 'var(--brand)', 'pause'] : ['Parado', 'var(--brand)', 'idle'];
     pill.lastChild.textContent = lbl; pill.style.setProperty('--c', col); pill.firstChild.innerHTML = ICON[ic];
   }};
-  // profundidad: sigue al dedo/ratón o al giroscopio; si no, oscila suave
+  // Girarlo con el dedo: arrastrar a los lados lo da la vuelta entera (360°), con inercia al soltar;
+  // a los 3 s vuelve solo, por el camino corto, a lo que esté haciendo. Lo vertical sigue siendo scroll.
   const tilt = document.getElementById('tilt'), scene = document.getElementById('scene');
-  let target = null, t0 = performance.now(), lastInput = 0;
+  const t0 = performance.now();
   const set = (rx, ry) => { tilt.style.setProperty('--rx', rx.toFixed(2) + 'deg'); tilt.style.setProperty('--ry', ry.toFixed(2) + 'deg'); tilt.querySelector('.shine').style.setProperty('--sx', (50 - ry * 2.2).toFixed(1) + '%'); };
-  const fromPoint = (x, y) => { const r = scene.getBoundingClientRect(); target = [((y - r.top) / r.height - .5) * -16, ((x - r.left) / r.width - .5) * 50]; lastInput = performance.now(); };
-  scene.addEventListener('pointermove', e => fromPoint(e.clientX, e.clientY));
-  scene.addEventListener('pointerleave', () => { target = null; });
-  addEventListener('deviceorientation', e => { if (e.gamma == null) return; target = [Math.max(-12, Math.min(12, (e.beta - 40) * -.4)), Math.max(-28, Math.min(28, e.gamma * 1.1))]; lastInput = performance.now(); });
+  let userAng = null, dragging = false, sx = 0, sy = 0, sAng = 0, vel = 0, lastX = 0, lastT = 0, releasedAt = 0, shown = 0, pitch = 0;
+  const PER_PX = 24 / 300;  // 300 px de arrastre = una vuelta
+  scene.addEventListener('pointerdown', e => {
+    if (e.button > 0) return;
+    dragging = true; sx = lastX = e.clientX; sy = e.clientY; lastT = performance.now(); sAng = userAng ?? shown; vel = 0;
+    scene.setPointerCapture?.(e.pointerId); scene.classList.add('grab');
+  });
+  scene.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const now = performance.now();
+    userAng = sAng + (e.clientX - sx) * PER_PX;
+    pitch = Math.max(-8, Math.min(8, (e.clientY - sy) * -.08));
+    vel = (e.clientX - lastX) * PER_PX / Math.max(1, now - lastT) * 16;  // fotogramas por cuadro
+    lastX = e.clientX; lastT = now;
+  });
+  const endDrag = () => {
+    if (!dragging) return;
+    dragging = false; releasedAt = performance.now(); scene.classList.remove('grab');
+    if (performance.now() - lastT > 80) vel = 0;  // se paró antes de soltar: sin inercia
+  };
+  scene.addEventListener('pointerup', endDrag);
+  scene.addEventListener('pointercancel', endDrag);
+  scene.addEventListener('lostpointercapture', endDrag);
+  // aviso de que se puede girar, una vez por móvil
+  function hintOnce(){
+    let seen = false; try { seen = localStorage.getItem('hintGiro') === '1'; localStorage.setItem('hintGiro', '1'); } catch(e) {}
+    if (seen) return;
+    const h = document.getElementById('hint'); h.classList.add('show'); setTimeout(() => h.classList.remove('show'), 3500);
+  }
   // Robot 3D renderizado en Blender: 24 vistas (cada 15°). Si cargan todas, sustituyen a la foto.
   // Cada tipo de robot tiene su modelo (rob3d = McCulloch, rob3d_landroid = Landroid); si faltan los del
   // Landroid, se usa el del McCulloch teñido de naranja.
@@ -1283,12 +1409,20 @@ setInterval(loadHistory, 10 * 60 * 1000);
   function load(kind){
     if (want === kind) return;
     want = kind;
+    // mientras llegan sus vistas no se enseña nada: nunca el robot anterior con el nombre de este
+    FR = []; curFrame = -1; userAng = null; stage.classList.add('loading');
     const dirs = kind === 'landroid' ? ['rob3d_landroid', 'rob3d'] : ['rob3d'];
     const tryDir = i => preload(frames(dirs[i])).then(() => dirs[i]).catch(() => (i + 1 < dirs.length ? tryDir(i + 1) : null));
     tryDir(0).then(dir => {
-      if (!dir || want !== kind) return;  // sin renders (sigue la foto) o ya se cambió de robot
+      if (want !== kind) return;  // ya se cambió de robot
+      if (!dir) {  // sin renders: la foto o el dibujo, solo si es del McCulloch
+        if (kind !== 'landroid') stage.classList.remove('loading');
+        return;
+      }
       FR = frames(dir); curFrame = -1;
       r3d = true; imgEl.onerror = null; stage.classList.add('r3d'); showFrame(0);
+      requestAnimationFrame(() => stage.classList.remove('loading'));
+      hintOnce();
       stage.classList.toggle('tint', kind === 'landroid' && dir === 'rob3d');
       document.getElementById('dock3d').src = `static/${dir}/base_side.webp?v=${dir === 'rob3d' ? 2 : 1}`;
       // posición del LED dentro de la imagen de la base (la calcula to_web.py)
@@ -1308,15 +1442,24 @@ setInterval(loadHistory, 10 * 60 * 1000);
       return ph < .4 ? 0 : ph < .5 ? (ph - .4) / .1 * 12 : ph < .9 ? 12 : 12 + (ph - .9) / .1 * 12;
     }
     if (has('homing') || has('leaving') || has('upside') || has('docked') || has('charging')) return 0;
-    // quieto: el dedo o el ratón lo giran de verdad (±90°); si no, se balancea un poco
-    const live = target && performance.now() - lastInput < 4000;
-    return live ? target[1] / 50 * 12 : Math.sin((performance.now() - t0) / 2600) * 1.2;
+    return Math.sin((performance.now() - t0) / 2600) * 1.2;  // quieto: se balancea un poco
   }
   (function loop(){
     if (!document.hidden) {
-      if (r3d) { showFrame(frame3d()); set(target ? target[0] * .4 : 0, 0); }
-      else if (!target || performance.now() - lastInput > 4000) { const k = (performance.now() - t0) / 1000; set(Math.sin(k * .7) * 3, Math.sin(k * .45) * 16); }
-      else set(target[0], target[1]);
+      if (r3d) {
+        if (userAng != null && !dragging) {
+          userAng += vel; vel *= .93; if (Math.abs(vel) < .01) vel = 0;
+          pitch *= .9;
+          if (!vel && performance.now() - releasedAt > 3000) {
+            // vuelta suave a lo que esté haciendo, por el lado más corto
+            const goal = frame3d(), diff = ((goal - userAng) % 24 + 36) % 24 - 12;
+            userAng += diff * .08;
+            if (Math.abs(diff) < .25) userAng = null;
+          }
+        }
+        shown = userAng ?? frame3d();
+        showFrame(shown); set(pitch, 0);
+      } else { const k = (performance.now() - t0) / 1000; set(Math.sin(k * .7) * 3, Math.sin(k * .45) * 16); }
     }
     requestAnimationFrame(loop);
   })();

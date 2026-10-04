@@ -12,7 +12,7 @@ const T = {
     mow1: 'Cortar 1 h', mow3: 'Cortar 3 h', parkNext: 'Aparcar hasta el próximo turno', resume: 'Volver al horario', edgecut: 'Cortar solo los bordes',
     next: 'Próximo corte', today: 'hoy', tomorrow: 'mañana', none: 'sin programación', battery: 'Batería', lastData: 'último dato', lastSeen: 'Última conexión',
     offlineMsg: 'El robot no está al alcance del Bluetooth. Se reconecta solo al volver cerca del receptor.',
-    offlineLd: 'El Landroid no llega a la nube de Worx (sin Wi-Fi o apagado). Se reconecta solo.',
+    offlineLd: 'No llega a la nube de Worx (sin Wi-Fi o apagado). Se reconecta solo.',
     rain: 'Llueve: espera a que se seque el césped', noLink: 'Sin conexión',
     pick: 'Robot (entidad lawn_mower)', name: 'Nombre que se ve (opcional)', noEntity: 'No encuentro la entidad',
     pick2: 'Segundo robot (opcional): otro McCulloch o un Landroid', name2: 'Nombre del segundo robot (opcional)',
@@ -25,7 +25,7 @@ const T = {
     mow1: 'Mow 1 h', mow3: 'Mow 3 h', parkNext: 'Park until next run', resume: 'Resume schedule', edgecut: 'Cut edges only',
     next: 'Next run', today: 'today', tomorrow: 'tomorrow', none: 'no schedule', battery: 'Battery', lastData: 'last known', lastSeen: 'Last seen',
     offlineMsg: 'The mower is out of Bluetooth range. It reconnects by itself when it comes back near the receiver.',
-    offlineLd: 'The Landroid cannot reach the Worx cloud (no Wi-Fi or switched off). It reconnects by itself.',
+    offlineLd: 'It cannot reach the Worx cloud (no Wi-Fi or switched off). It reconnects by itself.',
     rain: 'Raining: waiting for the lawn to dry', noLink: 'Offline',
     pick: 'Mower (lawn_mower entity)', name: 'Display name (optional)', noEntity: 'Entity not found',
     pick2: 'Second mower (optional): another McCulloch or a Landroid', name2: 'Second mower name (optional)',
@@ -54,10 +54,13 @@ const CSS = `
 ha-card{overflow:hidden}
 .rbar{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:6px;background:var(--secondary-background-color,rgba(127,127,127,.12))}
 .rbar[hidden]{display:none}
-.rbar button{display:flex;align-items:center;gap:7px;min-width:0;border:0;border-radius:10px;padding:7px 10px;cursor:pointer;background:none;color:var(--primary-text-color);font:600 13px system-ui,sans-serif}
+.rbar button{display:flex;align-items:center;gap:8px;min-width:0;border:0;border-radius:10px;padding:7px 10px;cursor:pointer;background:none;color:var(--primary-text-color);font:600 13px/1.2 system-ui,sans-serif;text-align:left;transition:background .25s}
 .rbar button.on{background:var(--card-background-color,#fff);box-shadow:0 1px 3px rgba(0,0,0,.18)}
-.rbar b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rbar small{margin-left:auto;opacity:.7;white-space:nowrap}
+.rbar .rtx{display:flex;flex-direction:column;min-width:0}
+.rbar b{overflow-wrap:anywhere}
+.rbar small{opacity:.7;font-weight:500;font-size:11.5px}
+.scene.swap .bot,.scene.swap .dockw{animation:swapin .35s cubic-bezier(.2,.7,.2,1)}
+@keyframes swapin{from{opacity:0;transform:translateX(-50%) translateY(6px)}}
 .rbar i{width:8px;height:8px;border-radius:50%;flex:none;background:var(--c,#8a8f92)}
 .scene{position:relative;height:190px;overflow:hidden;background:radial-gradient(90% 75% at 50% 30%,#3a3d40 0%,#232527 55%,#17191a 100%)}
 .ground{position:absolute;left:-40%;right:-40%;bottom:-6%;height:64%;perspective:380px;perspective-origin:50% -30%;-webkit-mask:linear-gradient(to bottom,transparent,#000 38%);mask:linear-gradient(to bottom,transparent,#000 38%)}
@@ -119,8 +122,8 @@ ha-card{overflow:hidden}
 .fx b{position:absolute;bottom:6%;width:3px;height:7px;border-radius:2px;background:#8fdc6f;opacity:0;animation:clip 1s linear infinite}
 .s-mowing .fx b{display:block}.fx b{display:none}
 @keyframes clip{0%{opacity:0;transform:none}12%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(260deg)}}
-.pill{position:absolute;left:12px;top:10px;z-index:3;display:inline-flex;align-items:center;gap:7px;font:700 13px/1 system-ui,sans-serif;color:#fff;padding:7px 12px;border-radius:99px;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);border-left:3px solid var(--c);max-width:calc(100% - 120px)}
-.pill span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{position:absolute;left:12px;top:10px;z-index:3;display:inline-flex;align-items:center;gap:7px;font:700 13px/1.25 system-ui,sans-serif;color:#fff;padding:7px 12px;border-radius:16px;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);border-left:3px solid var(--c);max-width:calc(100% - 112px)}
+.pill span{overflow-wrap:anywhere}  /* en dos líneas si hace falta, nunca cortada */
 .pill svg{width:15px;height:15px;flex:none;fill:none;stroke:var(--c);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .bat{position:absolute;right:12px;top:10px;z-index:3;display:flex;align-items:center;gap:6px;font:700 13px/1 system-ui,sans-serif;color:#fff;padding:7px 10px;border-radius:99px;background:rgba(0,0,0,.5)}
 .bat i{position:relative;width:22px;height:11px;border:2px solid rgba(255,255,255,.8);border-radius:3px}
@@ -241,6 +244,20 @@ class McCullochRobCard extends HTMLElement {
       const ph = an && an.currentTime != null ? (an.currentTime % 14000) / 14000 : 0;
       f = ph < .4 ? 0 : ph < .5 ? (ph - .4) / .1 * 12 : ph < .9 ? 12 : 12 + (ph - .9) / .1 * 12;
     }
+    // girado con el dedo: manda eso (con inercia); a los 3 s vuelve solo por el camino corto
+    const u = this._drag;
+    if (u.ang != null) {
+      if (!u.on) {
+        u.ang += u.vel; u.vel *= .93; if (Math.abs(u.vel) < .01) u.vel = 0;
+        if (!u.vel && performance.now() - u.rel > 3000) {
+          const diff = ((f - u.ang) % 24 + 36) % 24 - 12;
+          u.ang += diff * .08;
+          if (Math.abs(diff) < .25) u.ang = null;
+        }
+      }
+      if (u.ang != null) f = u.ang;
+    }
+    u.shown = f;
     f = ((Math.round(f) % 24) + 24) % 24;
     if (f !== this._cur) {
       this._cur = f;
@@ -299,12 +316,30 @@ class McCullochRobCard extends HTMLElement {
       b.style.animationDelay = (Math.random()) + 's';
       fx.appendChild(b);
     }
+    // girar el robot con el dedo: 300 px de arrastre = una vuelta; lo vertical sigue siendo scroll
+    const scene = root.getElementById('scene'), u = this._drag = {ang: null, on: false, vel: 0, rel: 0, shown: 0};
+    scene.style.touchAction = 'pan-y';
+    scene.addEventListener('pointerdown', e => {
+      if (e.button > 0 || !this._fr) return;
+      Object.assign(u, {on: true, x0: e.clientX, lx: e.clientX, lt: performance.now(), a0: u.ang ?? u.shown, vel: 0});
+      scene.setPointerCapture?.(e.pointerId);
+    });
+    scene.addEventListener('pointermove', e => {
+      if (!u.on) return;
+      const now = performance.now();
+      u.ang = u.a0 + (e.clientX - u.x0) * 24 / 300;
+      u.vel = (e.clientX - u.lx) * 24 / 300 / Math.max(1, now - u.lt) * 16;
+      u.lx = e.clientX; u.lt = now;
+    });
+    const end = () => { if (!u.on) return; u.on = false; u.rel = performance.now(); if (performance.now() - u.lt > 80) u.vel = 0; };
+    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) scene.addEventListener(ev, end);
     root.getElementById('rbar').addEventListener('click', e => {
       const b = e.target.closest('button'); if (!b || b.dataset.e === this._sel) return;
       this._sel = b.dataset.e;
       try { localStorage.setItem('mcrob_sel_' + this._config.entity, this._sel); } catch (err) { /* sin almacenamiento */ }
-      this._fr = null;
-      root.getElementById('scene').classList.remove('r3d', 'tint');
+      this._fr = null; u.ang = null;
+      scene.classList.remove('r3d', 'tint', 'swap'); void scene.offsetWidth; scene.classList.add('swap');
+      setTimeout(() => scene.classList.remove('swap'), 400);
       root.getElementById('scene').dataset.s = '';
       this._setImage();
       this._update();
@@ -385,10 +420,11 @@ class McCullochRobCard extends HTMLElement {
           const q = this._status(x.entity), b = document.createElement('button');
           b.dataset.e = x.entity;
           b.className = x.entity === this._sel ? 'on' : '';
-          b.innerHTML = '<i></i><b></b><small></small>';
+          b.innerHTML = '<i></i><span class="rtx"><b></b><small></small></span>';
           b.querySelector('i').style.setProperty('--c', COLOR[q.s]);
           b.querySelector('b').textContent = name(x);
-          b.querySelector('small').textContent = isNaN(q.bat) ? '–' : q.bat + '%';
+          const st = q.s === 'offline' && q.kind === 'landroid' ? this._t('noLink') : this._t(q.s);
+          b.querySelector('small').textContent = isNaN(q.bat) ? st : `${st} · ${q.bat}%`;
           return b;
         }));
       }
@@ -521,8 +557,8 @@ if (!customElements.get('mcculloch-rob-card')) {
   customElements.define('mcculloch-rob-card-editor', McCullochRobCardEditor);
   window.customCards = window.customCards || [];
   window.customCards.push({
-    type: 'mcculloch-rob-card', name: 'McCulloch / Husqvarna robot',
-    description: 'Estado, batería, próximo corte y órdenes del robot cortacésped (y de un segundo robot, también Landroid)', preview: true,
+    type: 'mcculloch-rob-card', name: 'Robots cortacésped (McCulloch / Husqvarna / Landroid)',
+    description: 'Uno o dos robots en una tarjeta: estado animado en 3D, batería, próximo corte, averías en español y sus órdenes', preview: true,
     documentationURL: 'https://github.com/odegaard12/ha-mcculloch-husqvarna-ble',
   });
 }

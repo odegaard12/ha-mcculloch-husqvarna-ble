@@ -2,6 +2,25 @@
 
 Todas las versiones de la integración, la tarjeta y el panel web.
 
+## v0.3.4 · Giro 3D con el dedo, cada robot con su color y textos que no se cortan
+
+#### Novedades
+- **El robot se gira con el dedo**, en la app y en la tarjeta: arrastrando a los lados da la vuelta entera, con inercia, y a los 3 s vuelve solo a lo que estaba haciendo. El scroll vertical no se toca.
+- **Cada robot con su color y su icono**: amarillo el McCulloch, naranja el Landroid (botones, pestañas, anillo de batería, gráficas).
+- **Contraseña con teclado**: el robot bloqueado enseña un teclado numérico para abrirlo.
+- **Tirar hacia abajo para actualizar** la app.
+- Fundido corto al cambiar de robot.
+
+#### Correcciones
+- **Nunca se mezcla un robot con el otro**: mientras cargan sus vistas no se enseña nada (antes salía un momento el McCulloch con el nombre del Landroid), y la app arranca con el último robot visto y su aspecto.
+- **Textos que no se cortan**: la barra de robots va en dos líneas (nombre / estado · batería), las etiquetas de avería pasan a dos líneas en la app y en la tarjeta, y la tabla de «Todos los datos» parte los valores largos.
+- La pantalla de contraseña tenía el título partido en dos.
+- Sobre el robot aparecía un óvalo translúcido.
+- La app no se recarga sola a mitad de escribir una contraseña o con una ventana abierta.
+
+#### Repositorio
+- Título, textos, capturas completas y nombres (HACS, complemento y selector de tarjetas) con los dos robots.
+
 ## v0.3.3 · Landroid en 3D, tarjeta con dos robots, contraseña por robot y averías en español
 
 #### Novedades
