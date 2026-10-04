@@ -1003,12 +1003,21 @@ function readMcCulloch(){
   const al = [];
   if (offline && st('lawn_mower')) al.push(`<div class="alert warn">El robot no está al alcance del Bluetooth. Se reconecta solo al volver cerca del receptor.</div>`);
   if (on('binary_sensor','averia')) al.push(`<div class="alert"><span><b>⚠ ${esc(errText(val('sensor','error')))}</b><br><small>Revisa el robot y confírmalo en su teclado; luego pulsa Cortar o A la base.</small></span></div>`);
-  if (on('binary_sensor','levantado')) al.push(`<div class="alert warn">El robot está levantado.</div>`);
-  if (on('binary_sensor','volcado')) al.push(`<div class="alert">El robot está volcado.</div>`);
+  if (on('binary_sensor','levantado')) al.push(`<div class="alert warn"><span><b>El robot está levantado</b><br><small>Déjalo en el césped: sigue solo.</small></span></div>`);
+  if (on('binary_sensor','volcado')) al.push(`<div class="alert"><span><b>El robot está volcado</b><br><small>Dale la vuelta y confírmalo en su teclado; luego pulsa Cortar o A la base.</small></span></div>`);
   const clock = val('sensor','reloj_del_robot');
-  if (clock) { const readAt = new Date(st('sensor','reloj_del_robot').last_updated); const dm = (readAt - new Date(clock)) / 60000; if (Math.abs(dm) > 5) al.push(`<div class="alert info"><span>El reloj del robot va ${Math.abs(Math.round(dm))} min ${dm > 0 ? 'atrasado' : 'adelantado'}.</span><button class="chip" data-btn="poner_en_hora">Ponerlo en hora</button></div>`); }
+  // fuera de alcance no se le puede poner en hora: el aviso espera a que vuelva
+  if (clock && !offline) { const readAt = new Date(st('sensor','reloj_del_robot').last_updated); const dm = (readAt - new Date(clock)) / 60000; if (Math.abs(dm) > 5) al.push(`<div class="alert info"><span>El reloj del robot va ${Math.abs(Math.round(dm))} min ${dm > 0 ? 'atrasado' : 'adelantado'}.</span><button class="chip" data-btn="poner_en_hora">Ponerlo en hora</button></div>`); }
   return {flags, alerts: al, tasks: st('sensor','programacion_tareas')?.attributes?.tareas || [], seen: val('sensor','ultima_conexion'),
     detail: [MODE[m] ? 'modo ' + MODE[m] : null, charging ? 'cargando' : null], foot: 'Bluetooth → ESP32 → Home Assistant'};
+}
+// una duración de HA en su propia unidad (h, min, s o d: el usuario puede cambiarla) como «1 h 35 min»
+function durTxt(s){
+  const v = Number(s?.state); if (!s || isNaN(v) || v <= 0) return null;
+  const min = Math.round(v * ({h: 60, min: 1, s: 1 / 60, d: 1440}[s.attributes?.unit_of_measurement] ?? 60));
+  if (min < 1) return null;
+  const h = Math.floor(min / 60), m = min % 60;
+  return h ? `${h} h${m ? ` ${m} min` : ''}` : `${m} min`;
 }
 // Landroid (Wi-Fi + nube de Worx): no hay sensor de actividad, sale del estado del cortacésped y del código de error
 const ldTasks = () => (st('sensor','proximo_horario')?.attributes?.slots || [])
@@ -1027,8 +1036,8 @@ function readLandroid(){
   const al = [];
   if (offline) al.push(`<div class="alert warn">${esc(curRobot().name)} no llega a la nube de Worx (sin Wi-Fi o apagado).${seen ? ` Datos de ${esc(ago(seen))}.` : ''}</div>`);
   else if (errOn) al.push(`<div class="alert"><span><b>⚠ ${esc(errText(err))}</b><br><small>Revísalo y pulsa OK en el robot; luego Cortar o A la base.</small></span></div>`);
-  const wait = Number(val('sensor','retraso_por_lluvia_restante'));
-  if (!offline && rain) al.push(`<div class="alert info">Llueve: el robot espera${wait > 0 ? ` unas ${h1(wait)} h` : ''} a que se seque el césped.</div>`);
+  const wait = durTxt(st('sensor','retraso_por_lluvia_restante'));
+  if (!offline && rain) al.push(`<div class="alert info">Llueve: el robot espera${wait ? ` unas ${wait}` : ''} a que se seque el césped.</div>`);
   const prog = val('sensor','progreso_diario'), zone = val('select','zona');
   return {flags, alerts: al, tasks: ldTasks(), seen,
     detail: [zone ? 'zona ' + zone : null, prog != null ? Math.round(Number(prog)) + ' % del día' : null, charging ? 'cargando' : null],
@@ -1173,7 +1182,7 @@ function renderDatosLandroid(){
   $('#sensors').innerHTML = row('Estado', lsOff ? 'Sin conexión' : LMS[ls] || ls)
     + row(lsOff ? 'Último error' : 'Error', err ? errText(err) : null)
     + row('Cargando', yn('cargando')) + row('Lloviendo', yn('sensor_de_lluvia'))
-    + row('Espera por lluvia', n('retraso_por_lluvia_restante', ' h', true))
+    + row('Espera por lluvia', durTxt(st('sensor','retraso_por_lluvia_restante')))
     + row('Hecho hoy', n('progreso_diario', ' %')) + row('Zona', val('select','zona'))
     + row('Señal Wi-Fi', n('intensidad_de_senal', ' dBm'))
     + row('Batería', [n('temperatura_de_la_bateria', ' °C', true), n('voltaje_de_la_bateria', ' V', true)].filter(Boolean).join(' · '))
