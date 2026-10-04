@@ -36,7 +36,7 @@ body{background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-syste
 button,input{font:inherit;color:inherit}
 .app{max-width:1120px;margin:0 auto;padding:max(12px,env(safe-area-inset-top)) 16px calc(96px + env(safe-area-inset-bottom))}
 header.top{display:flex;align-items:center;gap:10px;margin:2px 2px 12px}
-header.top img{width:38px;height:38px;border-radius:11px;object-fit:contain;background:radial-gradient(90% 80% at 50% 35%,#3a3d40,#17191a);padding:3px;transition:opacity .25s}
+header.top img{width:38px;height:38px;border-radius:11px;object-fit:contain;background:radial-gradient(90% 80% at 50% 35%,#3a3d40,#17191a);padding:2px;transition:opacity .25s}
 header.top h1{font-size:18px;margin:0;font-weight:750;flex:1}
 .live{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:5px 10px;border-radius:99px;background:var(--ok-soft);color:var(--ok);font-weight:650}
 .live i{width:7px;height:7px;border-radius:50%;background:currentColor}
@@ -181,6 +181,7 @@ nav.tabs button.on{color:var(--brand-ink);background:var(--brand);font-weight:70
 .actions button:active{transform:scale(.97)}
 .actions button.main{background:var(--brand);color:var(--brand-ink)}
 button:disabled{opacity:.5;cursor:wait}
+.actions.na button{opacity:.4;filter:grayscale(.6);cursor:not-allowed}
 .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:16px;box-shadow:var(--shadow)}
 .card h2{margin:0 0 12px;font-size:12.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:750;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .card h3{margin:14px 0 8px;font-size:13px;color:var(--muted);font-weight:650}
@@ -377,8 +378,8 @@ details.all td:last-child{text-align:right;font-weight:560;overflow-wrap:anywher
 .stage.upside .glow{opacity:1;background:radial-gradient(closest-side,rgba(255,59,48,.55),transparent)}
 .stage.hit .bot{animation:shake .12s linear 10}
 @keyframes shake{25%{transform:translateX(calc(-50% - 4px))}75%{transform:translateX(calc(-50% + 4px))}}
-.stage.offline .bot{filter:grayscale(1) brightness(.75);opacity:.55}
-.stage.offline .ground,.stage.offline .blades{filter:grayscale(.9) brightness(.6)}
+/* sin conexión: la hierba se queda verde; solo el robot pasa a gris (opaco, no transparente) */
+.stage.offline .bot{filter:grayscale(1) brightness(.85) contrast(.9)}
 @media (prefers-reduced-motion:reduce){.stage *{animation:none!important}}
 footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
 /* PIN */
@@ -774,7 +775,7 @@ function renderRobots(){
   const many = ROBOTS.length > 1;
   $('#rname').textContent = many ? 'Mis robots' : 'Mi robot';
   // el icono de arriba es el robot que se ve (su propio modelo), nunca el del otro
-  const icon = `static/${KIND === 'landroid' ? 'rob3d_landroid/turn_03.webp?v=2' : 'rob3d/turn_03.webp?v=1'}`;
+  const icon = `static/${KIND === 'landroid' ? 'rob3d_landroid' : 'rob3d'}/icono.webp?v=1`;  // recorte justo del robot
   if ($('#ricon').getAttribute('src') !== icon) $('#ricon').src = icon;
   $('#rcnt').hidden = !many; $('#rcnt').textContent = ROBOTS.length + ' ▾';
   $('#rbar').hidden = !many;
@@ -957,8 +958,10 @@ async function durante(accion, horas){
   } catch(e) { if (!locked) toast('No se pudo: ' + e.message); }
   finally { document.querySelectorAll('.chip').forEach(b => b.disabled = false); }
 }
+let OFFLINE = false;  // sin conexión: los botones avisan en vez de esperar a que falle la orden
 document.querySelector('.actions').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
+  if (OFFLINE) return toast(KIND === 'landroid' ? 'Sin conexión: el robot no llega a la nube de Worx' : 'Fuera de alcance: acércalo al receptor Bluetooth');
   const LM = `lawn_mower.${P}`;
   ({start: () => svc('lawn_mower','start_mowing',LM,'Cortando'), pause: () => svc('lawn_mower','pause',LM,'En pausa'), dock: () => svc('lawn_mower','dock',LM,'Volviendo a la base')})[b.dataset.act]();
 };
@@ -1036,6 +1039,7 @@ function render(){
   if (applyLock()) return;  // con contraseña: el servidor no manda sus datos y no hay nada que pintar
   const d = KIND === 'landroid' ? readLandroid() : readMcCulloch(), flags = d.flags, bat = flags.battery, a = flags.activity;
   setLive(!flags.offline, flags.offline ? (KIND === 'landroid' ? 'sin conexión' : 'fuera de alcance') : null);
+  OFFLINE = !!flags.offline; $('.actions').classList.toggle('na', OFFLINE);
   $('#bat').textContent = isNaN(bat) ? '–' : bat + '%';
   $('#batsub').textContent = flags.charging ? 'cargando' : 'batería';
   $('#ringfg').style.strokeDashoffset = 326.7 * (1 - (isNaN(bat) ? 0 : bat) / 100);

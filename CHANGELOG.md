@@ -2,6 +2,20 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.6 · La tarjeta vuelve a cargar siempre y robots en gris sin conexión
+
+_Arreglo del «error de configuración» de la tarjeta en algunos paneles, robot en gris sobre césped verde cuando no hay conexión e icono de la app más grande._
+
+#### Tarjeta
+- **Ya no sale «error de configuración»** (Custom element doesn't exist): algunas tarjetas de HACS cambian el registro de elementos del navegador por otro después de cargar esta, y el nuevo no la conocía. Ahora se vuelve a registrar sola si desaparece.
+- **Sin conexión, el césped se queda verde** y solo el robot pasa a gris (opaco, sin transparencia).
+
+#### App (panel web)
+- Mismo cambio de aspecto sin conexión: césped verde y robot gris.
+- **Icono de la cabecera recortado al robot**: antes salía diminuto dentro del cuadro.
+- **Botones apagados sin conexión**: Cortar, Pausa y A la base se ven en gris y, al pulsarlos, explican por qué en vez de esperar a que falle la orden.
+
+
 ## v0.3.5 · Revisión a fondo: jardín nuevo, averías legibles y fallos
 
 _Revisión completa de la app, la tarjeta y la integración: diseño del jardín, averías legibles y una docena de fallos menos._

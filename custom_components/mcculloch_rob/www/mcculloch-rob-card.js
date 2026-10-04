@@ -123,7 +123,7 @@ ha-card{overflow:hidden}
 @keyframes home3d{0%{left:100%;opacity:0}14%{opacity:1}78%{left:65%;opacity:1}92%{left:64%;opacity:1}100%{left:64%;opacity:0}}
 @keyframes leave3d{0%,18%{left:50%;opacity:1}85%{opacity:1}100%{left:100%;opacity:0}}
 .s-lifted .bot{bottom:24%;animation:float 2.4s ease-in-out infinite}
-.s-offline .bot{filter:grayscale(1) brightness(.75);opacity:.55}.s-offline .ground{filter:grayscale(.9) brightness(.6)}
+.s-offline .bot{filter:grayscale(1) brightness(.85) contrast(.9)}
 @keyframes breathe{50%{opacity:.35}}
 @keyframes float{50%{transform:translateX(-50%) translateY(-8px) rotate(2deg)}}
 .fx b{position:absolute;bottom:6%;width:3px;height:7px;border-radius:2px;background:#8fdc6f;opacity:0;animation:clip 1s linear infinite}
@@ -583,9 +583,18 @@ class McCullochRobCardEditor extends HTMLElement {
   }
 }
 
-if (!customElements.get('mcculloch-rob-card')) {
-  customElements.define('mcculloch-rob-card', McCullochRobCard);
-  customElements.define('mcculloch-rob-card-editor', McCullochRobCardEditor);
+// Algunas tarjetas de HACS cambian window.customElements por un polyfill de registros con ámbito después de que
+// esta se haya registrado: el registro nuevo no la conoce y HA pinta «Custom element doesn't exist». Se vuelve a
+// registrar (con una subclase, el mismo constructor no se puede definir dos veces) si desaparece.
+function register(){
+  for (const [tag, cls] of [['mcculloch-rob-card', McCullochRobCard], ['mcculloch-rob-card-editor', McCullochRobCardEditor]]) {
+    if (customElements.get(tag)) continue;
+    try { customElements.define(tag, class extends cls {}); } catch(e) { console.warn('mcculloch-rob-card:', e.message); }
+  }
+}
+register();
+[300, 1500, 5000, 15000].forEach(t => setTimeout(register, t));
+if (!(window.customCards || []).some(c => c.type === 'mcculloch-rob-card')) {
   window.customCards = window.customCards || [];
   window.customCards.push({
     type: 'mcculloch-rob-card', name: 'Robots cortacésped (McCulloch / Husqvarna / Landroid)',
