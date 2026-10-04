@@ -2,6 +2,14 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.7 · El robot pisa el césped en la tarjeta
+
+_En la tarjeta el robot ya no flota sobre el horizonte: se coloca en el centro del césped._
+
+#### Tarjeta
+- **El robot pisa el césped**: el render trae un margen transparente debajo y el robot quedaba pegado al horizonte, como flotando. Ahora se coloca en el centro del césped (también volcado o levantado).
+
+
 ## v0.3.6 · La tarjeta vuelve a cargar siempre y robots en gris sin conexión
 
 _Arreglo del «error de configuración» de la tarjeta en algunos paneles, robot en gris sobre césped verde cuando no hay conexión e icono de la app más grande._

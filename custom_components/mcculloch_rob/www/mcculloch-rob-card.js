@@ -88,8 +88,9 @@ ha-card{overflow:hidden}
 /* Landroid sin renders propios: el modelo del McCulloch teñido de naranja */
 .tint .bot img,.tint .dockw img{filter:hue-rotate(-24deg) saturate(1.35) drop-shadow(0 10px 12px rgba(0,0,0,.35))}
 /* tamaño por la altura de la escena (190 px), no por el ancho: en tarjetas anchas no se sale por arriba */
-.r3d .bot{width:min(64%,240px);bottom:5%}.r3d .bot .sh{display:none}  /* el render trae su sombra */
-.r3d.s-lifted .bot{bottom:16%}
+/* el render trae su sombra y un margen transparente abajo (~30 %): bajado para que pise el centro del césped */
+.r3d .bot{width:min(64%,240px);bottom:-14%}.r3d .bot .sh{display:none}
+.r3d.s-lifted .bot{bottom:-2%}
 .bot img{display:block;width:100%;filter:drop-shadow(0 12px 14px rgba(0,0,0,.5));position:relative;z-index:1}
 .bot .sh{position:absolute;left:4%;right:0;bottom:-1%;height:16%;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.75),transparent);filter:blur(4px)}
 .bot .glow{position:absolute;inset:-6% -6% 0;border-radius:50%;opacity:0;transition:opacity .4s}
@@ -106,7 +107,7 @@ ha-card{overflow:hidden}
 .s-error .glow,.s-upside .glow{opacity:1;background:radial-gradient(closest-side,rgba(255,59,48,.6),transparent);animation:breathe 1s infinite}
 .s-upside .b3d{transform:rotateX(180deg) translateY(-8%)}
 /* volcado con render: al voltearlo, la sombra quedaría arriba y el robot bajo la hierba */
-.r3d.s-upside .bot{bottom:14%}.r3d.s-upside .bot img{filter:none}
+.r3d.s-upside .bot{bottom:-4%}.r3d.s-upside .bot img{filter:none}
 /* base de carga (render con la misma cámara que el robot: mismo ancho = encajan) y su piloto */
 .dockw{position:absolute;left:50%;bottom:4%;width:min(64%,240px);transform:translateX(-50%);opacity:0;transition:opacity .6s;pointer-events:none}
 .dockw img{display:block;width:100%}
