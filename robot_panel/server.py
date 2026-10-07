@@ -82,13 +82,25 @@ MAX_FAILS, FAIL_WINDOW = 5, 300  # 5 PIN fallidos en 5 min bloquean esa IP 5 min
 GLOBAL_MAX_FAILS, GLOBAL_WINDOW = 20, 3600  # y 20 fallos en una hora, vengan de donde vengan, bloquean a todos
 
 
+def write_atomic(path: Path, data: bytes) -> None:
+    """Escribe entero o nada: un apagón a medias no deja el archivo vacío ni cortado."""
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_bytes(data)
+    tmp.chmod(0o600)
+    os.replace(tmp, path)
+
+
 def load_secret() -> bytes:
     """Clave para firmar la cookie de sesion; se crea una vez y se guarda junto al script."""
     f = HERE / ".app_secret"
-    if not f.exists():
-        f.write_text(secrets.token_hex(32))
-        f.chmod(0o600)
-    return bytes.fromhex(f.read_text().strip())
+    try:
+        key = bytes.fromhex(f.read_text().strip())
+    except (OSError, ValueError):
+        key = b""
+    if len(key) != 32:  # falta, vacía o cortada: una clave vacía dejaría falsificar sesiones
+        key = secrets.token_bytes(32)
+        write_atomic(f, key.hex().encode())
+    return key
 
 
 def make_app() -> web.Application:
@@ -114,7 +126,7 @@ def make_app() -> web.Application:
             return True
         try:
             exp, sig = req.cookies.get(COOKIE, "").split(".")
-            return int(exp) > time.time() and hmac.compare_digest(sig, sign(int(exp)))
+            return int(exp) > time.time() and hmac.compare_digest(sig.encode(), sign(int(exp)).encode())
         except ValueError:
             return False
 
@@ -176,17 +188,24 @@ def make_app() -> web.Application:
     cfg_file = HERE / "robots_cfg.json"
     cfg: dict = {}
     cfg_v = [0.0]
+    # archivo de nombres/contraseñas ilegible: todos los robots cerrados hasta que llegue la copia de la otra Pi
+    # (antes se quedaban todos ABIERTOS, sin contraseña)
+    broken = [False]
 
     def adopt(data) -> None:
         raw = data.get("robots", data) if isinstance(data, dict) else {}  # formato antiguo: sin "v"
         cfg.clear()
         cfg.update({k: v for k, v in raw.items() if k in ids and isinstance(v, dict)})
         cfg_v[0] = float(data.get("v", 0)) if isinstance(data, dict) and "robots" in data else 0.0
+        broken[0] = False
 
     try:
         adopt(json.loads(cfg_file.read_text(encoding="utf-8")))
-    except (OSError, ValueError):
+    except FileNotFoundError:
         pass
+    except (OSError, ValueError):
+        LOG.error("robots_cfg.json ilegible: robots cerrados hasta recibir la copia de la otra Pi")
+        broken[0] = True
     peer = os.environ.get("PEER_URL", "").rstrip("/")
 
     def cfg_blob() -> bytes:
@@ -195,8 +214,7 @@ def make_app() -> web.Application:
     def save_cfg(bump: bool = True) -> None:
         if bump:
             cfg_v[0] = max(time.time(), cfg_v[0] + 0.001)
-        cfg_file.write_bytes(cfg_blob())
-        cfg_file.chmod(0o600)
+        write_atomic(cfg_file, cfg_blob())
 
     def peer_sig(body: bytes) -> str:
         return hmac.new(secret, b"robots-peer:" + body, hashlib.sha256).hexdigest()
@@ -233,6 +251,8 @@ def make_app() -> web.Application:
         return (cfg.get(rid) or {}).get("name") or next(r["name"] for r in robots if r["id"] == rid)
 
     def lock_of(rid: str) -> str | None:
+        if broken[0]:
+            return "!"  # ningún PIN da este hash: cerrado hasta tener la configuración buena
         return (cfg.get(rid) or {}).get("pin")
 
     def pin_hash(p: str) -> str:
@@ -250,7 +270,7 @@ def make_app() -> web.Application:
             return True
         try:
             exp, sig = req.cookies.get(ul_cookie(rid), "").split(".")
-            return int(exp) > time.time() and hmac.compare_digest(sig, ul_sign(rid, int(exp)))
+            return int(exp) > time.time() and hmac.compare_digest(sig.encode(), ul_sign(rid, int(exp)).encode())
         except ValueError:
             return False
 

@@ -12,7 +12,7 @@ from bleak_retry_connector import close_stale_connections_by_address
 
 from homeassistant.components import bluetooth
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
@@ -188,12 +188,31 @@ class RobCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise ValueError(f"no se pudieron leer las {expected} franjas")
         return tasks
 
+    async def command(self, fn) -> Any:
+        """Una orden de botón o del cortacésped: sin mezclarse con el sondeo, con el «no» del robot y los cortes
+        de Bluetooth como mensaje claro en HA (no una traza), y refrescando el estado después."""
+        try:
+            async with self.op_lock:  # no mezclar con el sondeo ni con una grabación del horario
+                await self.ensure_connected()
+                result = await fn()
+        except ConfigEntryAuthFailed as err:
+            raise HomeAssistantError("El robot no acepta el PIN: vuelve a configurarlo en la integración") from err
+        except UpdateFailed as err:
+            raise HomeAssistantError(f"No se pudo hablar con el robot: {err}") from err
+        except (BleakError, TimeoutError) as err:
+            raise HomeAssistantError(f"Se cortó la conexión Bluetooth con el robot: {err or type(err).__name__}") from err
+        if isinstance(result, ResponseResult) and result is not ResponseResult.OK:
+            raise HomeAssistantError(f"El robot respondió {result.name}")
+        await self.async_request_refresh()
+        return result
+
     async def async_set_schedule(self, tasks: list[TaskInformation]) -> list[dict[str, Any]]:
         """Sustituye la programacion semanal del robot y devuelve la que queda grabada."""
         async with self.op_lock:
             await self.ensure_connected()
             await self.mower.set_tasks(tasks)
-            written = await self._read_tasks()
+            # contadas: una lectura fallida da error, no «horario vacío» recién grabado
+            written = await self._read_tasks(len(tasks))
         if self.data is not None:
             self.data["tasks"] = written
             self.data["GetNumberOfTasks"] = len(written)

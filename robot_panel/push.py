@@ -109,22 +109,22 @@ def setup_push(app: web.Application, here: Path, ha: str, token: str, robots: li
         except (ClientError, TimeoutError) as e:
             LOG.warning("No llego a la otra Pi para copiar suscripciones: %s", e)
 
-    def _send(sub: dict, data: dict) -> bool:
-        """True si sigue viva; False si el servicio dice que ya no existe (se borra)."""
+    def _send(sub: dict, data: dict) -> str:
+        """«ok» entregado; «fallo» no llegó pero el móvil sigue suscrito; «muerta» ya no existe (se borra)."""
         from pywebpush import WebPushException, webpush
 
         target = {"endpoint": sub["endpoint"], "keys": sub["keys"]}
         try:
             webpush(subscription_info=target, data=json.dumps(data), vapid_private_key=str(pem),
                     vapid_claims={"sub": claim}, ttl=12 * 3600, timeout=10)
-            return True
+            return "ok"
         except WebPushException as e:
             code = e.response.status_code if e.response is not None else 0
             LOG.warning("Aviso no entregado (%s): %s", code, str(e)[:120])
-            return code not in (404, 410)
+            return "muerta" if code in (404, 410) else "fallo"
         except Exception as e:  # noqa: BLE001 - red caída, tiempo agotado...: ese móvil sigue suscrito y no frena al resto
             LOG.warning("Aviso no entregado (%s): %s", type(e).__name__, str(e)[:120])
-            return True
+            return "fallo"
 
     def may_see(sub: dict, rid: str) -> bool:
         # suscripciones de antes de las contraseñas: solo los robots que hoy no tienen contraseña
@@ -135,14 +135,15 @@ def setup_push(app: web.Application, here: Path, ha: str, token: str, robots: li
     async def send(data: dict, only: str | None = None, robot: str | None = None) -> int:
         loop = asyncio.get_running_loop()
         targets = [s for s in subs if (only is None or s["endpoint"] == only) and (robot is None or may_see(s, robot))]
-        alive = await asyncio.gather(*(loop.run_in_executor(None, _send, s, data) for s in targets))
-        dead = [s for s, ok in zip(targets, alive) if not ok]
+        res = await asyncio.gather(*(loop.run_in_executor(None, _send, s, data) for s in targets))
+        dead = [s for s, r in zip(targets, res) if r == "muerta"]
         if dead:
             for s in dead:
                 subs.remove(s)
             _save(subs_file, subs)
             await replicate()
-        return len(targets) - len(dead)
+        # solo cuentan los entregados: si falló la red, el aviso no gasta el enfriamiento y se reintenta
+        return res.count("ok")
 
     async def forget_robot(rid: str) -> None:
         """Al poner contraseña a un robot, nadie sigue recibiendo sus avisos hasta volver a activarlos desbloqueado."""

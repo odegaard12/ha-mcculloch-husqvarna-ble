@@ -2,6 +2,21 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.9 · Órdenes con mensajes claros, horario bien leído y contraseñas que no se pierden
+
+_Revisión de fallos: las órdenes del robot avisan si las rechaza, el horario recién grabado no sale vacío, y el panel no pierde contraseñas ni avisos con un apagón o un corte de red._
+
+#### Integración
+- **Cortar, Pausa y A la base avisan si el robot dice que no**: antes, una orden rechazada parecía hecha. Los cortes de Bluetooth salen como un mensaje claro, no como un error interno.
+- **El horario recién grabado no sale vacío** si falla una lectura: da error y se queda el horario que se conocía.
+
+#### App (panel web)
+- **Las contraseñas de los robots no se pierden con un apagón**: los archivos se escriben enteros o nada. Si aun así el de nombres y contraseñas estuviera roto, los robots quedan cerrados (antes, abiertos) hasta recibir la copia de la otra Pi.
+- **Los avisos que no llegan se reintentan**: un corte de red ya no cuenta como aviso enviado. «Probar aviso» dice la verdad si no llegó.
+- La clave de sesión se regenera si estuviera vacía o cortada.
+- Avisos de levantado y volcado con qué hacer, el del reloj solo con conexión, y la espera por lluvia del Landroid en su unidad.
+
+
 ## v0.3.8 · Barra de robots más clara y nombres editables desde la tarjeta
 
 _Con dos robots, la barra de arriba muestra la foto y el color de cada uno, y el nombre se cambia desde la propia tarjeta._

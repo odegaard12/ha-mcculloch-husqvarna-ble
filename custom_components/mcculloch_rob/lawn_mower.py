@@ -55,25 +55,15 @@ class RobMower(LiveEntity, LawnMowerEntity):
                 return LawnMowerActivity.PAUSED
         return LawnMowerActivity.ERROR
 
-    # Cada orden toma op_lock: son varios comandos BLE y no deben colarse en medio
-    # de una grabación del horario (que va en una transacción del robot).
+    # coordinator.command: con op_lock (no se cuela en una grabación del horario), comprueba el «no» del robot
+    # y convierte los cortes de Bluetooth en un mensaje claro
     async def async_start_mowing(self) -> None:
-        async with self.coordinator.op_lock:
-            await self.coordinator.ensure_connected()
-            if self.activity is LawnMowerActivity.PAUSED:
-                await self.coordinator.mower.mower_resume()
-            else:
-                await self.coordinator.mower.mower_override(3.0)
-        await self.coordinator.async_request_refresh()
+        mower = self.coordinator.mower
+        paused = self.activity is LawnMowerActivity.PAUSED
+        await self.coordinator.command(mower.mower_resume if paused else lambda: mower.mower_override(3.0))
 
     async def async_pause(self) -> None:
-        async with self.coordinator.op_lock:
-            await self.coordinator.ensure_connected()
-            await self.coordinator.mower.mower_pause()
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.command(self.coordinator.mower.mower_pause)
 
     async def async_dock(self) -> None:
-        async with self.coordinator.op_lock:
-            await self.coordinator.ensure_connected()
-            await self.coordinator.mower.mower_park()
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.command(self.coordinator.mower.mower_park)

@@ -140,6 +140,14 @@ async def main():
         # avisos: solo servicios push de verdad (nada de mandar peticiones a otras direcciones)
         evil = {"subscription": {"endpoint": "https://10.0.0.1/x", "keys": {"p256dh": "a", "auth": "b"}}}
         assert (await c5.post("/api/push/subscribe", json=evil)).status in (400, 503)
+    # archivo de nombres/contraseñas cortado (apagón a medias): todo cerrado, no todo abierto, hasta la copia buena
+    (server.HERE / "robots_cfg.json").write_text('{"v": 1, "robo')
+    async with TestClient(TestServer(server.make_app())) as c6:
+        await c6.post("/api/login", json={"pin": "4321"})
+        assert (await c6.post("/api/servicio", json=ok)).status == 423
+        good = _json.dumps({"v": 9e12 + 1, "robots": {}}).encode()
+        assert (await c6.post("/api/robots/peer", data=good, headers={"X-Peer-Sig": sig(good)})).status == 200
+        assert (await c6.post("/api/servicio", json=ok)).status == 502
     del os.environ["ROBOTS"]
     print("servidor: todo OK")
 
