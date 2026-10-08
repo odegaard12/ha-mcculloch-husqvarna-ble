@@ -53,7 +53,7 @@ header.top h1{font-size:18px;margin:0;font-weight:750;flex:1}
 .rbar button.on{background:var(--brand);color:var(--brand-ink)}
 .rbar .rtx{display:flex;flex-direction:column;min-width:0;flex:1}
 .rbar b{font-size:14.5px;line-height:1.15;overflow-wrap:anywhere}
-.rbar small{font-size:12px;font-weight:600;opacity:.72;line-height:1.25;margin-top:2px}
+.rbar small{font-size:12px;font-weight:600;opacity:.72;line-height:1.25;margin-top:2px;white-space:nowrap}
 .dotc{width:9px;height:9px;border-radius:50%;flex:none;background:var(--c,#8a8f92);box-shadow:0 0 0 2px rgba(255,255,255,.5)}
 .sheet{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
 .sheet[hidden]{display:none}
@@ -211,8 +211,9 @@ button:disabled{opacity:.5;cursor:wait}
 .task .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .task input[type=time]{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:8px 10px;min-height:42px;font-size:16px}
 .task .dur{color:var(--muted);font-size:13px;margin-left:auto}
-.days{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
-.days button{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--card);cursor:pointer;font-weight:700}
+/* los 7 días siempre en una fila (antes el domingo bajaba solo a otra línea en móviles estrechos) */
+.days{display:grid;grid-template-columns:repeat(7,minmax(0,40px));gap:6px;margin-top:10px;justify-content:space-between}
+.days button{width:100%;aspect-ratio:1;padding:0;border-radius:50%;border:1px solid var(--line);background:var(--card);cursor:pointer;font-weight:700}
 .days button.on{background:var(--brand);color:var(--brand-ink);border-color:transparent}
 .del{border:0;background:none;color:var(--bad);cursor:pointer;padding:6px;border-radius:10px}
 .del:hover{background:var(--bad-soft)}
@@ -232,6 +233,9 @@ button:disabled{opacity:.5;cursor:wait}
 .sw span{position:absolute;inset:0;background:var(--line);border-radius:99px;transition:.15s}
 .sw span::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:.15s}
 .sw input:checked+span{background:var(--ok)}.sw input:checked+span::after{transform:translateX(20px)}
+/* sin conexión el ajuste no se sabe: atenuado y dicho, no un «apagado» que engaña */
+.sw input:disabled{cursor:not-allowed}.sw input:disabled+span{opacity:.35}
+.toggle:has(.sw input:disabled) small::after{content:" · se sabrá al conectar";font-style:italic}
 details.all summary{cursor:pointer;font-weight:650;list-style:none;display:flex;justify-content:space-between}
 details.all summary::after{content:"▾";color:var(--muted)} details.all[open] summary::after{content:"▴"}
 details.all table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13.5px;table-layout:fixed}
