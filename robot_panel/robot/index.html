@@ -610,7 +610,8 @@ const errText = c => {
   return (ERRS[KIND] || {})[c] || (ERRS.mcculloch || {})[c] || ERR[c] || c.replaceAll('_',' ').replace(/^./, x => x.toUpperCase());
 };
 const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'], DN = ['L','M','X','J','V','S','D'], DLONG = ['lunes','martes','miércoles','jueves','viernes','sábado','domingo'];
-const hm = m => { m = Math.round(m); return String(Math.floor(m / 60)).padStart(2,'0') + ':' + String(m % 60).padStart(2,'0'); };
+// tope 24:00: una franja del robot que pasa de medianoche no sale como «26:00» (ni rompe el editor)
+const hm = m => { m = Math.min(1440, Math.round(m)); return String(Math.floor(m / 60)).padStart(2,'0') + ':' + String(m % 60).padStart(2,'0'); };
 const toMin = s => { const [h, m] = String(s || '0:0').split(':').map(Number); return h * 60 + m; };
 const fmtH = h => h == null || isNaN(h) ? '–' : Math.round(Number(h)).toLocaleString('es-ES') + ' h';
 const fmtDate = iso => { if (!iso || iso === 'unknown' || iso === 'unavailable') return '—'; const d = new Date(iso); return isNaN(d) ? '—' : d.toLocaleString('es-ES',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}); };
@@ -682,23 +683,35 @@ async function api(url, opts){
   if (r.status === 401) { showLock(); throw new Error('bloqueado'); }
   return r;
 }
-function showLock(){ if (locked) return; locked = true; pinBuf = ''; drawPins(); $('#lock').hidden = false; }
+function showLock(){
+  if (locked) return; locked = true; pinBuf = ''; drawPins(); $('#lock').hidden = false;
+  // si al arrancar falló /api/sesion, pinLen seguiría en 4 y un PIN de 6 se mandaría a medias (y contaría como fallo)
+  fetch('api/sesion', {cache:'no-store'}).then(r => r.json()).then(s => { if (s.pin_len > 0 && s.pin_len <= 12) { pinLen = s.pin_len; drawPins(); } }).catch(() => {});
+}
 function drawPins(){
   const box = $('#pins');
   if (box.children.length !== pinLen) box.innerHTML = '<i></i>'.repeat(pinLen);
   box.querySelectorAll('i').forEach((d, i) => d.classList.toggle('f', i < pinBuf.length));
 }
+let pinBusy = false;  // un solo envío a la vez: el último dígito + Enter mandaba dos y contaban dos fallos
 async function tryPin(){
-  const r = await fetch('api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({pin: pinBuf})});
-  if (r.ok) { locked = false; $('#lock').hidden = true; $('#msgpin').textContent = ''; loadRobots().then(() => { poll(); loadHistory(); }); pushRender().catch(() => {}); return; }
-  const j = await r.json().catch(() => ({}));
-  $('#msgpin').textContent = j.error || 'PIN incorrecto';
-  $('#pins').classList.add('shake'); setTimeout(() => $('#pins').classList.remove('shake'), 400);
-  pinBuf = ''; drawPins();
+  if (pinBusy || pinBuf.length !== pinLen) return;
+  pinBusy = true;
+  try {
+    const r = await fetch('api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({pin: pinBuf})});
+    if (r.ok) { locked = false; $('#lock').hidden = true; $('#msgpin').textContent = ''; loadRobots().then(() => { poll(); loadHistory(); }); pushRender().catch(() => {}); return; }
+    const j = await r.json().catch(() => ({}));
+    $('#msgpin').textContent = j.error || 'PIN incorrecto';
+    $('#pins').classList.add('shake'); setTimeout(() => $('#pins').classList.remove('shake'), 400);
+  } catch(e) {
+    $('#msgpin').textContent = 'Sin conexión: vuelve a probar';
+  } finally {
+    pinBusy = false; pinBuf = ''; drawPins();
+  }
 }
 function pinKey(k){
   if (k === 'del') pinBuf = pinBuf.slice(0, -1);
-  else if (/^\d$/.test(k) && pinBuf.length < pinLen) pinBuf += k;
+  else if (/^\d$/.test(k) && pinBuf.length < pinLen && !pinBusy) pinBuf += k;
   drawPins();
   if (pinBuf.length === pinLen) tryPin();
 }
@@ -722,11 +735,12 @@ async function pollOnce(){
   try {
     const r = await api('api/estado', {cache:'no-store'});
     const j = await r.json();
-    if (!r.ok) { setLive(false, 'sin datos'); $('#alerts').innerHTML = `<div class="alert warn">${esc(j.error || 'Home Assistant no responde')}</div>`; return; }
+    if (!r.ok) { setLive(false, 'sin datos'); $('#alerts').innerHTML = `<div class="alert warn">${esc(j.error || 'Home Assistant no responde')}</div>`; return false; }
     states = {}; for (const x of j) states[x.entity_id] = x;
     render(); renderRobots();
     document.body.classList.remove('stale');
-  } catch(e) { if (!locked) setLive(false); }
+    return true;  // al tirar para actualizar: «Actualizado ✓» solo si de verdad llegaron datos
+  } catch(e) { if (!locked) setLive(false); return false; }
 }
 async function svc(domain, service, entity_id, label){
   document.querySelectorAll('.actions button,.chip,.sw input').forEach(b => b.disabled = true);
@@ -783,15 +797,17 @@ function renderRobots(){
   $('#rbar').style.setProperty('--n', ROBOTS.length);
   // el robot que se ve lleva un lápiz para cambiarle el nombre ahí mismo; el que tiene contraseña, un candado
   const PEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/></svg>';
-  $('#rbar').innerHTML = ROBOTS.map(r => {
+  setHTML($('#rbar'), ROBOTS.map(r => {
     const s = summary(r), on = r.id === P;
     const sub = isLocked(r) ? '🔒 Con contraseña' : [s.txt, s.bat != null ? s.bat + ' %' : null].filter(Boolean).join(' · ');
     return `<button data-r="${esc(r.id)}" class="${on ? 'on' : ''}" aria-pressed="${on}"><span class="dotc" style="--c:${s.col}"></span><span class="rtx"><b>${esc(r.name)}</b><small>${esc(sub)}</small></span>${on && !isLocked(r) ? `<span class="pen" data-edit="${esc(r.id)}" role="button" aria-label="Cambiar el nombre">${PEN}</span>` : ''}</button>`;
-  }).join('');
+  }).join(''));
   if (!$('#sheet').hidden) drawSheet();
 }
+// rehacer los botones cada 5 s aunque no cambie nada se comía a veces un toque (pulsar en uno y soltar en el nuevo)
+function setHTML(el, html){ if (el._html !== html) { el._html = html; el.innerHTML = html; } }
 function drawSheet(){
-  $('#rlist').innerHTML = ROBOTS.map(r => {
+  setHTML($('#rlist'), ROBOTS.map(r => {
     const s = summary(r), ld = r.kind === 'landroid', lk = isLocked(r), id = esc(r.id);
     const acts = lk ? `<button class="chip" data-open="${id}">🔓 Desbloquear</button>`
       : `<button class="chip" data-edit="${id}">✎ Nombre</button><button class="chip" data-pass="${id}">🔒 ${r.locked ? 'Cambiar o quitar contraseña' : 'Poner contraseña'}</button>${r.locked ? `<button class="chip" data-close="${id}">Bloquear ya</button>` : ''}`;
@@ -801,7 +817,7 @@ function drawSheet(){
       <span class="st"><span class="dotc" style="--c:${s.col}"></span>${esc(s.txt)}${s.seen ? ' · ' + esc(s.seen) : ''}</span></span>
       <span class="bt">${s.bat != null ? esc(s.bat) + '%' : '–'}</span></button>
       <div class="racts chips">${acts}</div></div>`;
-  }).join('');
+  }).join(''));
 }
 function pickRobot(id){
   const r = ROBOTS.find(x => x.id === id) || ROBOTS[0];
@@ -920,10 +936,15 @@ $('#rbar').onclick = e => {
 // teclado de la contraseña del robot (4 a 8 cifras; «Abrir» la manda)
 let lkBuf = '';
 function drawLkPins(){ $('#lkpins').innerHTML = Array.from({length: Math.max(4, lkBuf.length)}, (_, i) => `<i class="${i < lkBuf.length ? 'f' : ''}"></i>`).join(''); }
+let lkBusy = false;
 async function lkSend(){
+  if (lkBusy) return;  // «Abrir» pulsado dos veces = dos intentos fallidos contados
   if (lkBuf.length < 4) { $('#lkmsg').textContent = 'Son de 4 a 8 cifras'; return; }
-  const res = await postJSON('api/robots/abrir', {id: P, pin: lkBuf});
-  lkBuf = ''; drawLkPins();
+  lkBusy = true;
+  let res;
+  try { res = await postJSON('api/robots/abrir', {id: P, pin: lkBuf}); }
+  catch(e) { $('#lkmsg').textContent = 'Sin conexión: vuelve a probar'; return; }
+  finally { lkBusy = false; lkBuf = ''; drawLkPins(); }
   if (!res.ok) {
     $('#lkmsg').textContent = await errorOf(res);
     $('#lkpins').classList.add('shake'); setTimeout(() => $('#lkpins').classList.remove('shake'), 400);
@@ -1008,7 +1029,11 @@ function readMcCulloch(){
   const clock = val('sensor','reloj_del_robot');
   // fuera de alcance no se le puede poner en hora: el aviso espera a que vuelva
   if (clock && !offline) { const readAt = new Date(st('sensor','reloj_del_robot').last_updated); const dm = (readAt - new Date(clock)) / 60000; if (Math.abs(dm) > 5) al.push(`<div class="alert info"><span>El reloj del robot va ${Math.abs(Math.round(dm))} min ${dm > 0 ? 'atrasado' : 'adelantado'}.</span><button class="chip" data-btn="poner_en_hora">Ponerlo en hora</button></div>`); }
-  return {flags, alerts: al, tasks: st('sensor','programacion_tareas')?.attributes?.tareas || [], seen: val('sensor','ultima_conexion'),
+  // horario desconocido (robot sin leer desde que arrancó HA, o franjas contadas pero no leídas): null, no
+  // «sin horario»; si no, el editor saldría vacío y al guardar BORRARÍA el horario de verdad del robot
+  const ps = st('sensor','programacion_tareas'), tareas = ps?.attributes?.tareas;
+  const known = ps && !['unknown', 'unavailable'].includes(ps.state) && Array.isArray(tareas) && !(Number(ps.state) > 0 && !tareas.length);
+  return {flags, alerts: al, tasks: known ? tareas : null, seen: val('sensor','ultima_conexion'),
     detail: [MODE[m] ? 'modo ' + MODE[m] : null, charging ? 'cargando' : null], foot: 'Bluetooth → ESP32 → Home Assistant'};
 }
 // una duración de HA en su propia unidad (h, min, s o d: el usuario puede cambiarla) como «1 h 35 min»
@@ -1055,7 +1080,7 @@ function render(){
   $('#ringfg').style.stroke = bat < 20 ? '#ff6b5b' : 'var(--brand)';
   $('#alerts').innerHTML = d.alerts.join('');
 
-  const tasks = d.tasks;
+  const unknownSched = d.tasks == null, tasks = d.tasks || [];
   // junto a la batería: lo que va a pasar (el estado ya lo dice la etiqueta de la foto)
   const run = runningNow(tasks), nx = nextRun(tasks);
   // datos para la indicación de la escena (qué está haciendo y qué viene)
@@ -1067,12 +1092,14 @@ function render(){
   if (mowingNow && run) { $('#statelbl').textContent = 'cortando'; $('#state').textContent = 'Hasta las ' + hm(run.start_time_in_minutes + run.duration_in_minutes); }
   else if (run) { $('#statelbl').textContent = 'franja de ahora'; $('#state').textContent = `${hm(run.start_time_in_minutes)}–${hm(run.start_time_in_minutes + run.duration_in_minutes)}`; }
   else if (nx) { $('#statelbl').textContent = 'próximo corte'; $('#state').textContent = (nx.k === 0 ? 'Hoy' : nx.k === 1 ? 'Mañana' : DLONG[nx.d][0].toUpperCase() + DLONG[nx.d].slice(1)) + ' ' + hm(nx.m); }
-  else { $('#statelbl').textContent = 'próximo corte'; $('#state').textContent = flags.offline ? 'Se sabrá al conectar' : 'Sin horario'; }
+  else { $('#statelbl').textContent = 'próximo corte'; $('#state').textContent = flags.offline || unknownSched ? 'Se sabrá al conectar' : 'Sin horario'; }
   $('#detail').textContent = d.detail.filter(Boolean).join(' · ') || ' ';
   weekMin = tasks.reduce((acc, t) => acc + t.duration_in_minutes * DAYS.filter(dd => t['on_' + dd]).length, 0);
   renderFacts();
-  renderWeek(tasks);
-  if (!editing && KIND === 'mcculloch') loadEditor(tasks);
+  renderWeek(unknownSched ? null : tasks);
+  schedLocked = KIND === 'mcculloch' && unknownSched;
+  // mientras se elige una hora (el selector abierto aún no ha dado «change») no se rehace el editor
+  if (!editing && KIND === 'mcculloch' && !$('#tasks').contains(document.activeElement)) loadEditor(tasks);
   renderDatos(); renderRobot();
   const upd = st('sensor','bateria')?.last_updated;
   $('#foot').textContent = d.foot + (upd ? ' · última lectura ' + ago(upd) : '');
@@ -1094,12 +1121,17 @@ function renderFacts(){
 
 /* ---------- horario ---------- */
 function renderWeek(tasks){
+  if (tasks == null) {  // horario sin leer todavía
+    $('#weekhours').textContent = '';
+    $('#week').innerHTML = '<div class="empty">El horario se sabrá cuando el robot conecte.</div>';
+    return;
+  }
   const now = new Date(), today = (now.getDay() + 6) % 7, nowPct = (now.getHours() * 60 + now.getMinutes()) / 14.4;
   const total = tasks.reduce((acc, t) => acc + t.duration_in_minutes * DAYS.filter(d => t['on_' + d]).length, 0);
   $('#weekhours').textContent = tasks.length ? Math.round(total / 60) + ' h/semana' : '';
   $('#week').innerHTML = tasks.length ? `<div class="week">${DAYS.map((d, i) => `<span${i === today ? ' style="font-weight:800"' : ''}>${DN[i]}</span><div class="bar">${tasks.filter(t => t['on_' + d]).map(t => { const a = t.start_time_in_minutes / 14.4, w = Math.min(t.duration_in_minutes / 14.4, 100 - a); return `<b style="left:${a}%;width:${w}%" title="${hm(t.start_time_in_minutes)}–${hm(t.start_time_in_minutes + t.duration_in_minutes)}"></b>`; }).join('')}${i === today ? `<span class="now" style="left:${nowPct}%"></span>` : ''}</div>`).join('')}<div class="hours"><span>0h</span><span>6</span><span>12</span><span>18</span><span>24</span></div></div>` : '<div class="empty">El robot no tiene programación: solo corta cuando se lo mandas.</div>';
 }
-let editing = false, draft = [], original = '';
+let editing = false, draft = [], original = '', schedLocked = false;
 const TEMPLATES = [
   ['L–V 9:00–19:00', [{start:'09:00', end:'19:00', days:DAYS.slice(0,5)}]],
   ['Todos los días 8:00–20:00', [{start:'08:00', end:'20:00', days:[...DAYS]}]],
@@ -1123,8 +1155,11 @@ function drawEditor(){
   const dirty = JSON.stringify(draft) !== original;
   $('#dirty').hidden = !dirty; $('#discard').hidden = !dirty;
   const errs = draft.map(validate);
-  $('#save').disabled = !dirty || errs.some(Boolean) || draft.length > 15;
-  $('#add').disabled = draft.length >= 15;
+  // horario del robot sin leer: no se deja grabar (sustituiría uno que no vemos)
+  $('#save').disabled = schedLocked || !dirty || errs.some(Boolean) || draft.length > 15;
+  $('#add').disabled = schedLocked || draft.length >= 15;
+  $('#templates').querySelectorAll('button').forEach(b => b.disabled = schedLocked);
+  if (schedLocked) { $('#tasks').innerHTML = '<p class="empty" style="margin:0">El horario se podrá cambiar cuando el robot conecte: ahora no se sabe cuál tiene.</p>'; return; }
   $('#tasks').innerHTML = draft.length ? draft.map((t, i) => {
     const d = endMin(t.end) - toMin(t.start);
     return `<div class="task" data-i="${i}">
@@ -1273,7 +1308,8 @@ async function loadWeekMow(){
   try {
     const pts = (await hist('&e=actividad&d=7')).map(p => ({t: new Date(p.t).getTime(), v: p.v})).filter(p => p.v && p.v !== 'unknown');
     const days = [];
-    for (let k = 6; k >= 0; k--) { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - k); days.push({a: d.getTime(), b: d.getTime() + 864e5, ms: 0, dow: (d.getDay() + 6) % 7, today: k === 0}); }
+    // fin = medianoche del día siguiente (no +24 h: el día del cambio de hora tiene 23 o 25)
+    for (let k = 6; k >= 0; k--) { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - k); const e = new Date(d); e.setDate(e.getDate() + 1); days.push({a: d.getTime(), b: e.getTime(), ms: 0, dow: (d.getDay() + 6) % 7, today: k === 0}); }
     pts.forEach((p, i) => {
       if (p.v !== 'mowing' && p.v !== 'edgecut') return;
       const a = p.t, b = i + 1 < pts.length ? pts[i + 1].t : Date.now();
@@ -1349,10 +1385,13 @@ setInterval(loadHistory, 10 * 60 * 1000);
     y0 = null;
     if (pulled <= 80) { ptr.classList.remove('on'); return; }
     busy = true; ptr.textContent = 'Actualizando…';
-    try { await loadRobots(true); await poll(); loadHistory(); checkVersion(); } finally {
-      ptr.textContent = 'Actualizado ✓'; setTimeout(() => { ptr.classList.remove('on'); busy = false; }, 700);
+    let ok = false;
+    try { await loadRobots(true); ok = await poll() !== false; loadHistory(); checkVersion(); } finally {
+      ptr.textContent = ok ? 'Actualizado ✓' : 'Sin conexión'; setTimeout(() => { ptr.classList.remove('on'); busy = false; }, ok ? 700 : 1500);
     }
   });
+  // iOS cancela el toque (gesto del sistema, notificación): sin esto el aviso se quedaba puesto
+  addEventListener('touchcancel', () => { if (y0 == null) return; y0 = null; pulled = 0; ptr.classList.remove('on'); });
 })();
 // iOS no respeta user-scalable=no: el pellizco se corta aquí (el doble toque ya lo quita touch-action)
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), {passive: false}));

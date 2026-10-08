@@ -206,7 +206,7 @@ class McCullochRobCard extends HTMLElement {
   setConfig(config) {
     if (!config || !config.entity || !config.entity.startsWith('lawn_mower.')) throw new Error('entity: lawn_mower.xxx');
     if (config.entity_2 && !config.entity_2.startsWith('lawn_mower.')) throw new Error('entity_2: lawn_mower.xxx');
-    const imageChanged = this._config && this._config.image !== config.image;
+    const imageChanged = this._config && this._config.image !== config.image, prevSel = this._sel;
     this._config = config;
     this._idsBy = {};
     if (!this._robots().some(r => r.entity === this._sel)) {
@@ -214,7 +214,14 @@ class McCullochRobCard extends HTMLElement {
       try { saved = localStorage.getItem('mcrob_sel_' + config.entity); } catch (e) { /* sin almacenamiento */ }
       this._sel = this._robots().some(r => r.entity === saved) ? saved : config.entity;
     }
-    if (imageChanged && this.shadowRoot) this._setImage();  // el editor cambia la foto sin recargar
+    // el editor cambia la foto o el robot (p. ej. un McCulloch por un Landroid) sin recargar: fuera los
+    // fotogramas y el tono del anterior
+    if ((imageChanged || (prevSel && this._sel !== prevSel)) && this.shadowRoot) {
+      this._fr = null;
+      const scene = this.shadowRoot.getElementById('scene');
+      if (scene) { scene.classList.remove('r3d', 'tint'); scene.dataset.s = ''; }
+      this._setImage();
+    }
   }
 
   _robots() {
@@ -405,12 +412,18 @@ class McCullochRobCard extends HTMLElement {
     root.querySelector('.acts').addEventListener('click', e => {
       const b = e.target.closest('button'); if (!b) return;
       const svc = {start: 'start_mowing', pause: 'pause', dock: 'dock'}[b.dataset.a];
-      this._hass.callService('lawn_mower', svc, {entity_id: this._sel});
+      this._call('lawn_mower', svc, this._sel);
     });
     root.querySelector('.chips').addEventListener('click', e => {
       const b = e.target.closest('button'); const id = b && this._ids(this._sel)[b.dataset.b];
-      if (id) this._hass.callService('button', 'press', {entity_id: id});
+      if (id) this._call('button', 'press', id);
     });
+  }
+
+  // una orden que falla (robot que dice que no, Bluetooth cortado) sale como aviso de HA, no se pierde en silencio
+  _call(domain, service, entity_id) {
+    this._hass.callService(domain, service, {entity_id}).catch(err => this.dispatchEvent(new CustomEvent('hass-notification', {
+      detail: {message: err?.message || String(err)}, bubbles: true, composed: true})));
   }
 
   // Entidades hermanas del robot, por dispositivo: el McCulloch por su clave de traducción; el Landroid por
@@ -548,7 +561,8 @@ class McCullochRobCard extends HTMLElement {
     }
     r.getElementById('next').textContent = nextTxt;
     // fuera de alcance: cuándo se supo de él por última vez (sensor siempre disponible)
-    let offTxt = this._t(kind === 'landroid' ? 'offlineLd' : 'offlineMsg');
+    // sin la entidad (nombre mal escrito o integración quitada) no es un problema de Bluetooth ni de la nube
+    let offTxt = !mower ? `${this._t('noEntity')}: ${this._sel}` : this._t(kind === 'landroid' ? 'offlineLd' : 'offlineMsg');
     const seen = new Date(q.st('last_seen')?.state);
     if (offline && !isNaN(seen)) {
       const mins = (seen - Date.now()) / 6e4;
