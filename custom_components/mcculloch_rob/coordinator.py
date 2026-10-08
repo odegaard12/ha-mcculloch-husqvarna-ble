@@ -208,11 +208,18 @@ class RobCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def async_set_schedule(self, tasks: list[TaskInformation]) -> list[dict[str, Any]]:
         """Sustituye la programacion semanal del robot y devuelve la que queda grabada."""
-        async with self.op_lock:
-            await self.ensure_connected()
-            await self.mower.set_tasks(tasks)
-            # contadas: una lectura fallida da error, no «horario vacío» recién grabado
-            written = await self._read_tasks(len(tasks))
+        try:
+            async with self.op_lock:
+                await self.ensure_connected()
+                await self.mower.set_tasks(tasks)
+                # contadas: una lectura fallida da error, no «horario vacío» recién grabado
+                written = await self._read_tasks(len(tasks))
+        except Exception:
+            # la grabación pudo quedar a medias (la librería no deshace): se relee el horario del robot
+            # en la próxima lectura en vez de seguir mostrando el viejo hasta 10 min
+            self._last_slow = None
+            self.hass.async_create_task(self.async_request_refresh())
+            raise
         if self.data is not None:
             self.data["tasks"] = written
             self.data["GetNumberOfTasks"] = len(written)
