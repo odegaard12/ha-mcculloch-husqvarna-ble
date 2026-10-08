@@ -1,5 +1,5 @@
 name: Robots cortacésped (panel)
-version: "0.3.9"
+version: "0.3.10"
 slug: robot_panel
 description: App para el móvil con tus robots cortacésped en 3D (McCulloch / Husqvarna por Bluetooth y Worx Landroid), averías en español, avisos y contraseña por robot
 url: https://github.com/odegaard12/ha-mcculloch-husqvarna-ble

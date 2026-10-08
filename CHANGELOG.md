@@ -2,6 +2,25 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.10 · El horario no se puede borrar sin querer y el PIN no cuenta fallos de más
+
+_Con el robot sin conectar, la app ya no ofrece un horario vacío que al guardar borraría el de verdad; el PIN no gasta intentos de más y la tarjeta avisa si una orden falla._
+
+#### App (panel web)
+- **El horario no se puede borrar sin querer**: con el robot sin leer (fuera de alcance desde que arrancó HA), la app decía «sin horario» y dejaba guardar uno nuevo encima del de verdad. Ahora dice «se sabrá al conectar» y no deja editarlo hasta que el robot conecte.
+- **Elegir una hora ya no se corta**: la actualización de cada 5 s no rehace el editor mientras el selector de hora está abierto.
+- **PIN**: un solo envío a la vez (el último dígito + Enter contaba dos fallos), la longitud se vuelve a pedir si falló al arrancar, y un corte de red dice «sin conexión» en vez de quedarse colgado. Igual en la contraseña de cada robot.
+- Franjas que pasan de medianoche ya no salen como «26:00»; tirar para actualizar dice «Sin conexión» si no llegó nada y no se queda enganchado; la barra de robots no se rehace si no cambia (se comía algún toque); los días del cambio de hora cuentan bien.
+
+#### Tarjeta
+- **Las órdenes que fallan avisan** (antes se perdían en silencio).
+- Cambiar de robot en el editor de la tarjeta cambia también su foto y su color sin recargar.
+- Con una entidad mal escrita dice «No encuentro la entidad», no que el robot está fuera de alcance.
+
+#### Integración
+- Si una grabación del horario falla a medias, se vuelve a leer el del robot en vez de mostrar el viejo.
+
+
 ## v0.3.9 · Órdenes con mensajes claros, horario bien leído y contraseñas que no se pierden
 
 _Revisión de fallos: las órdenes del robot avisan si las rechaza, el horario recién grabado no sale vacío, y el panel no pierde contraseñas ni avisos con un apagón o un corte de red._
