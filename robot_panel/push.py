@@ -38,8 +38,10 @@ def _load(f: Path, default):
 
 
 def _save(f: Path, data) -> None:
-    f.write_text(json.dumps(data), encoding="utf-8")
-    f.chmod(0o600)
+    tmp = f.with_name(f.name + ".tmp")  # entero o nada: un apagón a medias no deja la lista cortada
+    tmp.write_text(json.dumps(data), encoding="utf-8")
+    tmp.chmod(0o600)
+    os.replace(tmp, f)
 
 
 def public_key(pem: Path) -> str | None:
@@ -95,11 +97,18 @@ def setup_push(app: web.Application, here: Path, ha: str, token: str, robots: li
     def sign(body: bytes) -> str:
         return hmac.new(secret, b"push-peer:" + body, hashlib.sha256).hexdigest()
 
+    # versión de la lista: la otra Pi solo acepta una copia más nueva que la suya (una vieja reenviada no
+    # resucita móviles dados de baja ni robots a los que se puso contraseña)
+    v_file = here / "push_subs_v.json"
+    subs_v = [float(_load(v_file, 0) or 0)]
+
     async def replicate() -> None:
-        """Copia la lista a la otra Pi (sesión propia: el token de HA no sale de aquí)."""
+        """Copia la lista a la otra Pi (sesión propia: el token de HA no sale de aquí). Se llama tras cada cambio local."""
+        subs_v[0] = max(time.time(), subs_v[0] + 0.001)
+        _save(v_file, subs_v[0])
         if not peer:
             return
-        body = json.dumps(subs).encode()
+        body = json.dumps({"v": subs_v[0], "subs": subs}).encode()
         try:
             async with ClientSession(timeout=ClientTimeout(total=5)) as s, \
                     s.post(f"{peer}/api/push/peer", data=body,
@@ -200,9 +209,17 @@ def setup_push(app: web.Application, here: Path, ha: str, token: str, robots: li
         body = await req.read()
         if not hmac.compare_digest(req.headers.get("X-Peer-Sig", "").encode(errors="replace"), sign(body).encode()):
             return web.json_response({"error": "firma"}, status=403)
-        data = json.loads(body)
-        subs[:] = [s for s in data if _valid_sub(s)][-20:]
+        try:
+            data = json.loads(body)
+            v, new = float(data["v"]), data["subs"]
+        except (ValueError, TypeError, KeyError):
+            return web.json_response({"error": "formato"}, status=400)
+        if v <= subs_v[0]:
+            return web.json_response({"ok": False, "motivo": "copia vieja"}, status=409)
+        subs[:] = [s for s in new if _valid_sub(s)][-20:]
+        subs_v[0] = v
         _save(subs_file, subs)
+        _save(v_file, v)
         return web.json_response({"ok": True})
 
     app.router.add_get("/api/push/key", get_key)

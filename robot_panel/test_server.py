@@ -148,6 +148,14 @@ async def main():
         good = _json.dumps({"v": 9e12 + 1, "robots": {}}).encode()
         assert (await c6.post("/api/robots/peer", data=good, headers={"X-Peer-Sig": sig(good)})).status == 200
         assert (await c6.post("/api/servicio", json=ok)).status == 502
+        # suscripciones entre Pis: solo entra una copia más nueva; la misma reenviada o el formato viejo, no
+        psig = lambda b: hmac.new(secret, b"push-peer:" + b, hashlib.sha256).hexdigest()  # noqa: E731
+        newer = _json.dumps({"v": 9e12, "subs": []}).encode()
+        r1 = await c6.post("/api/push/peer", data=newer, headers={"X-Peer-Sig": psig(newer)})
+        if r1.status != 404:  # sin pywebpush no hay avisos
+            assert r1.status == 200
+            assert (await c6.post("/api/push/peer", data=newer, headers={"X-Peer-Sig": psig(newer)})).status == 409
+            assert (await c6.post("/api/push/peer", data=b"[]", headers={"X-Peer-Sig": psig(b"[]")})).status == 400
     del os.environ["ROBOTS"]
     print("servidor: todo OK")
 
