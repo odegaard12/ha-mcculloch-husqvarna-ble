@@ -2,6 +2,51 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.11 · Horario en una fila y ajustes claros sin conexión
+
+_La app ordena mejor el editor de horario y deja claro qué ajustes no se saben mientras el robot no está conectado._
+
+#### App (panel web)
+- **Los 7 días de cada franja en una fila**: el domingo ya no baja solo a otra línea en móviles estrechos.
+- **Ajustes sin conexión atenuados**: los interruptores del robot (modo fiesta, bloqueo, modo ECO…) salían como «apagados» sin saberse; ahora se ven atenuados con «se sabrá al conectar».
+- La barra de robots enseña estado y batería en una sola línea.
+- La lista de móviles con avisos se copia entre los dos servidores con versión: una copia vieja reenviada no vuelve a dar de alta un móvil, y se guarda entera o nada.
+
+
+## v0.3.10 · El horario no se puede borrar sin querer y el PIN no cuenta fallos de más
+
+_Con el robot sin conectar, la app ya no ofrece un horario vacío que al guardar borraría el de verdad; el PIN no gasta intentos de más y la tarjeta avisa si una orden falla._
+
+#### App (panel web)
+- **El horario no se puede borrar sin querer**: con el robot sin leer (fuera de alcance desde que arrancó HA), la app decía «sin horario» y dejaba guardar uno nuevo encima del de verdad. Ahora dice «se sabrá al conectar» y no deja editarlo hasta que el robot conecte.
+- **Elegir una hora ya no se corta**: la actualización de cada 5 s no rehace el editor mientras el selector de hora está abierto.
+- **PIN**: un solo envío a la vez (el último dígito + Enter contaba dos fallos), la longitud se vuelve a pedir si falló al arrancar, y un corte de red dice «sin conexión» en vez de quedarse colgado. Igual en la contraseña de cada robot.
+- Franjas que pasan de medianoche ya no salen como «26:00»; tirar para actualizar dice «Sin conexión» si no llegó nada y no se queda enganchado; la barra de robots no se rehace si no cambia (se comía algún toque); los días del cambio de hora cuentan bien.
+
+#### Tarjeta
+- **Las órdenes que fallan avisan** (antes se perdían en silencio).
+- Cambiar de robot en el editor de la tarjeta cambia también su foto y su color sin recargar.
+- Con una entidad mal escrita dice «No encuentro la entidad», no que el robot está fuera de alcance.
+
+#### Integración
+- Si una grabación del horario falla a medias, se vuelve a leer el del robot en vez de mostrar el viejo.
+
+
+## v0.3.9 · Órdenes con mensajes claros, horario bien leído y contraseñas que no se pierden
+
+_Revisión de fallos: las órdenes del robot avisan si las rechaza, el horario recién grabado no sale vacío, y el panel no pierde contraseñas ni avisos con un apagón o un corte de red._
+
+#### Integración
+- **Cortar, Pausa y A la base avisan si el robot dice que no**: antes, una orden rechazada parecía hecha. Los cortes de Bluetooth salen como un mensaje claro, no como un error interno.
+- **El horario recién grabado no sale vacío** si falla una lectura: da error y se queda el horario que se conocía.
+
+#### App (panel web)
+- **Las contraseñas de los robots no se pierden con un apagón**: los archivos se escriben enteros o nada. Si aun así el de nombres y contraseñas estuviera roto, los robots quedan cerrados (antes, abiertos) hasta recibir la copia de la otra Pi.
+- **Los avisos que no llegan se reintentan**: un corte de red ya no cuenta como aviso enviado. «Probar aviso» dice la verdad si no llegó.
+- La clave de sesión se regenera si estuviera vacía o cortada.
+- Avisos de levantado y volcado con qué hacer, el del reloj solo con conexión, y la espera por lluvia del Landroid en su unidad.
+
+
 ## v0.3.8 · Barra de robots más clara y nombres editables desde la tarjeta
 
 _Con dos robots, la barra de arriba muestra la foto y el color de cada uno, y el nombre se cambia desde la propia tarjeta._

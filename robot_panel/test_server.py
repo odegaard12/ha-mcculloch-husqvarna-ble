@@ -140,6 +140,22 @@ async def main():
         # avisos: solo servicios push de verdad (nada de mandar peticiones a otras direcciones)
         evil = {"subscription": {"endpoint": "https://10.0.0.1/x", "keys": {"p256dh": "a", "auth": "b"}}}
         assert (await c5.post("/api/push/subscribe", json=evil)).status in (400, 503)
+    # archivo de nombres/contraseñas cortado (apagón a medias): todo cerrado, no todo abierto, hasta la copia buena
+    (server.HERE / "robots_cfg.json").write_text('{"v": 1, "robo')
+    async with TestClient(TestServer(server.make_app())) as c6:
+        await c6.post("/api/login", json={"pin": "4321"})
+        assert (await c6.post("/api/servicio", json=ok)).status == 423
+        good = _json.dumps({"v": 9e12 + 1, "robots": {}}).encode()
+        assert (await c6.post("/api/robots/peer", data=good, headers={"X-Peer-Sig": sig(good)})).status == 200
+        assert (await c6.post("/api/servicio", json=ok)).status == 502
+        # suscripciones entre Pis: solo entra una copia más nueva; la misma reenviada o el formato viejo, no
+        psig = lambda b: hmac.new(secret, b"push-peer:" + b, hashlib.sha256).hexdigest()  # noqa: E731
+        newer = _json.dumps({"v": 9e12, "subs": []}).encode()
+        r1 = await c6.post("/api/push/peer", data=newer, headers={"X-Peer-Sig": psig(newer)})
+        if r1.status != 404:  # sin pywebpush no hay avisos
+            assert r1.status == 200
+            assert (await c6.post("/api/push/peer", data=newer, headers={"X-Peer-Sig": psig(newer)})).status == 409
+            assert (await c6.post("/api/push/peer", data=b"[]", headers={"X-Peer-Sig": psig(b"[]")})).status == 400
     del os.environ["ROBOTS"]
     print("servidor: todo OK")
 
