@@ -2,6 +2,17 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.11 · Horario en una fila y ajustes claros sin conexión
+
+_La app ordena mejor el editor de horario y deja claro qué ajustes no se saben mientras el robot no está conectado._
+
+#### App (panel web)
+- **Los 7 días de cada franja en una fila**: el domingo ya no baja solo a otra línea en móviles estrechos.
+- **Ajustes sin conexión atenuados**: los interruptores del robot (modo fiesta, bloqueo, modo ECO…) salían como «apagados» sin saberse; ahora se ven atenuados con «se sabrá al conectar».
+- La barra de robots enseña estado y batería en una sola línea.
+- La lista de móviles con avisos se copia entre los dos servidores con versión: una copia vieja reenviada no vuelve a dar de alta un móvil, y se guarda entera o nada.
+
+
 ## v0.3.10 · El horario no se puede borrar sin querer y el PIN no cuenta fallos de más
 
 _Con el robot sin conectar, la app ya no ofrece un horario vacío que al guardar borraría el de verdad; el PIN no gasta intentos de más y la tarjeta avisa si una orden falla._
