@@ -713,9 +713,13 @@ async function pushRender(){
     msg.textContent = 'Avisos activados en este móvil.';
     $('#ptest').onclick = async () => { const r = await api('api/push/test', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({endpoint: sub.endpoint})}); toast(r.ok ? 'Aviso de prueba enviado' : 'No se pudo enviar'); };
     $('#poff').onclick = async () => { await api('api/push/unsubscribe', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({endpoint: sub.endpoint})}); await sub.unsubscribe(); pushRender(); };
+  } else if (Notification.permission === 'denied') {
+    // bloqueados: el botón no podría ni preguntar, así que solo se dice dónde desbloquearlos
+    box.innerHTML = '';
+    msg.textContent = 'Los avisos están bloqueados para esta app: actívalos en los ajustes del móvil (Notificaciones) y vuelve aquí.';
   } else {
     box.innerHTML = '<button class="chip" id="pon" style="background:var(--brand);color:#17191a;border-color:var(--brand);font-weight:700">Activar avisos</button>';
-    msg.textContent = Notification.permission === 'denied' ? 'Los avisos están bloqueados para esta app en los ajustes del móvil.' : '';
+    msg.textContent = '';
     $('#pon').onclick = async () => {
       try {
         if (await Notification.requestPermission() !== 'granted') { msg.textContent = 'Sin permiso no se pueden mandar avisos.'; return; }

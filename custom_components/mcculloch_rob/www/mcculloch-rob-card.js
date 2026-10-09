@@ -67,8 +67,9 @@ ha-card{overflow:hidden}
 .rbar b{overflow-wrap:anywhere}
 .rbar small{display:flex;align-items:center;gap:5px;opacity:.75;font-weight:550;font-size:11.5px}
 .rbar button.on small{opacity:.8}
-.rbar .pen{flex:none;width:28px;height:28px;display:grid;place-items:center;border-radius:9px;background:rgba(0,0,0,.12)}
-.rbar .pen svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+/* lápiz como insignia en la esquina: el nombre y el estado usan todo el ancho y no se parten */
+.rbar .pen{position:absolute;top:-6px;right:-6px;width:24px;height:24px;display:grid;place-items:center;border-radius:50%;background:var(--card-background-color,#1c1c1c);color:var(--primary-text-color);box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.rbar .pen svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .rbar input{flex:1;min-width:0;border:0;border-radius:8px;padding:6px 8px;font:650 13.5px system-ui,sans-serif;background:rgba(255,255,255,.9);color:#1b1b1b}
 .scene.swap .bot,.scene.swap .dockw{animation:swapin .35s cubic-bezier(.2,.7,.2,1)}
 @keyframes swapin{from{opacity:0;transform:translateX(-50%) translateY(6px)}}

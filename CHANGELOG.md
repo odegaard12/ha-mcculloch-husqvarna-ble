@@ -2,6 +2,17 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.17 · Tarjeta sin textos partidos y avisos bloqueados explicados
+
+_En la tarjeta de Home Assistant el estado del robot ya no se parte por el lápiz de renombrar, y la app explica cómo desbloquear los avisos en vez de enseñar un botón que no funciona._
+
+#### Tarjeta de Home Assistant
+- **El lápiz de renombrar pasa a la esquina** del robot elegido: «En la base · 100%» cabe en una línea.
+#### App (panel web)
+- **Avisos bloqueados en el móvil**: ya no sale «Activar avisos» (no podría hacer nada); dice dónde desbloquearlos.
+- Simulador de pruebas: el Landroid devuelve su propio historial (estados de cortacésped), no el del McCulloch.
+
+
 ## v0.3.16 · Barra superior del color de la app y todo ajustado a la pantalla
 
 _La barra de estado del móvil ya no sale oscura sobre la app clara, y el inicio cabe entero en móviles pequeños y en horizontal._
