@@ -22,6 +22,7 @@ import hashlib
 import hmac
 import json
 import logging
+import math
 import os
 import re
 import secrets
@@ -49,10 +50,11 @@ def parse_robots() -> list[dict]:
 
 def entity_re(ids: list[str]) -> re.Pattern:
     # una sola entidad de alguno de los robots, nunca una lista separada por comas (HA la trocearía)
-    return re.compile(rf"(lawn_mower|button|switch)\.({'|'.join(map(re.escape, ids))})(_[a-z0-9_]+)?")
+    return re.compile(rf"(lawn_mower|button|switch|number|select)\.({'|'.join(map(re.escape, ids))})(_[a-z0-9_]+)?")
 ALLOWED = {
     ("lawn_mower", "start_mowing"), ("lawn_mower", "pause"), ("lawn_mower", "dock"),
     ("button", "press"), ("switch", "turn_on"), ("switch", "turn_off"),
+    ("number", "set_value"), ("select", "select_option"),  # ajustes con valor (retraso por lluvia, zona…)
 }
 
 
@@ -443,20 +445,53 @@ def make_app() -> web.Application:
             return web.json_response({"error": "orden no permitida"}, status=403)
         if not is_open(req, robot_of(entity.split(".", 1)[1])):
             return locked_resp()
+        data = {"entity_id": entity}
+        if domain == "number":
+            try:
+                v = float(body.get("value"))
+            except (TypeError, ValueError):
+                v = float("nan")
+            if not math.isfinite(v):
+                return web.json_response({"error": "valor no válido"}, status=400)
+            data["value"] = v  # el rango lo comprueba HA con el mínimo y máximo de la entidad
+        elif domain == "select":
+            opt = body.get("option")
+            if not isinstance(opt, str) or not 0 < len(opt) <= 40:
+                return web.json_response({"error": "opción no válida"}, status=400)
+            data["option"] = opt
+        ok, msg = await ha_call(req, domain, service, data)
+        return web.json_response({"ok": ok, **({"error": msg} if msg else {})}, status=200 if ok else 502)
+
+    async def ha_call(req, domain: str, service: str, data: dict, timeout: float = 30) -> tuple[bool, str | None]:
+        """Un servicio de HA: (hecho, mensaje de error de HA si lo hay)."""
         try:
-            async with req.app["http"].post(f"{ha}/api/services/{domain}/{service}", json={"entity_id": entity}) as r:
-                return web.json_response({"ok": r.status == 200}, status=200 if r.status == 200 else 502)
+            async with req.app["http"].post(f"{ha}/api/services/{domain}/{service}", json=data,
+                                            timeout=ClientTimeout(total=timeout)) as r:
+                if r.status == 200:
+                    return True, None
+                j = await r.json(content_type=None) if r.content_length != 0 else {}
+                return False, (j.get("message") if isinstance(j, dict) else None) or f"HA respondió {r.status}"
         except (ClientError, TimeoutError) as e:
-            return unreachable(e)
+            return False, f"No llego a Home Assistant: {type(e).__name__}"
+
+    def robot_of_body(body: dict) -> str | None:
+        """Robot de la orden: el que pide la app (campo r) o, en apps viejas que no lo mandan, el primero."""
+        rid = body.get("r", PREFIX)
+        return rid if rid in ids else None
 
     async def programacion(req):
         """Valida lo basico y pide a HA que grabe la programacion en el robot."""
         if not token:
             return no_token()
-        if not is_open(req, PREFIX):
-            return locked_resp()
         body = await body_of(req)
+        rid = robot_of_body(body)
+        if not rid:
+            return web.json_response({"error": "robot desconocido"}, status=400)
+        if not is_open(req, rid):
+            return locked_resp()
         tasks = body.get("tasks")
+        if kinds[rid] == "landroid":  # la nube de Worx tarda minutos por franja y varias seguidas se pisan (probado 09/10)
+            return web.json_response({"error": "El horario del Landroid se cambia desde la app de Worx"}, status=400)
         if not isinstance(tasks, list) or len(tasks) > 15:
             return web.json_response({"error": "programacion no valida"}, status=400)
         clean = []
@@ -479,12 +514,25 @@ def make_app() -> web.Application:
         return web.json_response({"ok": True, "tasks": ((data or {}).get("service_response") or {}).get("tasks")})
 
     async def durante(req):
-        """Cortar o aparcar durante N horas (servicios propios de la integracion)."""
+        """Cortar o aparcar durante N horas: servicios propios de la integración (McCulloch) o corte puntual (Landroid)."""
         if not token:
             return no_token()
-        if not is_open(req, PREFIX):
-            return locked_resp()
         body = await body_of(req)
+        rid = robot_of_body(body)
+        if not rid:
+            return web.json_response({"error": "robot desconocido"}, status=400)
+        if not is_open(req, rid):
+            return locked_resp()
+        if kinds[rid] == "landroid":
+            try:
+                minutes = round(float(body.get("horas")) * 60)
+            except (TypeError, ValueError):
+                minutes = 0
+            if body.get("accion") != "cortar" or not 10 <= minutes <= 120:  # lo que admite su «one-time schedule»
+                return web.json_response({"error": "El Landroid corta de 10 min a 2 h seguidas"}, status=400)
+            ok, msg = await ha_call(req, "landroid_cloud", "ots",
+                                    {"entity_id": f"lawn_mower.{rid}", "runtime": minutes, "boundary": bool(body.get("bordes"))}, 60)
+            return web.json_response({"ok": True} if ok else {"error": msg}, status=200 if ok else 502)
         service = {"cortar": "mow_for", "aparcar": "park_for"}.get(body.get("accion"))
         try:
             hours = float(body.get("horas"))

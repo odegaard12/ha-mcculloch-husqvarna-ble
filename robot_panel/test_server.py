@@ -100,6 +100,16 @@ async def main():
         # nombre: se guarda y lo ven todos
         assert (await c4.post("/api/robots/nombre", json={"id": "landroid", "name": "  Robot   de abajo "})).status == 200
         assert (await c4.post("/api/robots/nombre", json={"id": "otro", "name": "x"})).status == 400
+        # Landroid: su horario no se graba desde aquí (la nube tarda y se pisa), corte puntual de 10 min a 2 h, ajustes con valor válido
+        una = [{"start": "09:00", "end": "10:00", "days": ["monday"]}]
+        assert (await c4.post("/api/programacion", json={"r": "landroid", "tasks": una})).status == 400
+        assert (await c4.post("/api/programacion", json={"r": "nadie", "tasks": []})).status == 400
+        assert (await c4.post("/api/durante", json={"r": "landroid", "accion": "cortar", "horas": 5})).status == 400
+        assert (await c4.post("/api/durante", json={"r": "landroid", "accion": "cortar", "horas": 1})).status == 502
+        num = {"domain": "number", "service": "set_value", "entity_id": "number.landroid_par_motor"}
+        assert (await c4.post("/api/servicio", json={**num, "value": "x"})).status == 400
+        assert (await c4.post("/api/servicio", json={**num, "value": 5})).status == 502
+        assert (await c4.post("/api/servicio", json={**num, "entity_id": "number.otra_cosa", "value": 5})).status == 403
         # contraseña del Landroid: quien la pone sigue dentro en su móvil
         assert (await c4.post("/api/robots/clave", json={"id": "landroid", "nueva": "12"})).status == 400
         assert (await c4.post("/api/robots/clave", json={"id": "landroid", "nueva": "2468"})).status == 200

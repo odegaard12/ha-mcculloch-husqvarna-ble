@@ -2,6 +2,22 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.12 · Landroid: cortar a ratos, más ajustes y mantenimiento
+
+_El Landroid gana órdenes y ajustes en la app: cortar 30 min, 1 h o 2 h, sus ajustes con número y zona, y poner a cero los contadores al cambiar cuchillas o batería._
+
+#### App (panel web) · Landroid
+- **Cortar ahora durante 30 min, 1 h o 2 h** (el corte puntual de Worx, de 10 min a 2 h).
+- **Más ajustes**: espera tras la lluvia, extensión del horario, fuerza de las ruedas y zona, además de atajos de Off Limits y actualizar solo. Se guardan al cambiarlos y se apagan sin conexión.
+- **Mantenimiento**: «Cuchillas nuevas» y «Batería nueva» ponen a cero sus contadores, con confirmación.
+- El horario se ve agrupado por franjas (los días con la misma hora juntos).
+- El horario sigue cambiándose desde la app de Worx: probado en el robot real, la nube tarda minutos en aplicar cada franja y varias seguidas se pisan, así que grabarlo desde aquí podría dejarlo a medias.
+
+#### App (panel web)
+- Las órdenes y los ajustes van al robot que se está viendo (antes «cortar durante» iba siempre al primero).
+- Tras una orden, lo que no tiene conexión se vuelve a apagar al momento.
+
+
 ## v0.3.11 · Horario en una fila y ajustes claros sin conexión
 
 _La app ordena mejor el editor de horario y deja claro qué ajustes no se saben mientras el robot no está conectado._

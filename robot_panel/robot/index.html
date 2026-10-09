@@ -215,6 +215,14 @@ button:disabled{opacity:.5;cursor:wait}
 .days{display:grid;grid-template-columns:repeat(7,minmax(0,40px));gap:6px;margin-top:10px;justify-content:space-between}
 .days button{width:100%;aspect-ratio:1;padding:0;border-radius:50%;border:1px solid var(--line);background:var(--card);cursor:pointer;font-weight:700}
 .days button.on{background:var(--brand);color:var(--brand-ink);border-color:transparent}
+/* ajustes con valor (Landroid): número con su unidad o lista */
+.setrow{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.setrow:first-child{border-top:0}
+.setrow>span:first-child{flex:1;min-width:0}.setrow small{color:var(--muted)}
+.setrow input,.setrow select{width:92px;font:inherit;font-size:16px;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:inherit;text-align:right}
+.setrow select{width:auto;text-align:left}
+.setrow .u{font-size:13px;color:var(--muted);width:26px;flex:none}
+.setrow :disabled{opacity:.45}
 .del{border:0;background:none;color:var(--bad);cursor:pointer;padding:6px;border-radius:10px}
 .del:hover{background:var(--bad-soft)}
 .err{color:var(--bad);font-size:13px;margin-top:6px}
@@ -492,8 +500,11 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
         <!-- solo lo del día a día; el horario y las gráficas van en sus pestañas -->
         <div class="card quick ld-only">
           <h2>Órdenes rápidas</h2>
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 20h18"/><path d="M6 20c0-4 1-7 3-9M12 20c0-5 0-8 1-11M18 20c0-4-1-6-3-8"/></svg>Cortar ahora durante</h3>
+          <div class="chips"><button class="chip" data-mow="0.5">30 min</button><button class="chip" data-mow="1">1 h</button><button class="chip" data-mow="2">2 h</button></div>
+          <h3>Bordes</h3>
           <div class="chips"><button class="chip" data-btn="corte_de_bordes">Cortar solo los bordes</button></div>
-          <p class="muted" style="font-size:13px;margin:12px 0 0">Este robot va por Wi-Fi y la nube de Worx: si no tiene cobertura, verás sus últimos datos.</p>
+          <p class="muted" style="font-size:13px;margin:12px 0 0">Este robot va por Wi-Fi y la nube de Worx: si no tiene cobertura, verás sus últimos datos. Las órdenes llegan en unos segundos.</p>
         </div>
         <div class="card quick mc-only">
           <h2>Órdenes rápidas</h2>
@@ -516,7 +527,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
       </div>
       <div class="card ld-only">
         <h2>Editar horario</h2>
-        <p class="muted" style="margin:0">Este horario se cambia desde la app de Worx; aquí se ve tal como lo tiene guardado el robot.</p>
+        <p class="muted" style="margin:0">Este horario se cambia desde la app de Worx; aquí se ve tal como lo tiene guardado el robot. Desde aquí no: la nube de Worx tarda minutos en aplicar cada franja y varias seguidas se pisan, y el robot podría quedarse con medio horario.</p>
       </div>
       <div class="card mc-only">
         <h2>Editar horario <span class="dirty" id="dirty" hidden>sin guardar</span></h2>
@@ -574,6 +585,9 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
           <div id="pushmsg" class="muted" style="font-size:13px;margin-top:10px"></div>
         </div>
         <div class="card mc-only"><h2>Mantenimiento</h2><div class="chips"><button class="chip" data-btn="poner_en_hora">Poner el reloj en hora</button></div></div>
+        <div class="card ld-only"><h2>Mantenimiento</h2>
+          <div class="chips"><button class="chip" data-reset="restablecer_tiempo_de_cuchillas" data-q="¿Has cambiado las cuchillas? El contador de horas de cuchillas vuelve a cero.">Cuchillas nuevas</button><button class="chip" data-reset="restablecer_ciclos_de_bateria" data-q="¿Has cambiado la batería? El contador de ciclos de carga vuelve a cero.">Batería nueva</button></div>
+          <p class="muted" style="font-size:13px;margin:12px 0 0">Ponen a cero sus contadores: úsalos solo al cambiar la pieza.</p></div>
         <div class="card" id="installcard">
           <h2>App</h2>
           <p class="muted" id="installtxt" style="margin:0 0 12px">Añádela a la pantalla de inicio para abrirla como una app.</p>
@@ -746,16 +760,18 @@ async function pollOnce(){
     return true;  // al tirar para actualizar: «Actualizado ✓» solo si de verdad llegaron datos
   } catch(e) { if (!locked) setLive(false); return false; }
 }
-async function svc(domain, service, entity_id, label){
-  document.querySelectorAll('.actions button,.chip,.sw input').forEach(b => b.disabled = true);
+// extra: {value} para un número o {option} para una lista (ajustes del Landroid)
+async function svc(domain, service, entity_id, label, extra = {}){
+  const ctl = '.actions button,.chip,.sw input,.setrow input,.setrow select';
+  document.querySelectorAll(ctl).forEach(b => b.disabled = true);
   toast('Hablando con el robot…');
   try {
-    const r = await api('api/servicio', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({domain, service, entity_id})});
+    const r = await api('api/servicio', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({domain, service, entity_id, ...extra})});
     if (r.status === 423) afterRobotsChange();  // le han puesto contraseña desde otro móvil
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
     toast(label + ' ✓'); setTimeout(poll, 2500);
   } catch(e) { if (!locked) toast('No se pudo: ' + e.message); }
-  finally { document.querySelectorAll('.actions button,.chip,.sw input').forEach(b => b.disabled = false); }
+  finally { document.querySelectorAll(ctl).forEach(b => b.disabled = false); render(); }  // render: vuelve a apagar lo que no tiene conexión
 }
 
 /* ---------- navegación ---------- */
@@ -827,6 +843,7 @@ function pickRobot(id){
   const r = ROBOTS.find(x => x.id === id) || ROBOTS[0];
   const changed = r.id !== P;
   P = r.id; KIND = r.kind; document.body.dataset.kind = KIND;
+  if (changed) editing = false;  // un horario a medio editar es de su robot: no pasa al otro
   try { localStorage.setItem('robot', P); localStorage.setItem('robotKind', KIND); } catch(e) {}
   $('#sheet').hidden = true;
   if (!changed) { applyLock(); return renderRobots(); }
@@ -977,9 +994,10 @@ async function durante(accion, horas){
   document.querySelectorAll('.chip').forEach(b => b.disabled = true);
   toast('Hablando con el robot…');
   try {
-    const r = await api('api/durante', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({accion, horas})});
+    const r = await api('api/durante', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({r: P, accion, horas})});
+    if (r.status === 423) afterRobotsChange();
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
-    toast((accion === 'cortar' ? 'Cortando ' : 'Aparcado ') + horas + ' h ✓'); setTimeout(poll, 2500);
+    toast((accion === 'cortar' ? 'Cortando ' : 'Aparcado ') + (horas < 1 ? Math.round(horas * 60) + ' min' : horas + ' h') + ' ✓'); setTimeout(poll, 2500);
   } catch(e) { if (!locked) toast('No se pudo: ' + e.message); }
   finally { document.querySelectorAll('.chip').forEach(b => b.disabled = false); }
 }
@@ -1049,9 +1067,21 @@ function durTxt(s){
   return h ? `${h} h${m ? ` ${m} min` : ''}` : `${m} min`;
 }
 // Landroid (Wi-Fi + nube de Worx): no hay sensor de actividad, sale del estado del cortacésped y del código de error
-const ldTasks = () => (st('sensor','proximo_horario')?.attributes?.slots || [])
-  .filter(s => DAYS.includes(s.day) && (s.duration_extended || s.duration) > 0)
-  .map(s => ({start_time_in_minutes: toMin(s.start), duration_in_minutes: s.duration_extended || s.duration, ['on_' + s.day]: true}));
+// franjas del Landroid: los días con la misma hora, duración y bordes se juntan en una (como se editan);
+// null = horario sin leer (robot sin conexión desde que arrancó HA): ni «sin horario» ni editor que lo pise
+function ldTasks(){
+  const ps = st('sensor','proximo_horario'), slots = ps?.attributes?.slots;
+  if (!Array.isArray(slots)) return null;  // sin conexión HA no trae las franjas
+  const by = new Map();
+  for (const s of slots) {
+    const dur = s.duration || 0;  // la del horario guardado (duration_extended ya lleva la extensión de tiempo)
+    if (!DAYS.includes(s.day) || dur <= 0) continue;
+    const k = `${s.start}|${dur}|${!!s.boundary}`;
+    if (!by.has(k)) by.set(k, {start_time_in_minutes: toMin(s.start), duration_in_minutes: dur, boundary: !!s.boundary});
+    by.get(k)['on_' + s.day] = true;
+  }
+  return [...by.values()].sort((a, b) => a.start_time_in_minutes - b.start_time_in_minutes);
+}
 function readLandroid(){
   const lm = st('lawn_mower'), ls = lm?.state, offline = !lm || ['unavailable', 'unknown'].includes(ls);
   const bat = num('sensor','bateria'), charging = on('binary_sensor','cargando');
@@ -1187,11 +1217,12 @@ $('#tasks').addEventListener('click', e => {
   if (e.target.closest('[data-del]')) { draft.splice(i, 1); editing = true; drawEditor(); }
 });
 $('#add').onclick = () => { draft.push({start:'09:00', end:'18:00', days:DAYS.slice(0,5)}); editing = true; drawEditor(); };
-$('#discard').onclick = () => { editing = false; loadEditor(st('sensor','programacion_tareas')?.attributes?.tareas || []); };
+$('#discard').onclick = () => { editing = false; render(); };
 $('#save').onclick = async () => {
   $('#save').disabled = true; toast('Grabando el horario en el robot…');
   try {
-    const r = await api('api/programacion', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({tasks: draft.map(t => ({...t, end: endMin(t.end) === 1440 ? '24:00' : t.end}))})});
+    const tasks = draft.map(t => ({start: t.start, end: endMin(t.end) === 1440 ? '24:00' : t.end, days: t.days}));
+    const r = await api('api/programacion', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({r: P, tasks})});
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.error || r.statusText);
     toast('Horario guardado en el robot ✓'); editing = false;
@@ -1268,17 +1299,40 @@ function renderDatos(){
 
 /* ---------- ajustes ---------- */
 const TOGGLES = [['modo_eco','Modo ECO','Gasta menos batería con el motor de corte más suave'],['sensorcontrol_ritmo_segun_crecimiento','SensorControl','Corta más o menos según lo que crezca el césped'],['modo_garaje','Modo garaje','Entra en la base como si fuera un garaje']];
-const TOGGLES_LD = [['modo_pausa','Modo fiesta','Se salta el horario hasta que lo quites'],['bloqueo','Bloqueo','Pide el PIN en el propio robot para moverlo'],['off_limits','Off Limits','Respeta las zonas prohibidas'],['auto_schedule','Horario automático','Worx calcula el horario según el césped']];
-$('#toggles').onchange = e => { const k = e.target.dataset.tg; if (k) svc('switch', e.target.checked ? 'turn_on' : 'turn_off', `switch.${P}_${k}`, 'Ajuste guardado'); };
+const TOGGLES_LD = [['modo_pausa','Modo fiesta','Se salta el horario hasta que lo quites'],['bloqueo','Bloqueo','Pide el PIN en el propio robot para moverlo'],['off_limits','Off Limits','Respeta las zonas prohibidas'],['accesos_directos_de_off_limits','Atajos de Off Limits','Cruza las zonas prohibidas por los pasos marcados'],['auto_schedule','Horario automático','Worx calcula el horario según el césped'],['actualizacion_automatica_de_firmware','Actualizar solo','Instala las versiones nuevas del robot sin preguntar']];
+// [entidad, título, explicación, unidad] — número que se guarda al cambiarlo
+const NUMBERS_LD = [['retraso_por_lluvia','Espera tras la lluvia','Tiempo que espera en la base después de llover','min'],['extension_de_tiempo','Extensión del horario','Alarga o acorta todas las franjas a la vez','%'],['par_motor','Fuerza de las ruedas','Más para cuestas o césped alto; menos gasta menos','%']];
+$('#toggles').onchange = e => {
+  const k = e.target.dataset.tg; if (k) return svc('switch', e.target.checked ? 'turn_on' : 'turn_off', `switch.${P}_${k}`, 'Ajuste guardado');
+  const nk = e.target.dataset.num;
+  if (nk) {
+    const s = st('number', nk), v = Number(e.target.value), min = s?.attributes?.min, max = s?.attributes?.max;
+    if (e.target.value === '' || isNaN(v) || (min != null && v < min) || (max != null && v > max)) { toast(`Pon un valor entre ${min} y ${max}`); return render(); }
+    return svc('number', 'set_value', `number.${P}_${nk}`, 'Ajuste guardado', {value: v});
+  }
+  const sk = e.target.dataset.sel; if (sk) svc('select', 'select_option', `select.${P}_${sk}`, 'Ajuste guardado', {option: e.target.value});
+};
+// poner a cero un contador (cuchillas o batería nuevas): pide confirmación, no se puede deshacer
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-reset]'); if (!b) return;
+  if (OFFLINE) return toast('Sin conexión: se podrá cuando el robot conecte');
+  if (await ask({title: b.textContent, text: b.dataset.q, fields: [], ok: 'Poner a cero'})) svc('button', 'press', `button.${P}_${b.dataset.reset}`, b.textContent);
+});
 function renderRobot(){
   const ld = KIND === 'landroid';
-  $('#toggles').innerHTML = (ld ? TOGGLES_LD : TOGGLES).filter(([k]) => st('switch', k)).map(([k, t, d]) => `<label class="toggle"><span><b>${t}</b><br><small>${d}</small></span><span class="sw"><input type="checkbox" data-tg="${k}" ${on('switch', k) ? 'checked' : ''} ${val('switch', k) == null ? 'disabled title="El robot no está conectado"' : ''}><span></span></span></label>`).join('') || '<div class="empty">Sin ajustes disponibles.</div>';
+  // con un número o lista abiertos no se rehace (si no, el refresco de cada 5 s borraría lo que se está escribiendo)
+  if ($('#toggles').contains(document.activeElement) && document.activeElement.matches('input:not([type=checkbox]),select')) return;
+  const off = (dom, k) => val(dom, k) == null ? 'disabled title="El robot no está conectado"' : '';
+  const toggles = (ld ? TOGGLES_LD : TOGGLES).filter(([k]) => st('switch', k)).map(([k, t, d]) => `<label class="toggle"><span><b>${t}</b><br><small>${d}</small></span><span class="sw"><input type="checkbox" data-tg="${k}" ${on('switch', k) ? 'checked' : ''} ${off('switch', k)}><span></span></span></label>`).join('');
+  const numbers = !ld ? '' : NUMBERS_LD.filter(([k]) => st('number', k)).map(([k, t, d, u]) => { const a = st('number', k).attributes || {};
+    return `<label class="setrow"><span><b>${t}</b><br><small>${d}</small></span><input type="number" inputmode="numeric" data-num="${k}" min="${a.min ?? ''}" max="${a.max ?? ''}" step="${a.step ?? 1}" value="${esc(val('number', k) != null ? Math.round(Number(val('number', k))) : '')}" ${off('number', k)}><span class="u">${u}</span></label>`; }).join('')
+    + (st('select', 'zona') ? `<label class="setrow"><span><b>Zona</b><br><small>Por dónde empieza a cortar</small></span><select data-sel="zona" ${off('select', 'zona')}>${(st('select','zona').attributes?.options || []).map(o => `<option${o === val('select','zona') ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select></label>` : '');
+  $('#toggles').innerHTML = toggles + numbers || '<div class="empty">Sin ajustes disponibles.</div>';
   const row = (k, v) => v ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : '';
   if (ld) {
     const n = k => { const v = val('number', k); return v == null ? null : Math.round(Number(v)).toLocaleString('es-ES'); };
     $('#info').innerHTML = row('Modelo', 'Worx Landroid') + row('Firmware', st('update','firmware')?.attributes?.installed_version)
       + row('Césped', n('lawn_size') ? n('lawn_size') + ' m²' : null) + row('Perímetro', n('lawn_perimeter') ? n('lawn_perimeter') + ' m' : null)
-      + row('Par del motor', n('par_motor') != null ? n('par_motor') + ' %' : null) + row('Extensión de horario', n('extension_de_tiempo') != null ? n('extension_de_tiempo') + ' %' : null)
       + row('Cuchillas cambiadas', val('sensor','momento_del_reinicio_del_tiempo_de_cuchillas') ? fmtDate(val('sensor','momento_del_reinicio_del_tiempo_de_cuchillas')) : null);
     return;
   }
