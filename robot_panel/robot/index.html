@@ -80,7 +80,14 @@ header.top h1{font-size:18px;margin:0;font-weight:750;flex:1}
 .racts .chip{min-height:36px;padding:6px 12px;font-size:13px}
 .fld{display:block;margin:0 4px 12px}
 .fld span{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
-.fld input{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--card)}
+.fld input,.fld select{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--card);color:inherit;font:inherit;font-size:16px}
+.fld.chk{display:flex;align-items:center;gap:10px}.fld.chk input{width:22px;height:22px;flex:none}.fld.chk span{margin:0;font-size:15px;color:inherit}
+/* franjas del Landroid: una por fila, con sus dos botones */
+.ldrow{display:flex;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--line)}
+.ldrow:first-child{border-top:0}
+.ldrow .tx{flex:1;min-width:0}.ldrow .tx small{display:block;color:var(--muted);font-size:13px}
+.ldrow button{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:7px 12px;font:inherit;font-size:13px;font-weight:650;color:inherit;cursor:pointer}
+.ldrow button:disabled{opacity:.4;cursor:not-allowed}
 .dlgm{min-height:4px}
 .lockview{display:none;max-width:520px;margin:30px auto;text-align:center}
 .lockview .card{padding:28px 20px}
@@ -188,6 +195,8 @@ button:disabled{opacity:.5;cursor:wait}
 .card h3:first-of-type{margin-top:0}
 .alert{border-radius:16px;padding:12px 14px;font-weight:560;background:var(--bad-soft);color:var(--bad);display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .alert + .alert{margin-top:10px}
+.alert[hidden]{display:none}  /* el display:flex de arriba le ganaba a «hidden» */
+#ldpend{display:block;margin-bottom:12px}#ldpend[hidden]{display:none}
 .alert.warn{background:var(--warn-soft);color:var(--warn)}.alert.info{background:var(--info-soft);color:var(--info)}
 .chips{display:flex;gap:8px;flex-wrap:wrap}
 .chip{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:9px 14px;cursor:pointer;min-height:42px;display:inline-flex;align-items:center;gap:8px}
@@ -526,8 +535,11 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
         <div class="chips mc-only" style="margin-top:14px"><button class="chip wide" data-btn="volver_a_la_programacion">Volver a la programación</button></div>
       </div>
       <div class="card ld-only">
-        <h2>Editar horario</h2>
-        <p class="muted" style="margin:0">Este horario se cambia desde la app de Worx; aquí se ve tal como lo tiene guardado el robot. Desde aquí no: la nube de Worx tarda minutos en aplicar cada franja y varias seguidas se pisan, y el robot podría quedarse con medio horario.</p>
+        <h2>Franjas <span class="muted" id="ldcount"></span></h2>
+        <div class="alert info" id="ldpend" hidden></div>
+        <div id="ldlist"></div>
+        <div class="bar-actions"><button class="btn ghost" id="ldadd">+ Añadir franja</button></div>
+        <p class="muted" style="font-size:13px;margin:12px 0 0">Los cambios van <b>de uno en uno</b>: la nube de Worx tarda unos minutos en aplicar cada uno y, si se mandan varios seguidos, se pisan. Mientras se aplica no se puede hacer otro. Como mucho dos franjas por día.</p>
       </div>
       <div class="card mc-only">
         <h2>Editar horario <span class="dirty" id="dirty" hidden>sin guardar</span></h2>
@@ -873,12 +885,17 @@ function applyLock(){
 function ask({title, text = '', fields, ok = 'Aceptar'}){
   return new Promise(res => {
     $('#dlgt').textContent = title; $('#dlgp').textContent = text; $('#dlgo').textContent = ok; $('#dlgm').textContent = '';
-    $('#dlgf').innerHTML = fields.map(f => `<label class="fld"><span>${esc(f.label)}</span><input data-k="${f.k}" type="${f.type || 'text'}" ${f.num ? 'inputmode="numeric" pattern="[0-9]*" autocomplete="off"' : ''} maxlength="${f.max || 30}" value="${esc(f.value || '')}"></label>`).join('');
+    // campos: texto/número/hora; type:'select' con options [[valor, texto]]; type:'checkbox' (devuelve true/false)
+    $('#dlgf').innerHTML = fields.map(f => f.type === 'select'
+      ? `<label class="fld"><span>${esc(f.label)}</span><select data-k="${f.k}">${f.options.map(([v, t]) => `<option value="${esc(v)}"${v === f.value ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></label>`
+      : f.type === 'checkbox'
+      ? `<label class="fld chk"><input data-k="${f.k}" type="checkbox"${f.value ? ' checked' : ''}><span>${esc(f.label)}</span></label>`
+      : `<label class="fld"><span>${esc(f.label)}</span><input data-k="${f.k}" type="${f.type || 'text'}" ${f.num ? 'inputmode="numeric" pattern="[0-9]*" autocomplete="off"' : ''} maxlength="${f.max || 30}" value="${esc(f.value || '')}"></label>`).join('');
     $('#dlg').hidden = false;
     setTimeout(() => $('#dlgf input')?.focus(), 60);
     const done = v => { $('#dlg').hidden = true; $('#dlgo').onclick = $('#dlgc').onclick = $('#dlgf').onkeydown = null; res(v); };
     $('#dlgc').onclick = () => done(null);
-    $('#dlgo').onclick = () => done(Object.fromEntries([...$('#dlgf').querySelectorAll('input')].map(i => [i.dataset.k, i.value.trim()])));
+    $('#dlgo').onclick = () => done(Object.fromEntries([...$('#dlgf').querySelectorAll('input,select')].map(i => [i.dataset.k, i.type === 'checkbox' ? i.checked : i.value.trim()])));
     $('#dlgf').onkeydown = e => { if (e.key === 'Enter') $('#dlgo').click(); };
   });
 }
@@ -1082,6 +1099,81 @@ function ldTasks(){
   }
   return [...by.values()].sort((a, b) => a.start_time_in_minutes - b.start_time_in_minutes);
 }
+/* franjas del Landroid, una cada vez: la nube de Worx tarda minutos en aplicar cada cambio y dos seguidos se pisan
+   (probado en el robot real), así que tras mandar uno se espera a VERLO hecho antes de dejar otro. El pendiente se
+   guarda en el móvil: si se cierra la app, al volver sigue esperando. */
+const LD_MAX_WAIT = 10 * 60e3;
+let ldPend = null;  // {r, want: franja que tiene que aparecer, gone: {day,start} que tiene que irse, label, t0}
+try { ldPend = JSON.parse(localStorage.getItem('ldpend') || 'null'); } catch(e) {}
+const savePend = () => { try { ldPend ? localStorage.setItem('ldpend', JSON.stringify(ldPend)) : localStorage.removeItem('ldpend'); } catch(e) {} };
+const cap = s => s ? s[0].toUpperCase() + s.slice(1) : s;
+const sameSlot = (a, b) => a.day === b.day && a.start === b.start;
+function ldEntries(){  // null = sin leer (sin conexión)
+  const e = st('sensor','proximo_horario')?.attributes?.schedule_entries;
+  if (!Array.isArray(e)) return null;
+  return e.filter(x => DAYS.includes(x.day) && x.duration > 0).map(x => ({day: x.day, start: x.start, duration: x.duration, boundary: !!x.boundary}))
+    .sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day) || a.start.localeCompare(b.start));
+}
+const slotLabel = x => `${cap(DLONG[DAYS.indexOf(x.day)])} ${x.start}–${hm(toMin(x.start) + x.duration)}`;
+function renderLdSched(){
+  if (KIND !== 'landroid') return;
+  const list = ldEntries();
+  if (ldPend && ldPend.r === P && list) {
+    const w = ldPend.want, g = ldPend.gone;
+    const done = (!w || list.some(x => sameSlot(x, w) && x.duration === w.duration && x.boundary === w.boundary)) && (!g || !list.some(x => sameSlot(x, g)));
+    if (done) { toast(ldPend.label + ' ✓'); ldPend = null; savePend(); }
+    else if (Date.now() - ldPend.t0 > LD_MAX_WAIT) {
+      toast(`«${ldPend.label}» no se ha confirmado en 10 minutos: mira el horario en la app de Worx`);
+      ldPend = null; savePend();
+    }
+  }
+  const busy = !!(ldPend && ldPend.r === P), blocked = busy || OFFLINE || list == null;
+  $('#ldpend').hidden = !busy;
+  if (busy) { const m = Math.floor((Date.now() - ldPend.t0) / 6e4);
+    $('#ldpend').innerHTML = `⏳ <b>Aplicando:</b> ${esc(ldPend.label)}. La nube de Worx tarda unos minutos${m ? ` (van ${m} min)` : ''}; hasta entonces no se puede hacer otro cambio.`; }
+  $('#ldcount').textContent = list ? list.length + ' de 14' : '';
+  $('#ldadd').disabled = blocked || (list || []).length >= 14;
+  const dis = blocked ? ' disabled' : '';
+  $('#ldlist').innerHTML = list == null ? '<p class="empty" style="margin:0">El horario se sabrá cuando el robot conecte.</p>'
+    : list.length ? list.map((x, i) => `<div class="ldrow"><span class="tx"><b>${esc(slotLabel(x))}</b><small>${Math.floor(x.duration / 60)} h${x.duration % 60 ? ' ' + x.duration % 60 + ' min' : ''}${x.boundary ? ' · repasa los bordes' : ''}</small></span><button data-lde="${i}"${dis}>Cambiar</button><button data-ldd="${i}"${dis}>Quitar</button></div>`).join('')
+    : '<p class="empty" style="margin:0">Sin franjas: el robot solo corta cuando se lo mandas.</p>';
+}
+async function ldSend(body, label, want, gone){
+  if (OFFLINE) return toast('Sin conexión: el robot no llega a la nube de Worx');
+  toast('Mandando al robot…');
+  try {
+    const r = await postJSON('api/franja', {r: P, ...body});
+    if (r.status === 423) afterRobotsChange();
+    if (!r.ok) throw new Error(await errorOf(r));
+    ldPend = {r: P, want, gone, label, t0: Date.now()}; savePend(); renderLdSched();
+  } catch(e) { if (!locked) toast('No se pudo: ' + e.message); }
+}
+async function ldDialog(x){  // x: franja a cambiar, o null para añadir
+  const v = await ask({title: x ? 'Cambiar franja' : 'Añadir franja', ok: x ? 'Cambiar' : 'Añadir',
+    text: 'Se manda sola y la nube de Worx tarda unos minutos en aplicarla.', fields: [
+      {k: 'day', label: 'Día', type: 'select', options: DAYS.map((d, j) => [d, cap(DLONG[j])]), value: x?.day || DAYS[0]},
+      {k: 'start', label: 'Empieza', type: 'time', value: x?.start || '09:00'},
+      {k: 'end', label: 'Termina', type: 'time', value: x ? hm(toMin(x.start) + x.duration) : '12:00'},
+      {k: 'b', label: 'Repasar los bordes al empezar', type: 'checkbox', value: x?.boundary}]});
+  if (!v) return;
+  const dur = endMin(v.end) - toMin(v.start);
+  if (!v.start || !v.end || dur <= 0) return toast('La hora de fin tiene que ser después del inicio');
+  const others = (ldEntries() || []).filter(y => y.day === v.day && !(x && sameSlot(x, y)));
+  if (others.length >= 2) return toast('Ese día ya tiene dos franjas: es lo máximo que guarda el robot');
+  if (others.some(y => y.start === v.start)) return toast('Ese día ya hay una franja a esa hora');
+  const want = {day: v.day, start: v.start, duration: dur, boundary: !!v.b};
+  if (x) ldSend({op: 'edit', current_day: x.day, current_start: x.start, ...want}, slotLabel(want), want, sameSlot(x, want) ? null : {day: x.day, start: x.start});
+  else ldSend({op: 'add', ...want}, slotLabel(want), want, null);
+}
+document.addEventListener('click', async e => {
+  const list = ldEntries() || [];
+  if (e.target.closest('#ldadd')) return ldDialog(null);
+  const ed = e.target.closest('[data-lde]'); if (ed) return ldDialog(list[ed.dataset.lde]);
+  const dl = e.target.closest('[data-ldd]'); if (!dl) return;
+  const x = list[dl.dataset.ldd];
+  if (x && await ask({title: 'Quitar franja', text: `¿Quitar ${slotLabel(x)}? Tarda unos minutos en aplicarse.`, fields: [], ok: 'Quitar'}))
+    ldSend({op: 'delete', day: x.day, start: x.start}, 'Quitar ' + slotLabel(x), null, {day: x.day, start: x.start});
+});
 function readLandroid(){
   const lm = st('lawn_mower'), ls = lm?.state, offline = !lm || ['unavailable', 'unknown'].includes(ls);
   const bat = num('sensor','bateria'), charging = on('binary_sensor','cargando');
@@ -1131,6 +1223,7 @@ function render(){
   weekMin = tasks.reduce((acc, t) => acc + t.duration_in_minutes * DAYS.filter(dd => t['on_' + dd]).length, 0);
   renderFacts();
   renderWeek(unknownSched ? null : tasks);
+  renderLdSched();
   schedLocked = KIND === 'mcculloch' && unknownSched;
   // mientras se elige una hora (el selector abierto aún no ha dado «change») no se rehace el editor
   if (!editing && KIND === 'mcculloch' && !$('#tasks').contains(document.activeElement)) loadEditor(tasks);

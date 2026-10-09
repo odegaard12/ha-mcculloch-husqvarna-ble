@@ -56,6 +56,7 @@ ALLOWED = {
     ("button", "press"), ("switch", "turn_on"), ("switch", "turn_off"),
     ("number", "set_value"), ("select", "select_option"),  # ajustes con valor (retraso por lluvia, zona…)
 }
+WEEK = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
 
 
 def load_env() -> None:
@@ -513,6 +514,43 @@ def make_app() -> web.Application:
             return unreachable(e)
         return web.json_response({"ok": True, "tasks": ((data or {}).get("service_response") or {}).get("tasks")})
 
+    async def franja(req):
+        """Landroid: UNA franja cada vez (añadir, cambiar o quitar). La nube de Worx tarda minutos en aplicarla y dos
+        órdenes seguidas se pisan, así que no hay «grabar el horario entero»: la app espera a ver cada cambio hecho."""
+        if not token:
+            return no_token()
+        body = await body_of(req)
+        rid = robot_of_body(body)
+        if not rid or kinds[rid] != "landroid":
+            return web.json_response({"error": "solo para el Landroid"}, status=400)
+        if not is_open(req, rid):
+            return locked_resp()
+        hhmm = re.compile(r"([01]\d|2[0-3]):[0-5]\d")
+        op, day, start = body.get("op"), body.get("day"), str(body.get("start", ""))
+        if op not in ("add", "edit", "delete") or day not in WEEK or not hhmm.fullmatch(start):
+            return web.json_response({"error": "franja no válida"}, status=400)
+        data = {"entity_id": f"lawn_mower.{rid}"}
+        if op == "delete":
+            service, data["day"], data["start"] = "delete_schedule", day, start
+        else:
+            try:
+                minutes = int(body.get("duration"))
+            except (TypeError, ValueError):
+                minutes = 0
+            if not 1 <= minutes <= 1440 - (int(start[:2]) * 60 + int(start[3:])):
+                return web.json_response({"error": "la hora de fin tiene que ser después del inicio (y el mismo día)"}, status=400)
+            data.update(start=start, duration=minutes, boundary=bool(body.get("boundary")))
+            if op == "add":
+                service, data["days"] = "add_schedule", [day]
+            else:
+                cur_day, cur_start = body.get("current_day"), str(body.get("current_start", ""))
+                if cur_day not in WEEK or not hhmm.fullmatch(cur_start):
+                    return web.json_response({"error": "franja no válida"}, status=400)
+                service = "edit_schedule"
+                data.update(current_day=cur_day, current_start=cur_start, day=day)
+        ok, msg = await ha_call(req, "landroid_cloud", service, data, 60)
+        return web.json_response({"ok": True} if ok else {"error": msg}, status=200 if ok else 502)
+
     async def durante(req):
         """Cortar o aparcar durante N horas: servicios propios de la integración (McCulloch) o corte puntual (Landroid)."""
         if not token:
@@ -616,6 +654,7 @@ def make_app() -> web.Application:
     app.router.add_get("/api/historial", historial)
     app.router.add_post("/api/programacion", programacion)
     app.router.add_post("/api/durante", durante)
+    app.router.add_post("/api/franja", franja)
 
     async def sw(_):
         return web.FileResponse(HERE / "robot" / "sw.js", headers={"Cache-Control": "no-cache",

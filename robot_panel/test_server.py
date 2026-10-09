@@ -104,6 +104,16 @@ async def main():
         una = [{"start": "09:00", "end": "10:00", "days": ["monday"]}]
         assert (await c4.post("/api/programacion", json={"r": "landroid", "tasks": una})).status == 400
         assert (await c4.post("/api/programacion", json={"r": "nadie", "tasks": []})).status == 400
+        # …pero sí una franja cada vez
+        fr = {"r": "landroid", "op": "add", "day": "monday", "start": "09:00", "duration": 60, "boundary": True}
+        assert (await c4.post("/api/franja", json=fr)).status == 502  # válida; aquí no hay HA
+        assert (await c4.post("/api/franja", json={**fr, "r": "robot_cortacesped"})).status == 400
+        assert (await c4.post("/api/franja", json={**fr, "day": "lunes"})).status == 400
+        assert (await c4.post("/api/franja", json={**fr, "start": "9:00"})).status == 400
+        assert (await c4.post("/api/franja", json={**fr, "start": "23:30", "duration": 60})).status == 400  # pasa de medianoche
+        assert (await c4.post("/api/franja", json={**fr, "op": "edit"})).status == 400  # sin la franja a cambiar
+        assert (await c4.post("/api/franja", json={**fr, "op": "edit", "current_day": "monday", "current_start": "08:00"})).status == 502
+        assert (await c4.post("/api/franja", json={"r": "landroid", "op": "delete", "day": "friday", "start": "09:00"})).status == 502
         assert (await c4.post("/api/durante", json={"r": "landroid", "accion": "cortar", "horas": 5})).status == 400
         assert (await c4.post("/api/durante", json={"r": "landroid", "accion": "cortar", "horas": 1})).status == 502
         num = {"domain": "number", "service": "set_value", "entity_id": "number.landroid_par_motor"}

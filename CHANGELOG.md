@@ -2,6 +2,19 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.13 · Horario del Landroid desde la app, franja a franja
+
+_El horario del Landroid ya se cambia desde la app: una franja cada vez, y la app enseña que se está aplicando hasta que la nube de Worx lo confirma._
+
+#### App (panel web) · Landroid
+- **Franjas del horario**: añadir, cambiar (día, horas y si repasa los bordes) o quitar, de una en una.
+- **La limitación, a la vista**: la nube de Worx tarda unos minutos en aplicar cada cambio y dos seguidos se pisan (probado en el robot real). Tras mandar uno sale «⏳ Aplicando…» y no se puede hacer otro hasta verlo hecho; si en 10 minutos no se confirma, avisa para mirarlo en la app de Worx. El pendiente sigue aunque se cierre la app.
+- Como mucho dos franjas por día (lo que guarda el robot); la app no deja pasar de ahí ni repetir una hora.
+
+#### App (panel web)
+- Los avisos que se ocultan ya se ocultan de verdad (el estilo les ganaba).
+
+
 ## v0.3.12 · Landroid: cortar a ratos, más ajustes y mantenimiento
 
 _El Landroid gana órdenes y ajustes en la app: cortar 30 min, 1 h o 2 h, sus ajustes con número y zona, y poner a cero los contadores al cambiar cuchillas o batería._
