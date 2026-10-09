@@ -2,6 +2,20 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.14 · Inicio rediseñado: qué hace, por qué y qué toca
+
+_La pantalla de inicio se ordena de arriba abajo: quién es y cómo está, el jardín con la batería, una frase que explica el estado con la barra del día, y el botón que toca._
+
+#### App (panel web)
+- **Cabecera con el robot que ves** y su estado en una frase («Parado · 51 %»); fuera el «Mis robots» y el «2 ▾» que repetían la barra.
+- **Batería arriba a la derecha** del jardín, con su nivel y el rayo si carga.
+- **«Ahora»**: un solo estado y con motivo (p. ej. «Parado en su franja. Debería cortar hasta las 22:10. ¿Lo has pausado tú?»), y la **barra del día** con las franjas de hoy y una raya en la hora de ahora.
+- **El botón grande hace lo que toca**: «Seguir cortando» si está parado en su franja, «Pausa» si corta, «Cortar» en la base.
+- Cifras en una línea (hoy, semana, cuchillas); órdenes rápidas en dos filas (cortar y aparcar).
+- Barra de robots en una línea por robot; mantener pulsado le cambia el nombre. La barra y la cabecera dicen lo mismo que el «Ahora» («Parado», no «Sin actividad»).
+- El jardín queda limpio (lo dice el «Ahora») y la conexión técnica pasa a la ficha del robot en Ajustes.
+
+
 ## v0.3.13 · Horario del Landroid desde la app, franja a franja
 
 _El horario del Landroid ya se cambia desde la app: una franja cada vez, y la app enseña que se está aplicando hasta que la nube de Worx lo confirma._

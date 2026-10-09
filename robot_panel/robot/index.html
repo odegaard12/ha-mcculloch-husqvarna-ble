@@ -43,7 +43,7 @@ header.top h1{font-size:18px;margin:0;font-weight:750;flex:1}
 .live.off{background:var(--warn-soft);color:var(--warn)}
 /* varios robots: el nombre de arriba abre «Mis robots» y la barra cambia de uno a otro */
 .pick{flex:1;display:flex;align-items:center;gap:6px;border:0;background:none;padding:4px 0;cursor:pointer;text-align:left;min-width:0}
-.pick h1{font-size:18px;margin:0;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pick h1{font-size:18px;margin:0;font-weight:750}
 .pick .cnt{font-size:12px;font-weight:700;padding:3px 8px;border-radius:99px;background:var(--brand-soft);color:var(--ink);white-space:nowrap}
 .rbar{display:grid;grid-template-columns:repeat(var(--n,2),1fr);gap:6px;padding:4px;margin:0 0 12px;border-radius:16px;background:var(--card);border:1px solid var(--line)}
 .rbar[hidden]{display:none}
@@ -52,7 +52,7 @@ header.top h1{font-size:18px;margin:0;font-weight:750;flex:1}
 .rbar button:active{transform:scale(.97)}
 .rbar button.on{background:var(--brand);color:var(--brand-ink)}
 .rbar .rtx{display:flex;flex-direction:column;min-width:0;flex:1}
-.rbar b{font-size:14.5px;line-height:1.15;overflow-wrap:anywhere}
+.rbar b{font-size:13px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rbar small{font-size:12px;font-weight:600;opacity:.72;line-height:1.25;margin-top:2px;white-space:nowrap}
 .dotc{width:9px;height:9px;border-radius:50%;flex:none;background:var(--c,#8a8f92);box-shadow:0 0 0 2px rgba(255,255,255,.5)}
 .sheet{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
@@ -102,7 +102,7 @@ body[data-kind="landroid"]{--brand:#f38a12;--brand-soft:#ffe8d0}
 /* al cambiar de robot: la escena y las pestañas entran con un fundido corto */
 .app.swap .hero,.app.swap .view.on{animation:swapin .32s cubic-bezier(.2,.7,.2,1)}
 /* recién cambiado o desbloqueado, sin sus datos aún: no se enseña nada que pueda ser del otro robot */
-body.stale .hero .body,body.stale #alerts,body.stale .view:not(#v-inicio),body.stale .quick,body.stale .sstate,body.stale .caption{visibility:hidden}
+body.stale .hero .nowb,body.stale .batchip,body.stale #alerts,body.stale .view:not(#v-inicio),body.stale .quick,body.stale .sstate,body.stale .caption{visibility:hidden}
 @keyframes swapin{from{opacity:0;transform:translateY(6px)}}
 /* pestañas: la nueva entra con un fundido corto; la etiqueta de estado salta un poco cuando cambia */
 .view.on{animation:viewin .26s cubic-bezier(.2,.7,.2,1)}
@@ -181,7 +181,7 @@ nav.tabs button.on{color:var(--brand-ink);background:var(--brand);font-weight:70
 .quick h3{display:flex;align-items:center;gap:8px}
 .quick h3 svg{width:16px;height:16px;flex:none}
 .chip.wide{flex-basis:100%;justify-content:center}
-.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 18px 18px}
+.actions{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;padding:14px 18px 14px}  /* el que toca, más ancho */
 .actions button{border:0;border-radius:18px;padding:12px 6px;background:rgba(255,255,255,.1);color:#fff;font-weight:650;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;min-height:76px}
 .actions button svg{width:26px;height:26px}
 .actions button:hover{background:rgba(255,255,255,.18)}
@@ -267,9 +267,32 @@ details.all td:last-child{text-align:right;font-weight:560;overflow-wrap:anywher
 .tlh{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-top:4px}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:13px;color:var(--muted)}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
-.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 18px 14px}
-.facts div{background:rgba(255,255,255,.07);border-radius:14px;padding:8px 10px}
-.facts b{display:block;font-size:15px}.facts small{opacity:.7;font-size:11.5px}
+/* cifras en una línea pequeña al pie del bloque oscuro */
+.facts{display:flex;justify-content:space-between;gap:10px;padding:0 18px 16px;font-size:13px;color:rgba(255,255,255,.72)}
+.facts b{color:#fff}
+/* «Ahora»: frase de estado y barra del día */
+.nowb{padding:14px 18px 2px}
+.nowb small{display:block;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;opacity:.65;font-weight:700}
+.nowb b{display:block;font-size:20px;line-height:1.25;margin:2px 0}
+.nowb span{display:block;opacity:.8;font-size:13.5px}
+.daybar{position:relative;height:12px;border-radius:6px;background:rgba(255,255,255,.12);margin-top:12px;overflow:hidden}
+.daybar i{position:absolute;top:0;bottom:0;background:#4caf50;border-radius:3px}
+.daybar em{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:#ff5a5a}
+.dayl{display:flex;justify-content:space-between;font-size:10.5px;opacity:.55;margin-top:4px}
+/* batería arriba a la derecha de la escena */
+.batchip{position:absolute;top:12px;right:12px;z-index:6;display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.55);color:#fff;border-radius:99px;padding:6px 11px;font-size:13px}
+.batchip b{font-weight:750}.batchip small{font-size:12px}
+.batchip i{width:20px;height:10px;border:1.5px solid currentColor;border-radius:3px;position:relative}
+.batchip i::after{content:"";position:absolute;inset:1px;right:auto;width:calc(var(--lvl,0%) - 2px);background:#7bd77f;border-radius:1px}
+.batchip.low i::after{background:#ff6b5b}
+/* cabecera: el robot que se ve y su estado en una frase */
+.pick .rtt{display:flex;flex-direction:column;min-width:0;text-align:left}
+.pick .rtt h1{font-size:17px;line-height:1.2;overflow-wrap:anywhere}  /* nombre largo: dos líneas, nunca cortado */
+.pick .rtt small{font-size:12.5px;color:var(--muted);font-weight:550}
+/* órdenes rápidas en filas: etiqueta y botones del mismo ancho */
+.qrow{display:flex;align-items:center;gap:8px;margin:8px 0}
+.qrow>b{width:64px;flex:none;font-size:13.5px}
+.qp{display:flex;gap:5px;flex:1;min-width:0}.qp .chip{flex:1 1 0;min-width:0;justify-content:center;padding-left:2px;padding-right:2px;font-size:13px;white-space:nowrap}
 /* escena con la foto oficial: cada estado es una clase en .stage */
 /* jardín: cielo (de noche, más oscuro y con estrellas), setos al fondo y césped con franjas de corte */
 .stage{position:absolute;inset:0;overflow:hidden;perspective:900px;transition:background .8s;
@@ -324,6 +347,7 @@ details.all td:last-child{text-align:right;font-weight:560;overflow-wrap:anywher
 .caption .ic{display:inline-flex}
 .caption .ic svg{width:17px;height:17px;fill:none;stroke:var(--brand);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .stage.cap .caption{opacity:1;transform:none}
+#v-inicio .caption{display:none}  /* lo dice el bloque «Ahora» de debajo: el jardín queda limpio */
 .stage.cap .blades{opacity:.55}
 .stage.homing .ic{animation:nudge 1.2s ease-in-out infinite}.stage.leaving .ic{animation:nudge 1.2s ease-in-out infinite reverse}
 @keyframes nudge{50%{transform:translateX(5px)}}
@@ -434,7 +458,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
 <div class="app">
   <header class="top">
     <img id="ricon" src="static/icon-192.png?v=6" alt="">
-    <button class="pick" id="pick" aria-label="Mis robots"><h1 id="rname">Mi robot</h1><span class="cnt" id="rcnt" hidden></span></button>
+    <button class="pick" id="pick" aria-label="Mis robots"><span class="rtt"><h1 id="rname">Mi robot</h1><small id="rsub"></small></span><span class="cnt" id="rcnt" hidden></span></button>
     <span class="live off" id="live"><i></i><span>conectando</span></span>
   </header>
   <div class="rbar" id="rbar" hidden></div>
@@ -488,20 +512,21 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
             </div>
             <span class="sstate" id="sstate"><svg viewBox="0 0 24 24" aria-hidden="true"></svg><span>—</span></span>
             <span class="spinhint" id="hint">↔ Desliza para girarlo</span>
+            <!-- batería arriba a la derecha: siempre a la vista sin bajar -->
+            <span class="batchip" id="batchip"><i id="batbar"></i><b id="bat">–</b><small id="batsub"></small></span>
           </div>
-          <div class="body">
-            <div class="ring">
-              <svg viewBox="0 0 120 120" width="92" height="92" aria-hidden="true"><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="11"/><circle id="ringfg" cx="60" cy="60" r="52" fill="none" stroke="#ffc20e" stroke-width="11" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7" style="transition:stroke-dashoffset .7s"/></svg>
-              <div class="n"><div><b id="bat">–</b><small id="batsub">batería</small></div></div>
-            </div>
-            <div class="status"><small id="statelbl">próximo corte</small><b id="state">—</b><span id="detail">—</span></div>
+          <!-- «Ahora»: qué hace, por qué y qué viene, en una frase; y la barra del día con la hora actual -->
+          <div class="nowb">
+            <small id="statelbl">ahora</small><b id="state">—</b><span id="detail">—</span>
+            <div class="daybar" id="daybar" aria-hidden="true"></div>
+            <div class="dayl" aria-hidden="true"><span>0 h</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
           </div>
-          <div class="facts" id="facts"></div>
           <div class="actions">
             <button class="main" data-act="start"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Cortar</button>
             <button data-act="pause"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>Pausa</button>
             <button data-act="dock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>A la base</button>
           </div>
+          <div class="facts" id="facts"></div>
         </div>
         <div id="alerts"></div>
       </div>
@@ -509,18 +534,13 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
         <!-- solo lo del día a día; el horario y las gráficas van en sus pestañas -->
         <div class="card quick ld-only">
           <h2>Órdenes rápidas</h2>
-          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 20h18"/><path d="M6 20c0-4 1-7 3-9M12 20c0-5 0-8 1-11M18 20c0-4-1-6-3-8"/></svg>Cortar ahora durante</h3>
-          <div class="chips"><button class="chip" data-mow="0.5">30 min</button><button class="chip" data-mow="1">1 h</button><button class="chip" data-mow="2">2 h</button></div>
-          <h3>Bordes</h3>
-          <div class="chips"><button class="chip" data-btn="corte_de_bordes">Cortar solo los bordes</button></div>
-          <p class="muted" style="font-size:13px;margin:12px 0 0">Este robot va por Wi-Fi y la nube de Worx: si no tiene cobertura, verás sus últimos datos. Las órdenes llegan en unos segundos.</p>
+          <div class="qrow"><b>Cortar</b><div class="qp"><button class="chip" data-mow="0.5">30 min</button><button class="chip" data-mow="1">1 h</button><button class="chip" data-mow="2">2 h</button></div></div>
+          <div class="qrow"><b>Bordes</b><div class="qp"><button class="chip" data-btn="corte_de_bordes">Cortar solo los bordes</button></div></div>
         </div>
         <div class="card quick mc-only">
           <h2>Órdenes rápidas</h2>
-          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 20h18"/><path d="M6 20c0-4 1-7 3-9M12 20c0-5 0-8 1-11M18 20c0-4-1-6-3-8"/></svg>Cortar ahora durante</h3>
-          <div class="chips"><button class="chip" data-mow="1">1 h</button><button class="chip" data-mow="2">2 h</button><button class="chip" data-mow="3">3 h</button><button class="chip" data-mow="5">5 h</button><button class="chip" data-mow="8">8 h</button></div>
-          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Aparcar en la base</h3>
-          <div class="chips"><button class="chip" data-park="3">3 h</button><button class="chip" data-park="12">12 h</button><button class="chip" data-park="24">24 h</button><button class="chip" data-btn="aparcar_hasta_el_proximo_turno">Hasta el próximo turno</button><button class="chip" data-btn="aparcar_hasta_nuevo_aviso">Hasta nuevo aviso</button></div>
+          <div class="qrow"><b>Cortar</b><div class="qp"><button class="chip" data-mow="1">1 h</button><button class="chip" data-mow="2">2 h</button><button class="chip" data-mow="3">3 h</button><button class="chip" data-mow="5">5 h</button><button class="chip" data-mow="8">8 h</button></div></div>
+          <div class="qrow"><b>Aparcar</b><div class="qp"><button class="chip" data-park="3">3 h</button><button class="chip" data-park="12">12 h</button><button class="chip" data-park="24">24 h</button><button class="chip" data-btn="aparcar_hasta_el_proximo_turno" title="Hasta el próximo turno">Turno</button><button class="chip" data-btn="aparcar_hasta_nuevo_aviso" title="Hasta nuevo aviso">Siempre</button></div></div>
         </div>
       </div>
     </div>
@@ -811,28 +831,30 @@ function summary(r){
   else if (r.kind === 'landroid') { txt = LMS[lm.state] || lm.state; col = {mowing:'#47d35a', edgecut:'#47d35a', returning:'#47d35a', error:'#ff3b30'}[lm.state] || '#ffc20e'; }
   else {
     const a = v('sensor','actividad'), bad = v('binary_sensor','averia') === 'on';
-    txt = bad ? 'Avería' : ACTIVITY[a] || 'Parado';
+    // «sin actividad» es su código; para quien lo mira es «Parado» (lo mismo que dice el «Ahora» de abajo)
+    txt = bad ? 'Avería' : (a && a !== 'none' ? ACTIVITY[a] : null) || 'Parado';
     col = bad ? '#ff3b30' : ['mowing','going_out','going_home'].includes(a) ? '#47d35a' : a === 'charging' ? '#3fa9ff' : '#ffc20e';
   }
   const seen = v('sensor', r.kind === 'landroid' ? 'ultima_actualizacion' : 'ultima_conexion');
   return {txt, col, bat: v('sensor','bateria'), seen: off && seen && !isNaN(new Date(seen)) ? ago(seen) : null};
 }
 function renderRobots(){
-  const many = ROBOTS.length > 1;
-  $('#rname').textContent = many ? 'Mis robots' : 'Mi robot';
+  const many = ROBOTS.length > 1, me = curRobot(), ms = summary(me);
+  // arriba, el robot que se ve y cómo está en una frase (tocar abre «Mis robots»: nombre, contraseña…)
+  $('#rname').textContent = me.name;
+  $('#rsub').textContent = isLocked(me) ? 'Con contraseña' : [ms.txt, ms.bat != null ? ms.bat + ' %' : null].filter(Boolean).join(' · ');
   // el icono de arriba es el robot que se ve (su propio modelo), nunca el del otro
   const icon = `static/${KIND === 'landroid' ? 'rob3d_landroid' : 'rob3d'}/icono.webp?v=1`;  // recorte justo del robot
   if ($('#ricon').getAttribute('src') !== icon) $('#ricon').src = icon;
-  $('#rcnt').hidden = !many; $('#rcnt').textContent = ROBOTS.length + ' ▾';
+  $('#rcnt').hidden = true;  // la barra de robots ya dice cuántos hay
   $('#rbar').hidden = !many;
   if (!many) return;
   $('#rbar').style.setProperty('--n', ROBOTS.length);
-  // el robot que se ve lleva un lápiz para cambiarle el nombre ahí mismo; el que tiene contraseña, un candado
-  const PEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/></svg>';
+  // un toque cambia de robot; mantenerlo pulsado le cambia el nombre (sin lápiz que le quite sitio al nombre)
   setHTML($('#rbar'), ROBOTS.map(r => {
     const s = summary(r), on = r.id === P;
-    const sub = isLocked(r) ? '🔒 Con contraseña' : [s.txt, s.bat != null ? s.bat + ' %' : null].filter(Boolean).join(' · ');
-    return `<button data-r="${esc(r.id)}" class="${on ? 'on' : ''}" aria-pressed="${on}"><span class="dotc" style="--c:${s.col}"></span><span class="rtx"><b>${esc(r.name)}</b><small>${esc(sub)}</small></span>${on && !isLocked(r) ? `<span class="pen" data-edit="${esc(r.id)}" role="button" aria-label="Cambiar el nombre">${PEN}</span>` : ''}</button>`;
+    const sub = isLocked(r) ? '\u{1F512} Con contraseña' : [s.txt, s.bat != null ? s.bat + ' %' : null].filter(Boolean).join(' · ');
+    return `<button data-r="${esc(r.id)}" class="${on ? 'on' : ''}" aria-pressed="${on}" title="Mantén pulsado para cambiar el nombre"><span class="dotc" style="--c:${s.col}"></span><span class="rtx"><b>${esc(r.name)}</b><small>${esc(sub)}</small></span></button>`;
   }).join(''));
   if (!$('#sheet').hidden) drawSheet();
 }
@@ -967,8 +989,17 @@ $('#sheet').onclick = e => {
   else if (t.dataset.close) closeRobot(t.dataset.close);
   else pickRobot(t.dataset.r);
 };
+// toque: cambiar de robot; mantener pulsado medio segundo: cambiarle el nombre
+let rbarHold = null, rbarHeld = false;
+$('#rbar').addEventListener('pointerdown', e => {
+  const b = e.target.closest('[data-r]'); if (!b) return;
+  rbarHeld = false;
+  rbarHold = setTimeout(() => { rbarHeld = true; if (!isLocked(ROBOTS.find(r => r.id === b.dataset.r))) renameRobot(b.dataset.r); }, 550);
+});
+for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) $('#rbar').addEventListener(ev, () => clearTimeout(rbarHold));
+$('#rbar').addEventListener('contextmenu', e => e.preventDefault());  // en el móvil, la pulsación larga no abre el menú
 $('#rbar').onclick = e => {
-  const pen = e.target.closest('[data-edit]'); if (pen) { e.stopPropagation(); renameRobot(pen.dataset.edit); return; }
+  if (rbarHeld) { rbarHeld = false; return; }  // ya se abrió el nombre
   const b = e.target.closest('[data-r]'); if (b) pickRobot(b.dataset.r);
 };
 // teclado de la contraseña del robot (4 a 8 cifras; «Abrir» la manda)
@@ -1198,12 +1229,14 @@ function render(){
   document.body.dataset.kind = KIND;
   if (applyLock()) return;  // con contraseña: el servidor no manda sus datos y no hay nada que pintar
   const d = KIND === 'landroid' ? readLandroid() : readMcCulloch(), flags = d.flags, bat = flags.battery, a = flags.activity;
+  LINK = d.foot;  // «Bluetooth → ESP32 → Home Assistant»: se enseña en Ajustes, no al pie de cada pantalla
   setLive(!flags.offline, flags.offline ? (KIND === 'landroid' ? 'sin conexión' : 'fuera de alcance') : null);
   OFFLINE = !!flags.offline; $('.actions').classList.toggle('na', OFFLINE);
-  $('#bat').textContent = isNaN(bat) ? '–' : bat + '%';
-  $('#batsub').textContent = flags.charging ? 'cargando' : 'batería';
-  $('#ringfg').style.strokeDashoffset = 326.7 * (1 - (isNaN(bat) ? 0 : bat) / 100);
-  $('#ringfg').style.stroke = bat < 20 ? '#ff6b5b' : 'var(--brand)';
+  // batería arriba a la derecha de la escena: cifra, barrita de nivel, rayo si carga y roja si queda poca
+  $('#bat').textContent = isNaN(bat) ? '–' : bat + ' %';
+  $('#batsub').textContent = flags.charging ? '⚡' : '';
+  $('#batbar').style.setProperty('--lvl', (isNaN(bat) ? 0 : bat) + '%');
+  $('#batchip').classList.toggle('low', bat < 20);
   $('#alerts').innerHTML = d.alerts.join('');
 
   const unknownSched = d.tasks == null, tasks = d.tasks || [];
@@ -1214,12 +1247,12 @@ function render(){
   flags.next = nx ? (nx.k === 0 ? 'hoy' : nx.k === 1 ? 'mañana' : 'el ' + DLONG[nx.d]) + ' a las ' + hm(nx.m) : null;
   flags.lastSeen = d.seen && !isNaN(new Date(d.seen)) ? ago(d.seen) : null;  // sigue disponible sin robot
   window.robot3d && window.robot3d.update(flags);
-  const mowingNow = ['mowing', 'going_out'].includes(a);
-  if (mowingNow && run) { $('#statelbl').textContent = 'cortando'; $('#state').textContent = 'Hasta las ' + hm(run.start_time_in_minutes + run.duration_in_minutes); }
-  else if (run) { $('#statelbl').textContent = 'franja de ahora'; $('#state').textContent = `${hm(run.start_time_in_minutes)}–${hm(run.start_time_in_minutes + run.duration_in_minutes)}`; }
-  else if (nx) { $('#statelbl').textContent = 'próximo corte'; $('#state').textContent = (nx.k === 0 ? 'Hoy' : nx.k === 1 ? 'Mañana' : DLONG[nx.d][0].toUpperCase() + DLONG[nx.d].slice(1)) + ' ' + hm(nx.m); }
-  else { $('#statelbl').textContent = 'próximo corte'; $('#state').textContent = flags.offline || unknownSched ? 'Se sabrá al conectar' : 'Sin horario'; }
-  $('#detail').textContent = d.detail.filter(Boolean).join(' · ') || ' ';
+  const now = nowText(flags, run, nx, unknownSched);
+  $('#statelbl').textContent = 'ahora';
+  $('#state').textContent = now.v;
+  $('#detail').textContent = [now.d, ...d.detail.filter(Boolean)].filter(Boolean).join(' · ') || ' ';
+  drawDayBar(unknownSched ? null : tasks);
+  setActions(now.main, now.mainLabel);
   weekMin = tasks.reduce((acc, t) => acc + t.duration_in_minutes * DAYS.filter(dd => t['on_' + dd]).length, 0);
   renderFacts();
   renderWeek(unknownSched ? null : tasks);
@@ -1229,21 +1262,53 @@ function render(){
   if (!editing && KIND === 'mcculloch' && !$('#tasks').contains(document.activeElement)) loadEditor(tasks);
   renderDatos(); renderRobot();
   const upd = st('sensor','bateria')?.last_updated;
-  $('#foot').textContent = d.foot + (upd ? ' · última lectura ' + ago(upd) : '');
+  $('#foot').textContent = upd ? 'Última lectura ' + ago(upd) : '';
   if (st('lawn_mower')) document.body.classList.remove('stale');
 }
 
-// tres datos útiles bajo la batería; los que no tienen valor no se muestran
-let mowed24 = null, weekMin = 0;
+// qué hace, por qué y qué viene, en una frase; y qué orden es la que toca (botón grande)
+function nowText(f, run, nx, unknownSched){
+  const until = run ? hm(run.start_time_in_minutes + run.duration_in_minutes) : null;
+  const next = nx ? 'Próximo corte: ' + (nx.k === 0 ? 'hoy' : nx.k === 1 ? 'mañana' : 'el ' + DLONG[nx.d]) + ' a las ' + hm(nx.m)
+    : unknownSched || f.offline ? 'El horario se sabrá al conectar' : 'Sin horario: corta cuando se lo mandes';
+  const ld = KIND === 'landroid';
+  if (f.offline) return {v: ld ? 'Sin conexión' : 'Fuera de alcance', d: f.lastSeen ? 'Último dato ' + f.lastSeen : next, main: 'start', mainLabel: 'Cortar'};
+  if (f.upsideDown) return {v: 'Volcado', d: 'Dale la vuelta y confírmalo en el robot', main: 'start', mainLabel: 'Cortar'};
+  if (f.lifted) return {v: 'Levantado', d: 'Déjalo en el césped: sigue solo', main: 'start', mainLabel: 'Cortar'};
+  if (f.error) return {v: 'Avería', d: 'Mira el aviso de abajo', main: 'start', mainLabel: 'Cortar'};
+  const a = f.activity;
+  if (a === 'mowing' || a === 'going_out') return {v: a === 'going_out' ? 'Saliendo a cortar' : 'Cortando', d: until ? 'Hasta las ' + until : 'Hasta que termine o lo pares', main: 'pause', mainLabel: 'Pausa'};
+  if (a === 'going_home') return {v: 'Volviendo a la base', d: next, main: 'start', mainLabel: 'Seguir cortando'};
+  if (f.charging) return {v: 'Cargando en la base', d: run ? 'Sale a cortar al terminar de cargar' : next, main: 'start', mainLabel: 'Cortar'};
+  if (f.inBase) return {v: 'En la base', d: run ? 'En su franja, hasta las ' + until : next, main: 'start', mainLabel: 'Cortar'};
+  if (run) return {v: 'Parado en su franja', d: `Debería cortar hasta las ${until}. ¿Lo has pausado tú?`, main: 'start', mainLabel: 'Seguir cortando'};
+  return {v: f.state === 'paused' ? 'En pausa' : 'Parado', d: next, main: 'start', mainLabel: 'Cortar'};
+}
+// barra del día: las franjas de hoy en verde y una raya en la hora de ahora
+function drawDayBar(tasks){
+  const today = DAYS[(new Date().getDay() + 6) % 7], now = new Date(), pct = m => (m / 14.4).toFixed(2) + '%';
+  const segs = (tasks || []).filter(t => t['on_' + today]).map(t => `<i style="left:${pct(t.start_time_in_minutes)};width:${pct(Math.min(t.duration_in_minutes, 1440 - t.start_time_in_minutes))}"></i>`).join('');
+  $('#daybar').innerHTML = segs + `<em style="left:${pct(now.getHours() * 60 + now.getMinutes())}"></em>`;
+}
+// el botón grande hace lo que toca ahora; los otros dos quedan a su lado
+const ACT = {start: ['Cortar', '<path d="M8 5v14l11-7z"/>', 'currentColor'], pause: ['Pausa', '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>', 'currentColor'],
+  dock: ['A la base', '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>', 'none']};
+function setActions(main, label){
+  const order = [main, ...['start', 'pause', 'dock'].filter(k => k !== main)];
+  const html = order.map((k, i) => `<button${i === 0 ? ' class="main"' : ''} data-act="${k}"><svg viewBox="0 0 24 24" fill="${ACT[k][2]}"${ACT[k][2] === 'none' ? ' stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"' : ''}>${ACT[k][1]}</svg>${i === 0 && label ? label : ACT[k][0]}</button>`).join('');
+  setHTML($('.actions'), html);
+}
+// cifras en una línea pequeña; las que no tienen valor no salen
+let mowed24 = null, weekMin = 0, LINK = '';
 function renderFacts(){
   const bk = KIND === 'landroid' ? 'tiempo_de_uso_de_las_cuchillas_desde_el_reinicio' : 'uso_de_las_cuchillas';
   const blades = Number(val('sensor', bk));
   const f = [
-    mowed24 != null ? [h1(mowed24 / 36e5) + ' h', 'cortado 24 h'] : null,
-    weekMin ? [Math.round(weekMin / 60) + ' h', 'por semana'] : null,
-    !isNaN(blades) && val('sensor', bk) != null ? [Math.round(blades) + ' h', 'cuchillas'] : null,
+    mowed24 != null ? ['Hoy', h1(mowed24 / 36e5) + ' h'] : null,
+    weekMin ? ['Semana', Math.round(weekMin / 60) + ' h'] : null,
+    !isNaN(blades) && val('sensor', bk) != null ? ['Cuchillas', Math.round(blades) + ' h'] : null,
   ].filter(Boolean);
-  $('#facts').innerHTML = f.map(([b, s]) => `<div><b>${esc(b)}</b><small>${s}</small></div>`).join('');
+  $('#facts').innerHTML = f.map(([s, b]) => `<span>${s} <b>${esc(b)}</b></span>`).join('');
 }
 
 /* ---------- horario ---------- */
@@ -1424,12 +1489,12 @@ function renderRobot(){
   const row = (k, v) => v ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : '';
   if (ld) {
     const n = k => { const v = val('number', k); return v == null ? null : Math.round(Number(v)).toLocaleString('es-ES'); };
-    $('#info').innerHTML = row('Modelo', 'Worx Landroid') + row('Firmware', st('update','firmware')?.attributes?.installed_version)
+    $('#info').innerHTML = row('Modelo', 'Worx Landroid') + row('Conexión', LINK) + row('Firmware', st('update','firmware')?.attributes?.installed_version)
       + row('Césped', n('lawn_size') ? n('lawn_size') + ' m²' : null) + row('Perímetro', n('lawn_perimeter') ? n('lawn_perimeter') + ' m' : null)
       + row('Cuchillas cambiadas', val('sensor','momento_del_reinicio_del_tiempo_de_cuchillas') ? fmtDate(val('sensor','momento_del_reinicio_del_tiempo_de_cuchillas')) : null);
     return;
   }
-  $('#info').innerHTML = row('Modelo', 'McCulloch ROB S800') + row('Nº de serie', val('sensor','numero_de_serie')) + row('Software', val('sensor','version_software'))
+  $('#info').innerHTML = row('Modelo', 'McCulloch ROB S800') + row('Conexión', LINK) + row('Nº de serie', val('sensor','numero_de_serie')) + row('Software', val('sensor','version_software'))
     + row('Firmware', val('sensor','firmware_aplicacion')) + row('Reloj del robot', val('sensor','reloj_del_robot') ? fmtDate(val('sensor','reloj_del_robot')) : null)
     + row('Pasar el cable', val('sensor','pasar_el_cable_cm') ? val('sensor','pasar_el_cable_cm') + ' cm' : null)
     + row('Marcha atrás al salir', val('sensor','marcha_atras_al_salir_cm') ? val('sensor','marcha_atras_al_salir_cm') + ' cm' : null)
