@@ -2,6 +2,17 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.15 · Inicio ajustado al móvil: botones normales y nada cortado
+
+_El inicio rediseñado se ajusta a pantallas de móvil: botones de una línea y altura normal, nombres enteros, y todo a la vista sin bajar._
+
+#### App (panel web)
+- **Botones Cortar / Pausa / Base de altura normal** (54 px): icono al lado del texto y una sola línea; antes medían 100 px en móviles de 360 px y «A la base» se partía.
+- **Nombres de robot enteros** en la barra (el punto de estado pasa a la línea de debajo); si no caben, dos líneas, nunca «…».
+- **El jardín se adapta al alto del móvil**: en pantallas bajas los botones se ven sin bajar.
+- «Ahora» en una frase (sin «zona 1 · 100 % del día» pegado) y «Hoy 0 h» en vez de «0,0 h».
+
+
 ## v0.3.14 · Inicio rediseñado: qué hace, por qué y qué toca
 
 _La pantalla de inicio se ordena de arriba abajo: quién es y cómo está, el jardín con la batería, una frase que explica el estado con la barra del día, y el botón que toca._

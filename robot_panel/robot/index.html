@@ -52,7 +52,8 @@ header.top h1{font-size:18px;margin:0;font-weight:750;flex:1}
 .rbar button:active{transform:scale(.97)}
 .rbar button.on{background:var(--brand);color:var(--brand-ink)}
 .rbar .rtx{display:flex;flex-direction:column;min-width:0;flex:1}
-.rbar b{font-size:13px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rbar b{font-size:13.5px;line-height:1.2}  /* sin puntos suspensivos: si no cabe, a dos líneas */
+.rbar small .dotc{display:inline-block;width:7px;height:7px;margin-right:5px;vertical-align:1px;box-shadow:none}
 .rbar small{font-size:12px;font-weight:600;opacity:.72;line-height:1.25;margin-top:2px;white-space:nowrap}
 .dotc{width:9px;height:9px;border-radius:50%;flex:none;background:var(--c,#8a8f92);box-shadow:0 0 0 2px rgba(255,255,255,.5)}
 .sheet{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
@@ -151,7 +152,7 @@ nav.tabs button.on{color:var(--brand-ink);background:var(--brand);font-weight:70
 @media (min-width:900px){.cols{grid-template-columns:1.1fr 1fr;align-items:start}}
 .stack > * + *{margin-top:14px}
 .hero{border-radius:26px;color:#fff;background:radial-gradient(120% 90% at 50% 10%,var(--hero2),var(--hero));box-shadow:var(--shadow);overflow:hidden;position:relative}
-.scene{position:relative;height:250px}
+.scene{position:relative;height:clamp(180px,30vh,250px)}  /* en móviles bajos deja ver los botones sin bajar */
 @media (min-width:900px){.scene{height:320px}}
 .scene canvas{display:block;width:100%!important;height:100%!important;touch-action:pan-y}
 .scene .fallback{position:absolute;inset:0;display:grid;place-items:center}
@@ -181,9 +182,10 @@ nav.tabs button.on{color:var(--brand-ink);background:var(--brand);font-weight:70
 .quick h3{display:flex;align-items:center;gap:8px}
 .quick h3 svg{width:16px;height:16px;flex:none}
 .chip.wide{flex-basis:100%;justify-content:center}
-.actions{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;padding:14px 18px 14px}  /* el que toca, más ancho */
-.actions button{border:0;border-radius:18px;padding:12px 6px;background:rgba(255,255,255,.1);color:#fff;font-weight:650;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;min-height:76px}
-.actions button svg{width:26px;height:26px}
+.actions{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr);gap:8px;padding:14px 16px 12px}  /* el que toca, más ancho */
+/* icono al lado del texto y una sola línea: botones de 54 px, no de 100 (con el icono encima y «A la base» partido) */
+.actions button{border:0;border-radius:16px;padding:0 8px;background:rgba(255,255,255,.1);color:#fff;font-weight:700;font-size:14.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;height:54px;min-width:0;white-space:nowrap}
+.actions button svg{width:19px;height:19px;flex:none}
 .actions button:hover{background:rgba(255,255,255,.18)}
 .actions button:active{transform:scale(.97)}
 .actions button.main{background:var(--brand);color:var(--brand-ink)}
@@ -854,7 +856,7 @@ function renderRobots(){
   setHTML($('#rbar'), ROBOTS.map(r => {
     const s = summary(r), on = r.id === P;
     const sub = isLocked(r) ? '\u{1F512} Con contraseña' : [s.txt, s.bat != null ? s.bat + ' %' : null].filter(Boolean).join(' · ');
-    return `<button data-r="${esc(r.id)}" class="${on ? 'on' : ''}" aria-pressed="${on}" title="Mantén pulsado para cambiar el nombre"><span class="dotc" style="--c:${s.col}"></span><span class="rtx"><b>${esc(r.name)}</b><small>${esc(sub)}</small></span></button>`;
+    return `<button data-r="${esc(r.id)}" class="${on ? 'on' : ''}" aria-pressed="${on}" title="Mantén pulsado para cambiar el nombre"><span class="rtx"><b>${esc(r.name)}</b><small><span class="dotc" style="--c:${s.col}"></span>${esc(sub)}</small></span></button>`;
   }).join(''));
   if (!$('#sheet').hidden) drawSheet();
 }
@@ -1250,7 +1252,7 @@ function render(){
   const now = nowText(flags, run, nx, unknownSched);
   $('#statelbl').textContent = 'ahora';
   $('#state').textContent = now.v;
-  $('#detail').textContent = [now.d, ...d.detail.filter(Boolean)].filter(Boolean).join(' · ') || ' ';
+  $('#detail').textContent = now.d || ' ';  // una frase; modo, zona y % del día van en Datos
   drawDayBar(unknownSched ? null : tasks);
   setActions(now.main, now.mainLabel);
   weekMin = tasks.reduce((acc, t) => acc + t.duration_in_minutes * DAYS.filter(dd => t['on_' + dd]).length, 0);
@@ -1278,10 +1280,10 @@ function nowText(f, run, nx, unknownSched){
   if (f.error) return {v: 'Avería', d: 'Mira el aviso de abajo', main: 'start', mainLabel: 'Cortar'};
   const a = f.activity;
   if (a === 'mowing' || a === 'going_out') return {v: a === 'going_out' ? 'Saliendo a cortar' : 'Cortando', d: until ? 'Hasta las ' + until : 'Hasta que termine o lo pares', main: 'pause', mainLabel: 'Pausa'};
-  if (a === 'going_home') return {v: 'Volviendo a la base', d: next, main: 'start', mainLabel: 'Seguir cortando'};
+  if (a === 'going_home') return {v: 'Volviendo a la base', d: next, main: 'start', mainLabel: 'Seguir'};  // «Seguir cortando» no cabía en el botón
   if (f.charging) return {v: 'Cargando en la base', d: run ? 'Sale a cortar al terminar de cargar' : next, main: 'start', mainLabel: 'Cortar'};
   if (f.inBase) return {v: 'En la base', d: run ? 'En su franja, hasta las ' + until : next, main: 'start', mainLabel: 'Cortar'};
-  if (run) return {v: 'Parado en su franja', d: `Debería cortar hasta las ${until}. ¿Lo has pausado tú?`, main: 'start', mainLabel: 'Seguir cortando'};
+  if (run) return {v: 'Parado en su franja', d: `Debería cortar hasta las ${until}. ¿Lo has pausado tú?`, main: 'start', mainLabel: 'Seguir'};
   return {v: f.state === 'paused' ? 'En pausa' : 'Parado', d: next, main: 'start', mainLabel: 'Cortar'};
 }
 // barra del día: las franjas de hoy en verde y una raya en la hora de ahora
@@ -1292,7 +1294,7 @@ function drawDayBar(tasks){
 }
 // el botón grande hace lo que toca ahora; los otros dos quedan a su lado
 const ACT = {start: ['Cortar', '<path d="M8 5v14l11-7z"/>', 'currentColor'], pause: ['Pausa', '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>', 'currentColor'],
-  dock: ['A la base', '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>', 'none']};
+  dock: ['Base', '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>', 'none']};  // «Base» con su casita: «A la base» no cabía en una línea
 function setActions(main, label){
   const order = [main, ...['start', 'pause', 'dock'].filter(k => k !== main)];
   const html = order.map((k, i) => `<button${i === 0 ? ' class="main"' : ''} data-act="${k}"><svg viewBox="0 0 24 24" fill="${ACT[k][2]}"${ACT[k][2] === 'none' ? ' stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"' : ''}>${ACT[k][1]}</svg>${i === 0 && label ? label : ACT[k][0]}</button>`).join('');
@@ -1304,7 +1306,7 @@ function renderFacts(){
   const bk = KIND === 'landroid' ? 'tiempo_de_uso_de_las_cuchillas_desde_el_reinicio' : 'uso_de_las_cuchillas';
   const blades = Number(val('sensor', bk));
   const f = [
-    mowed24 != null ? ['Hoy', h1(mowed24 / 36e5) + ' h'] : null,
+    mowed24 != null ? ['Hoy', (mowed24 < 18e4 ? '0' : h1(mowed24 / 36e5)) + ' h'] : null,  // menos de 3 min: «0 h», no «0,0 h»
     weekMin ? ['Semana', Math.round(weekMin / 60) + ' h'] : null,
     !isNaN(blades) && val('sensor', bk) != null ? ['Cuchillas', Math.round(blades) + ' h'] : null,
   ].filter(Boolean);
