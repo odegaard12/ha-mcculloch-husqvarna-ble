@@ -2,6 +2,17 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.18 · iPhone: sin degradado arriba y barra de pestañas abajo del todo
+
+_En el iPhone la parte de arriba ya no tapa «Mis robots» ni «en directo», la barra de pestañas baja hasta la raya de inicio y las órdenes rápidas caben en una fila._
+
+#### App (panel web)
+- **Sin degradado arriba en el iPhone**: franja opaca del color de la app detrás de la hora; la cabecera empieza debajo y no se corta al bajar.
+- **El aviso «Suelta para actualizar» ya no asoma** debajo de la hora (con la muesca se escondía solo a medias).
+- **Barra de pestañas más abajo**: deja solo el hueco de la raya de inicio, no la zona segura entera.
+- **Órdenes rápidas en una fila**: la etiqueta va encima y los botones usan todo el ancho (sin «8 h» o «Siempre» sueltos debajo).
+
+
 ## v0.3.17 · Tarjeta sin textos partidos y avisos bloqueados explicados
 
 _En la tarjeta de Home Assistant el estado del robot ya no se parte por el lápiz de renombrar, y la app explica cómo desbloquear los avisos en vez de enseñar un botón que no funciona._

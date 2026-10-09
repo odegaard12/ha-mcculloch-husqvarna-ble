@@ -37,7 +37,9 @@ input,select,textarea{font-size:max(16px,1em)!important}
 button,.chip,.pad button,nav.tabs button{touch-action:manipulation;user-select:none;-webkit-user-select:none}
 body{background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior-y:contain}
 button,input{font:inherit;color:inherit}
-.app{max-width:1120px;margin:0 auto;padding:max(12px,env(safe-area-inset-top)) 16px calc(96px + env(safe-area-inset-bottom))}
+.app{max-width:1120px;margin:0 auto;padding:calc(12px + env(safe-area-inset-top,0px)) 16px calc(80px + env(safe-area-inset-bottom))}
+/* franja opaca detrás de la hora y la batería: sin degradado del iPhone tapando «Mis robots» al bajar */
+body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:30}
 header.top{display:flex;align-items:center;gap:10px;margin:2px 2px 12px}
 header.top img{width:38px;height:38px;border-radius:11px;object-fit:contain;background:radial-gradient(90% 80% at 50% 35%,#3a3d40,#17191a);padding:2px;transition:opacity .25s}
 header.top h1{font-size:18px;margin:0;font-weight:750;flex:1}
@@ -124,8 +126,8 @@ body.stale .hero .nowb,body.stale .batchip,body.stale #alerts,body.stale .view:n
 .spinhint{position:absolute;right:12px;bottom:50px;z-index:6;font-size:12px;font-weight:650;color:#fff;background:rgba(0,0,0,.45);padding:6px 10px;border-radius:99px;opacity:0;transition:opacity .4s;pointer-events:none}
 .spinhint.show{opacity:1}
 /* tirar hacia abajo para recargar */
-.ptr{position:fixed;left:50%;top:max(8px,env(safe-area-inset-top));z-index:35;transform:translate(-50%,-60px);background:var(--card);color:var(--ink);border:1px solid var(--line);box-shadow:var(--shadow);font-size:13px;font-weight:650;padding:8px 14px;border-radius:99px;transition:transform .2s}
-.ptr.on{transform:translate(-50%,0)}
+.ptr{position:fixed;left:50%;top:max(8px,env(safe-area-inset-top));z-index:35;transform:translate(-50%,-160px);opacity:0;background:var(--card);color:var(--ink);border:1px solid var(--line);box-shadow:var(--shadow);font-size:13px;font-weight:650;padding:8px 14px;border-radius:99px;transition:transform .2s,opacity .2s}  /* escondido del todo: con la muesca del iPhone -60 px asomaba debajo de la hora */
+.ptr.on{transform:translate(-50%,0);opacity:1}
 /* teclado de la contraseña de un robot */
 .lkpins{display:flex;gap:10px;justify-content:center;margin:16px 0 6px;min-height:14px}
 .lkpins i{width:13px;height:13px;border-radius:50%;border:2px solid var(--muted)}
@@ -137,7 +139,7 @@ body.stale .hero .nowb,body.stale .batchip,body.stale #alerts,body.stale .view:n
 .lkmsg{min-height:20px;color:var(--bad);font-size:14px;font-weight:600}
 .lkpins.shake{animation:shake .35s}
 body[data-kind="landroid"] .mc-only,body:not([data-kind="landroid"]) .ld-only{display:none!important}
-nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;justify-content:center;background:var(--nav);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;justify-content:center;background:var(--nav);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:6px 8px max(6px,calc(env(safe-area-inset-bottom) - 18px))}  /* pegada abajo: solo el hueco de la raya de inicio del iPhone */
 nav.tabs .in{display:grid;grid-template-columns:repeat(4,1fr);width:100%;max-width:520px;gap:4px}
 nav.tabs button{border:0;background:none;border-radius:14px;padding:6px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;color:var(--muted);cursor:pointer}
 nav.tabs button svg{width:24px;height:24px}
@@ -169,7 +171,7 @@ nav.tabs button.on{color:var(--brand-ink);background:var(--brand);font-weight:70
 @media (orientation:landscape) and (max-height:520px){
   header.top{margin-bottom:6px}header.top img{width:30px;height:30px}
   .rbar{margin-bottom:8px}.rbar button{min-height:40px;padding:4px 10px}
-  nav.tabs{padding:3px 8px calc(3px + env(safe-area-inset-bottom))}
+  nav.tabs{padding:3px 8px max(3px,calc(env(safe-area-inset-bottom) - 18px))}
   nav.tabs button{flex-direction:row;gap:6px;padding:6px 10px;font-size:13px}nav.tabs button svg{width:20px;height:20px}
   .app{padding-bottom:calc(60px + env(safe-area-inset-bottom))}
   .hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);grid-template-rows:auto auto 1fr}
@@ -316,10 +318,10 @@ details.all td:last-child{text-align:right;font-weight:560;overflow-wrap:anywher
 .pick .rtt h1{font-size:17px;line-height:1.2;overflow-wrap:anywhere}  /* nombre largo: dos líneas, nunca cortado */
 .pick .rtt small{font-size:12.5px;color:var(--muted);font-weight:550}
 /* órdenes rápidas en filas: etiqueta y botones del mismo ancho */
-.qrow{display:flex;align-items:center;gap:8px;margin:8px 0}
-.qrow>b{width:64px;flex:none;font-size:13.5px}
+.qrow{display:flex;flex-direction:column;align-items:stretch;gap:6px;margin:10px 0}  /* etiqueta encima: los botones usan todo el ancho y caben en una fila */
+.qrow>b{font-size:12.5px;color:var(--muted);font-weight:650}
 /* botones del mismo ancho; si no caben en una fila pasan a dos (nunca «Siemp…») */
-.qp{display:grid;grid-template-columns:repeat(auto-fit,minmax(56px,1fr));gap:6px;flex:1;min-width:0}
+.qp{display:grid;grid-template-columns:repeat(auto-fit,minmax(52px,1fr));gap:6px;min-width:0}
 .qp .chip{min-width:0;justify-content:center;padding-left:4px;padding-right:4px;font-size:13px;white-space:nowrap}
 /* escena con la foto oficial: cada estado es una clase en .stage */
 /* jardín: cielo (de noche, más oscuro y con estrellas), setos al fondo y césped con franjas de corte */
