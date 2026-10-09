@@ -4,9 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="app-version" content="__APP_VERSION__">
-<meta name="theme-color" content="#16181a">
+<!-- barra del móvil del mismo color que la página (antes gris casi negro sobre la página clara) -->
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f2f3f1">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0e0f10">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- «default»: hora y batería legibles y la app empieza debajo (con black-translucent salían en blanco sobre la página clara) -->
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Mi robot">
 <link rel="manifest" href="static/manifest.webmanifest">
 <link rel="icon" href="static/icon-192.png?v=6">
@@ -152,8 +155,29 @@ nav.tabs button.on{color:var(--brand-ink);background:var(--brand);font-weight:70
 @media (min-width:900px){.cols{grid-template-columns:1.1fr 1fr;align-items:start}}
 .stack > * + *{margin-top:14px}
 .hero{border-radius:26px;color:#fff;background:radial-gradient(120% 90% at 50% 10%,var(--hero2),var(--hero));box-shadow:var(--shadow);overflow:hidden;position:relative}
-.scene{position:relative;height:clamp(180px,30vh,250px)}  /* en móviles bajos deja ver los botones sin bajar */
-@media (min-width:900px){.scene{height:320px}}
+/* alto según la pantalla: en móviles bajos (SE) o en horizontal deja ver los botones sin bajar */
+.scene{position:relative;--sh:clamp(150px,27vh,250px);height:var(--sh)}
+@media (min-width:900px) and (min-height:600px){.scene{--sh:320px}}
+/* móvil bajo (SE): jardín más bajo y bloque más apretado para que los botones queden por encima de la barra */
+@media (orientation:portrait) and (max-height:620px){
+  .scene{--sh:clamp(140px,25vh,250px)}
+  header.top{margin-bottom:8px}.rbar{margin-bottom:8px}
+  .nowb .daybar,.nowb .dayl{display:none}.scene .bot{width:min(64%,calc(var(--sh) * 1.1))}  /* la frase de «Ahora» ya dice hasta cuándo corta */
+  .nowb{padding:10px 16px 0}.actions{padding:10px 14px 10px}
+}
+/* horizontal en el móvil: jardín a la izquierda, «Ahora» y botones a la derecha; cabecera y barra más finas */
+@media (orientation:landscape) and (max-height:520px){
+  header.top{margin-bottom:6px}header.top img{width:30px;height:30px}
+  .rbar{margin-bottom:8px}.rbar button{min-height:40px;padding:4px 10px}
+  nav.tabs{padding:3px 8px calc(3px + env(safe-area-inset-bottom))}
+  nav.tabs button{flex-direction:row;gap:6px;padding:6px 10px;font-size:13px}nav.tabs button svg{width:20px;height:20px}
+  .app{padding-bottom:calc(60px + env(safe-area-inset-bottom))}
+  .hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);grid-template-rows:auto auto 1fr}
+  .scene{grid-row:1/4;height:auto;min-height:100%;--sh:190px}
+  .nowb,.actions,.facts{grid-column:2}
+  .nowb{padding:10px 14px 0}.nowb b{font-size:17px}.nowb .dayl{display:none}
+  .actions{padding:10px 12px 8px}.hero .actions button{height:46px}
+}
 .scene canvas{display:block;width:100%!important;height:100%!important;touch-action:pan-y}
 .scene .fallback{position:absolute;inset:0;display:grid;place-items:center}
 .scene .fallback svg{width:60%;max-width:260px}
@@ -294,7 +318,9 @@ details.all td:last-child{text-align:right;font-weight:560;overflow-wrap:anywher
 /* órdenes rápidas en filas: etiqueta y botones del mismo ancho */
 .qrow{display:flex;align-items:center;gap:8px;margin:8px 0}
 .qrow>b{width:64px;flex:none;font-size:13.5px}
-.qp{display:flex;gap:5px;flex:1;min-width:0}.qp .chip{flex:1 1 0;min-width:0;justify-content:center;padding-left:2px;padding-right:2px;font-size:13px;white-space:nowrap}
+/* botones del mismo ancho; si no caben en una fila pasan a dos (nunca «Siemp…») */
+.qp{display:grid;grid-template-columns:repeat(auto-fit,minmax(56px,1fr));gap:6px;flex:1;min-width:0}
+.qp .chip{min-width:0;justify-content:center;padding-left:4px;padding-right:4px;font-size:13px;white-space:nowrap}
 /* escena con la foto oficial: cada estado es una clase en .stage */
 /* jardín: cielo (de noche, más oscuro y con estrellas), setos al fondo y césped con franjas de corte */
 .stage{position:absolute;inset:0;overflow:hidden;perspective:900px;transition:background .8s;
@@ -337,7 +363,7 @@ details.all td:last-child{text-align:right;font-weight:560;overflow-wrap:anywher
 @keyframes sway{from{transform:rotate(-4deg)}to{transform:rotate(5deg)}}
 .stage.mowing .blades path{animation-duration:calc(var(--d,3s) / 2.5)}
 .dock{position:absolute;width:96%;left:2%;bottom:3%;opacity:0;transform:translateY(10px);transition:.5s}
-.bot{position:absolute;left:50%;bottom:12%;width:min(64%,330px);transform:translateX(-50%);transition:left .9s ease,bottom .6s ease,filter .4s,opacity .4s}
+.bot{position:absolute;left:50%;bottom:12%;width:min(64%,330px,calc(var(--sh,250px) * 1.3));  /* también por el alto: en horizontal no se corta por arriba */transform:translateX(-50%);transition:left .9s ease,bottom .6s ease,filter .4s,opacity .4s}
 .tilt{position:relative;transform-style:preserve-3d;transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .25s ease-out;will-change:transform}
 .bot img{display:block;width:100%;height:auto;position:relative;z-index:1;filter:drop-shadow(0 14px 16px rgba(0,0,0,.45));user-select:none;-webkit-user-drag:none}
 .shine{position:absolute;inset:0;z-index:2;pointer-events:none;-webkit-mask:url(static/robot.webp?v=6) center/100% 100% no-repeat;mask:url(static/robot.webp?v=6) center/100% 100% no-repeat;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.28) 50%,transparent 65%);background-size:250% 100%;background-position:var(--sx,60%) 0;mix-blend-mode:screen}
@@ -843,8 +869,10 @@ function summary(r){
 function renderRobots(){
   const many = ROBOTS.length > 1, me = curRobot(), ms = summary(me);
   // arriba, el robot que se ve y cómo está en una frase (tocar abre «Mis robots»: nombre, contraseña…)
-  $('#rname').textContent = me.name;
-  $('#rsub').textContent = isLocked(me) ? 'Con contraseña' : [ms.txt, ms.bat != null ? ms.bat + ' %' : null].filter(Boolean).join(' · ');
+  // con dos robots, nombre y estado van SOLO en la barra de robots (antes salían dos veces seguidas)
+  $('#rname').textContent = many ? 'Mis robots' : me.name;
+  $('#rsub').textContent = many ? '' : isLocked(me) ? 'Con contraseña' : [ms.txt, ms.bat != null ? ms.bat + ' %' : null].filter(Boolean).join(' · ');
+  $('#rsub').hidden = many;
   // el icono de arriba es el robot que se ve (su propio modelo), nunca el del otro
   const icon = `static/${KIND === 'landroid' ? 'rob3d_landroid' : 'rob3d'}/icono.webp?v=1`;  // recorte justo del robot
   if ($('#ricon').getAttribute('src') !== icon) $('#ricon').src = icon;

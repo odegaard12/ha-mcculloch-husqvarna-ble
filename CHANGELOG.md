@@ -2,6 +2,18 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.16 · Barra superior del color de la app y todo ajustado a la pantalla
+
+_La barra de estado del móvil ya no sale oscura sobre la app clara, y el inicio cabe entero en móviles pequeños y en horizontal._
+
+#### App (panel web)
+- **Barra superior del color de la app**: theme-color claro u oscuro según el modo del móvil y barra de estado normal en iPhone (antes salía una franja oscura degradada encima).
+- **Cabecera sin repetir**: con varios robots dice «Mis robots» y la barra de debajo elige cuál.
+- **Móviles pequeños (SE)**: jardín más bajo y sin la regla de horas, así Cortar / Pausa / Base se ven sin bajar.
+- **En horizontal**: jardín a la izquierda y «Ahora» con los botones a la derecha, todo en una pantalla.
+- Órdenes rápidas en rejilla: ningún botón cortado («Siempre» ya no sale «Siemp…»).
+
+
 ## v0.3.15 · Inicio ajustado al móvil: botones normales y nada cortado
 
 _El inicio rediseñado se ajusta a pantallas de móvil: botones de una línea y altura normal, nombres enteros, y todo a la vista sin bajar._
