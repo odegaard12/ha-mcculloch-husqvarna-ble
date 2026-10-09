@@ -2,6 +2,65 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.18 · iPhone: sin degradado arriba y barra de pestañas abajo del todo
+
+_En el iPhone la parte de arriba ya no tapa «Mis robots» ni «en directo», la barra de pestañas baja hasta la raya de inicio y las órdenes rápidas caben en una fila._
+
+#### App (panel web)
+- **Sin degradado arriba en el iPhone**: franja opaca del color de la app detrás de la hora; la cabecera empieza debajo y no se corta al bajar.
+- **El aviso «Suelta para actualizar» ya no asoma** debajo de la hora (con la muesca se escondía solo a medias).
+- **Barra de pestañas más abajo**: deja solo el hueco de la raya de inicio, no la zona segura entera.
+- **Órdenes rápidas en una fila**: la etiqueta va encima y los botones usan todo el ancho (sin «8 h» o «Siempre» sueltos debajo).
+
+
+## v0.3.17 · Tarjeta sin textos partidos y avisos bloqueados explicados
+
+_En la tarjeta de Home Assistant el estado del robot ya no se parte por el lápiz de renombrar, y la app explica cómo desbloquear los avisos en vez de enseñar un botón que no funciona._
+
+#### Tarjeta de Home Assistant
+- **El lápiz de renombrar pasa a la esquina** del robot elegido: «En la base · 100%» cabe en una línea.
+#### App (panel web)
+- **Avisos bloqueados en el móvil**: ya no sale «Activar avisos» (no podría hacer nada); dice dónde desbloquearlos.
+- Simulador de pruebas: el Landroid devuelve su propio historial (estados de cortacésped), no el del McCulloch.
+
+
+## v0.3.16 · Barra superior del color de la app y todo ajustado a la pantalla
+
+_La barra de estado del móvil ya no sale oscura sobre la app clara, y el inicio cabe entero en móviles pequeños y en horizontal._
+
+#### App (panel web)
+- **Barra superior del color de la app**: theme-color claro u oscuro según el modo del móvil y barra de estado normal en iPhone (antes salía una franja oscura degradada encima).
+- **Cabecera sin repetir**: con varios robots dice «Mis robots» y la barra de debajo elige cuál.
+- **Móviles pequeños (SE)**: jardín más bajo y sin la regla de horas, así Cortar / Pausa / Base se ven sin bajar.
+- **En horizontal**: jardín a la izquierda y «Ahora» con los botones a la derecha, todo en una pantalla.
+- Órdenes rápidas en rejilla: ningún botón cortado («Siempre» ya no sale «Siemp…»).
+
+
+## v0.3.15 · Inicio ajustado al móvil: botones normales y nada cortado
+
+_El inicio rediseñado se ajusta a pantallas de móvil: botones de una línea y altura normal, nombres enteros, y todo a la vista sin bajar._
+
+#### App (panel web)
+- **Botones Cortar / Pausa / Base de altura normal** (54 px): icono al lado del texto y una sola línea; antes medían 100 px en móviles de 360 px y «A la base» se partía.
+- **Nombres de robot enteros** en la barra (el punto de estado pasa a la línea de debajo); si no caben, dos líneas, nunca «…».
+- **El jardín se adapta al alto del móvil**: en pantallas bajas los botones se ven sin bajar.
+- «Ahora» en una frase (sin «zona 1 · 100 % del día» pegado) y «Hoy 0 h» en vez de «0,0 h».
+
+
+## v0.3.14 · Inicio rediseñado: qué hace, por qué y qué toca
+
+_La pantalla de inicio se ordena de arriba abajo: quién es y cómo está, el jardín con la batería, una frase que explica el estado con la barra del día, y el botón que toca._
+
+#### App (panel web)
+- **Cabecera con el robot que ves** y su estado en una frase («Parado · 51 %»); fuera el «Mis robots» y el «2 ▾» que repetían la barra.
+- **Batería arriba a la derecha** del jardín, con su nivel y el rayo si carga.
+- **«Ahora»**: un solo estado y con motivo (p. ej. «Parado en su franja. Debería cortar hasta las 22:10. ¿Lo has pausado tú?»), y la **barra del día** con las franjas de hoy y una raya en la hora de ahora.
+- **El botón grande hace lo que toca**: «Seguir cortando» si está parado en su franja, «Pausa» si corta, «Cortar» en la base.
+- Cifras en una línea (hoy, semana, cuchillas); órdenes rápidas en dos filas (cortar y aparcar).
+- Barra de robots en una línea por robot; mantener pulsado le cambia el nombre. La barra y la cabecera dicen lo mismo que el «Ahora» («Parado», no «Sin actividad»).
+- El jardín queda limpio (lo dice el «Ahora») y la conexión técnica pasa a la ficha del robot en Ajustes.
+
+
 ## v0.3.13 · Horario del Landroid desde la app, franja a franja
 
 _El horario del Landroid ya se cambia desde la app: una franja cada vez, y la app enseña que se está aplicando hasta que la nube de Worx lo confirma._
