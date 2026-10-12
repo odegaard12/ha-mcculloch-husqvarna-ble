@@ -28,6 +28,26 @@ async def test_out_of_range_keeps_entities(hass: HomeAssistant, fake) -> None:
         assert hass.states.get("sensor.robot_cortacesped_programacion_tareas").state not in ("unknown", "unavailable")
 
 
+async def test_setup_does_not_wait_for_unreachable_robot(hass: HomeAssistant, fake) -> None:
+    """Conocido de antes: el arranque no espera a la primera lectura (con el robot lejos tardaba 100 s y frenaba HA)."""
+    import asyncio
+
+    entry = await _setup(hass)
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    never = asyncio.Event()
+
+    async def hangs(self):
+        await never.wait()
+
+    with patch("custom_components.mcculloch_rob.coordinator.RobCoordinator._async_update_data", hangs):
+        assert await asyncio.wait_for(hass.config_entries.async_setup(entry.entry_id), 5)
+        assert entry.state is ConfigEntryState.LOADED
+        assert hass.states.get("sensor.robot_cortacesped_bateria").state == "87"  # lo último guardado
+        assert hass.states.get("lawn_mower.robot_cortacesped").state == "unavailable"  # sin órdenes a ciegas
+        never.set()
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+
 async def test_last_seen_survives_out_of_range(hass: HomeAssistant, fake) -> None:
     """«Última conexión»: se rellena al hablar con el robot y sigue disponible aunque deje de responder."""
     entry = await _setup(hass)

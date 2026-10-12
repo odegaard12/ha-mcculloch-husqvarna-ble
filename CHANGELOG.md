@@ -2,6 +2,16 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.20 · Home Assistant arranca sin esperar al robot
+
+_Con el robot fuera de alcance, cada arranque de Home Assistant esperaba ~100 s a que conectara; ahora la primera lectura va en segundo plano._
+
+#### Integración
+- **El arranque de HA ya no espera al robot.** Si ya se conoce (sondeo guardado), las entidades se crean al momento con los últimos datos y la primera lectura va en segundo plano. Antes, con el robot lejos, HA avisaba «Waiting for integrations to complete setup» mientras hacía 5 intentos de 20 s.
+- Las órdenes siguen sin poder usarse hasta que conecte, y un PIN que deja de valer sigue abriendo la reautenticación.
+- Prueba nueva: el arranque termina aunque la lectura no acabe nunca.
+
+
 ## v0.3.19 · Los avisos de avería, vuelco, levantado y parado ya llegan al móvil
 
 _Los avisos con plazo fijo no saltaban nunca: el temporizador exigía que no quedara espera, y en esos avisos la espera es siempre la misma._
