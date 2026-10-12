@@ -68,6 +68,13 @@ def _push_host(url: str) -> bool:
     return any(host == h or host.endswith("." + h) for h in PUSH_HOSTS)
 
 
+def _due(cid: str, active: bool, wait: float) -> bool:
+    """¿Se avisa al acabar el temporizador? Los «sin conexión» recalculan lo que falta (debe haber llegado a 0); el resto
+    tienen un plazo fijo que ya se ha esperado: basta con que sigan activos. (Antes se exigía wait <= 1 a todos y las
+    averías, vuelcos, levantados y paradas no avisaban nunca.)"""
+    return active and (wait <= 1 or "sin_conexion" not in cid)
+
+
 def _valid_sub(s) -> bool:
     return (isinstance(s, dict) and isinstance(s.get("endpoint"), str) and s["endpoint"].startswith("https://")
             and _push_host(s["endpoint"])
@@ -327,7 +334,7 @@ def setup_push(app: web.Application, here: Path, ha: str, token: str, robots: li
             await asyncio.sleep(max(0.0, delay))
             timers.pop(cid, None)
             active, wait, text = rules()[cid]
-            if active and wait <= 1:  # sigue igual al cumplirse el plazo
+            if _due(cid, active, wait):  # sigue igual al cumplirse el plazo
                 await notify(cid, text)
 
         timers[cid] = asyncio.create_task(fire())

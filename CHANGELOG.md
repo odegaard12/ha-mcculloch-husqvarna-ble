@@ -2,6 +2,15 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.19 · Los avisos de avería, vuelco, levantado y parado ya llegan al móvil
+
+_Los avisos con plazo fijo no saltaban nunca: el temporizador exigía que no quedara espera, y en esos avisos la espera es siempre la misma._
+
+#### Avisos en el móvil
+- **Arreglado: avería, vuelco, levantado y parado no avisaban nunca.** Al acabar el plazo (2 min, 30 s, 2 min, 10 min) se comprobaba «no falta nada», que solo se cumple en los avisos de «sin conexión». Ahora basta con que el problema siga.
+- Prueba nueva que cubre la decisión de avisar.
+
+
 ## v0.3.18 · iPhone: sin degradado arriba y barra de pestañas abajo del todo
 
 _En el iPhone la parte de arriba ya no tapa «Mis robots» ni «en directo», la barra de pestañas baja hasta la raya de inicio y las órdenes rápidas caben en una fila._
