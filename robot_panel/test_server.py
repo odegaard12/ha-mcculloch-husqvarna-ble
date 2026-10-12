@@ -16,6 +16,12 @@ server.HERE = Path(tempfile.mkdtemp())  # .app_secret de usar y tirar
 
 
 async def main():
+    # avisos al cumplirse el plazo: los de plazo fijo (avería, vuelco...) basta con que sigan activos;
+    # los «sin conexión» solo cuando ya no falta nada
+    from push import _due
+    assert _due("landroid:averia", True, 120) and _due("robot_cortacesped:volcado", True, 30)
+    assert not _due("landroid:averia", False, 120)
+    assert _due("landroid:sin_conexion_1", True, 0.5) and not _due("landroid:sin_conexion_1", True, 3600)
     async with TestClient(TestServer(server.make_app())) as c:
         r = await c.post("/api/servicio", json={})
         assert r.status == 401, "sin sesión no se entra"

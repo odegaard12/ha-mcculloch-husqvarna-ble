@@ -246,12 +246,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: RobConfigEntry) -> bool:
     coordinator = RobCoordinator(hass, entry, mower, address, channel_id)
     await coordinator.async_load()
     if coordinator.supported:
-        # Ya lo conocemos (sondeo guardado): las entidades se crean aunque el robot esté lejos,
-        # como «no disponibles», y el coordinador sigue reintentando. Así no desaparece de HA.
-        await coordinator.async_refresh()
-        if isinstance(coordinator.last_exception, ConfigEntryAuthFailed):
-            await coordinator.async_shutdown()
-            raise coordinator.last_exception
+        # Ya lo conocemos (sondeo guardado): las entidades se crean ya con los últimos datos y la primera lectura va en
+        # segundo plano. Esperarla con el robot lejos retrasaba el arranque de TODO Home Assistant (5 intentos de 20 s).
+        # Las órdenes siguen sin poder usarse hasta que conecte (LiveEntity), y si el PIN deja de valer, el coordinador
+        # abre él solo la reautenticación.
+        entry.async_create_background_task(hass, coordinator.async_refresh(), f"{DOMAIN}_primera_lectura")
     else:
         # Primera vez: sin sondeo no sabemos qué entidades crear; si no está al alcance, se reintenta.
         try:
