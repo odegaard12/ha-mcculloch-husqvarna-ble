@@ -823,9 +823,22 @@ async function pollOnce(){
     states = {}; for (const x of j) states[x.entity_id] = x;
     render(); renderRobots();
     document.body.classList.remove('stale');
+    try { localStorage.setItem('ultimaLectura', JSON.stringify({t: Date.now(), j})); } catch(e) {}  // para abrir sin red
     return true;  // al tirar para actualizar: «Actualizado ✓» solo si de verdad llegaron datos
-  } catch(e) { if (!locked) setLive(false); return false; }
+  } catch(e) {
+    if (locked) return false;
+    // sin red al abrir: lo último que se supo (con su hora), no una pantalla vacía
+    if (!Object.keys(states).length) try {
+      const s = JSON.parse(localStorage.getItem('ultimaLectura') || 'null');
+      if (s && Array.isArray(s.j) && s.j.length) { for (const x of s.j) states[x.entity_id] = x; render(); renderRobots(); $('.actions').classList.add('na'); }  // datos viejos: sin órdenes
+      if (s) { setLive(false, 'sin conexión · datos ' + ago(s.t)); return false; }
+    } catch(e2) {}
+    setLive(false); return false;
+  }
 }
+// al volver la red o al volver a la app no se espera a los 5 s del reloj
+addEventListener('online', () => poll());
+document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
 // extra: {value} para un número o {option} para una lista (ajustes del Landroid)
 async function svc(domain, service, entity_id, label, extra = {}){
   const ctl = '.actions button,.chip,.sw input,.setrow input,.setrow select';
@@ -1592,7 +1605,7 @@ $('#install').onclick = async () => { if (!deferred) return; deferred.prompt(); 
 if (!isSecureContext) $('#installtxt').innerHTML = 'Para instalarla como app de verdad hay que abrirla por <b>https</b> (por ejemplo, con tu dominio o un túnel de Cloudflare). Desde aquí: menú del navegador → «Añadir a pantalla de inicio».';
 else if (/iphone|ipad/i.test(navigator.userAgent)) $('#installtxt').textContent = 'En iPhone: botón Compartir → «Añadir a pantalla de inicio».';
 if ('serviceWorker' in navigator && isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
-$('#logout').onclick = async () => { await fetch('api/logout', {method:'POST'}); showLock(); };
+$('#logout').onclick = async () => { await fetch('api/logout', {method:'POST'}); try { localStorage.removeItem('ultimaLectura'); } catch(e) {} showLock(); };
 
 (async () => {
   try { const v = localStorage.getItem('vista'); if (v && $('#v-' + v)) show(v); } catch(e) {}

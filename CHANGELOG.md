@@ -2,6 +2,29 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.22 · La app abre sin red y recupera la conexión sola
+
+_Con el móvil sin cobertura la app se quedaba en blanco y tardaba hasta 5 s en reaccionar al volver la red._
+
+#### App
+- **Abre sin red con lo último que se supo.** Guarda la última lectura en el móvil: sin conexión muestra los datos con su hora («sin conexión · datos hace 12 min»), con las órdenes apagadas. Se borra al cerrar sesión.
+- **Vuelve a conectar al instante:** al recuperar la red o volver a la app se lee de inmediato, sin esperar al reloj de 5 s.
+- **Las animaciones de los dos robots se guardan al instalar** (48 vistas, ~1,2 MB), así que también se ven sin red aunque ese robot no se hubiera mirado antes.
+
+
+## v0.3.21 · Ajustes y avisos más a prueba de cortes
+
+_Revisión del repo y de las dos Raspberry: tres fallos pequeños que solo se veían cuando algo se cortaba._
+
+#### Integración
+- **Los interruptores (ECO, heladas, garaje…) ya dan un mensaje claro si Bluetooth se corta** al cambiarlos. Antes, a diferencia de los botones y del cortacésped, salía un error interno con traza.
+- **El alta ya no falla con «error desconocido»** si el robot contesta algo raro al pedirle el modelo: ahora dice que no pudo conectar y se puede reintentar.
+
+#### Avisos en el móvil
+- **Las dos Raspberry se ponen al día con las suscripciones al arrancar.** Si una estaba apagada cuando alguien activó los avisos, tras una conmutación la otra no tenía a nadie a quien avisar. Ahora, al arrancar (y si falla la copia) la que tenga la lista más nueva gana, sin tocar la versión.
+- Pruebas nuevas: corte de Bluetooth en un interruptor, alta con modelo ilegible y respuesta firmada de la copia entre Pis.
+
+
 ## v0.3.20 · Home Assistant arranca sin esperar al robot
 
 _Con el robot fuera de alcance, cada arranque de Home Assistant esperaba ~100 s a que conectara; ahora la primera lectura va en segundo plano._

@@ -1,9 +1,14 @@
 // Service worker de «Mi robot»: guarda la carcasa de la app para que abra al instante y
 // sin red; los datos (api/) van siempre a la red y nunca se sirven de caché.
 // Rutas relativas al ámbito del worker: funciona en la raíz (Pi) y bajo el ingress de HA.
-const CACHE = 'mi-robot-v22';
+const CACHE = 'mi-robot-v23';
+// las vistas del robot (animaciones) también: sin red, un robot que no se ha mirado antes no se quedaba sin dibujo
+const vistas = (dir, vFrames, vBase) => [
+  ...Array.from({length: 24}, (_, k) => `static/${dir}/turn_${String(k).padStart(2, '0')}.webp?v=${vFrames}`),
+  `static/${dir}/base_side.webp?v=${vBase}`, `static/${dir}/icono.webp?v=1`, `static/${dir}/meta.json?v=${vBase}`];
 const SHELL = ['./', 'static/manifest.webmanifest', 'static/icon-192.png?v=6', 'static/icon-512.png?v=6',
-               'static/robot.svg', 'static/robot.webp?v=6'];
+               'static/robot.svg', 'static/robot.webp?v=6', 'static/errores_es.json?v=1',
+               ...vistas('rob3d', 1, 2), ...vistas('rob3d_landroid', 2, 1)];
 const SCOPE = new URL(self.registration.scope).pathname;
 
 self.addEventListener('install', e => {

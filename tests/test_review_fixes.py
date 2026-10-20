@@ -102,3 +102,35 @@ async def test_diagnostics_hide_identity(hass: HomeAssistant, fake) -> None:
     assert ADDRESS not in text and "123456" not in text and "'client_id': 99" not in text
     assert diag["data"]["GetBatteryLevel"] == 87  # lo útil sigue ahí
     assert DOMAIN  # import usado
+
+
+async def test_switch_bluetooth_cut_is_clear_error(hass: HomeAssistant, fake) -> None:
+    """Un corte de Bluetooth al cambiar un ajuste sale como mensaje claro de HA, no como traza de bleak."""
+    import pytest
+    from bleak import BleakError
+
+    from homeassistant.exceptions import HomeAssistantError
+
+    from .test_integration import FakeMower
+
+    await _setup(hass)
+
+    async def cut(self, name, warn_on_error=True, **kwargs):
+        raise BleakError("corte")
+
+    with patch.object(FakeMower, "command_response", cut), pytest.raises(HomeAssistantError, match="Bluetooth"):
+        await hass.services.async_call("switch", "turn_on", {"entity_id": "switch.robot_cortacesped_modo_eco"}, blocking=True)
+
+
+async def test_pairing_survives_odd_model_reply(hass: HomeAssistant, fake) -> None:
+    """Un robot que contesta algo raro al pedir el modelo no rompe el alta con «error desconocido»."""
+    from .test_integration import FakeMower
+
+    async def odd(self):
+        raise ValueError("respuesta rara")
+
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"address": ADDRESS})
+    with patch.object(FakeMower, "get_model", odd):
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], {"pin": "1234"})
+    assert result["type"] is FlowResultType.FORM and result["errors"] == {"base": "cannot_connect"}
