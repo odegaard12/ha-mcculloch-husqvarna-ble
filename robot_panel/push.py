@@ -124,6 +124,40 @@ def setup_push(app: web.Application, here: Path, ha: str, token: str, robots: li
                     LOG.warning("La otra Pi no aceptó las suscripciones: %s", r.status)
         except (ClientError, TimeoutError) as e:
             LOG.warning("No llego a la otra Pi para copiar suscripciones: %s", e)
+            catch_up_soon()  # cuando vuelva, se le manda la lista (catch_up no cambia la versión)
+
+    def adopt(new: list, v: float) -> None:
+        subs[:] = [s for s in new if _valid_sub(s)][-20:]
+        subs_v[0] = v
+        _save(subs_file, subs)
+        _save(v_file, v)
+
+    catching_up: list[asyncio.Task] = []
+
+    async def catch_up(tries: int = 8) -> None:
+        """Se pone al día con la otra Pi sin cambiar la versión: la que tenga la lista más nueva gana. Cubre la Pi que
+        estaba apagada cuando alguien activó los avisos (si no, tras una conmutación no avisaba a nadie)."""
+        for n in range(tries):
+            body = json.dumps({"v": subs_v[0], "subs": subs}).encode()
+            try:
+                async with ClientSession(timeout=ClientTimeout(total=5)) as s, \
+                        s.post(f"{peer}/api/push/peer", data=body,
+                               headers={"X-Peer-Sig": sign(body), "Content-Type": "application/json"}) as r:
+                    reply = await r.read()
+                    if r.status == 409 and hmac.compare_digest(r.headers.get("X-Peer-Sig", "").encode(errors="replace"),
+                                                               sign(reply).encode()):
+                        theirs = json.loads(reply)
+                        if float(theirs["v"]) > subs_v[0]:
+                            adopt(theirs["subs"], float(theirs["v"]))
+                    if r.status in (200, 409):
+                        return
+            except (ClientError, TimeoutError, ValueError, KeyError, TypeError) as e:
+                LOG.warning("No llego a la otra Pi para ponerme al día con las suscripciones (%s/%s): %s", n + 1, tries, e)
+            await asyncio.sleep(min(300, 15 * 2 ** n))
+
+    def catch_up_soon() -> None:
+        if peer and not any(not t.done() for t in catching_up):
+            catching_up[:] = [asyncio.get_running_loop().create_task(catch_up())]
 
     def _send(sub: dict, data: dict) -> str:
         """«ok» entregado; «fallo» no llegó pero el móvil sigue suscrito; «muerta» ya no existe (se borra)."""
@@ -222,11 +256,10 @@ def setup_push(app: web.Application, here: Path, ha: str, token: str, robots: li
         except (ValueError, TypeError, KeyError):
             return web.json_response({"error": "formato"}, status=400)
         if v <= subs_v[0]:
-            return web.json_response({"ok": False, "motivo": "copia vieja"}, status=409)
-        subs[:] = [s for s in new if _valid_sub(s)][-20:]
-        subs_v[0] = v
-        _save(subs_file, subs)
-        _save(v_file, v)
+            # la mía es igual o más nueva: se la devuelvo firmada para que la otra Pi se ponga al día
+            mine = json.dumps({"ok": False, "motivo": "copia vieja", "v": subs_v[0], "subs": subs}).encode()
+            return web.Response(body=mine, status=409, content_type="application/json", headers={"X-Peer-Sig": sign(mine)})
+        adopt(new, v)
         return web.json_response({"ok": True})
 
     app.router.add_get("/api/push/key", get_key)
@@ -394,6 +427,7 @@ def setup_push(app: web.Application, here: Path, ha: str, token: str, robots: li
             backoff = min(backoff * 2, 600)
 
     async def start(app):
+        catch_up_soon()  # al arrancar, ponerse al día con la otra Pi
         app["push_watch"] = asyncio.create_task(watch(app)) if (key and token) else asyncio.create_task(asyncio.sleep(0))
 
     async def stop(app):

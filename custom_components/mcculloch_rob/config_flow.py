@@ -137,7 +137,7 @@ class RobConfigFlow(ConfigFlow, domain=DOMAIN):
             manufacturer = await mower.get_manufacturer() or "McCulloch"
             model = await mower.get_model() or "ROB"
             return "ok", f"{manufacturer} {model}"
-        except (BleakError, TimeoutError) as err:
+        except (BleakError, TimeoutError, ValueError) as err:  # ValueError: respuesta del robot no interpretable
             LOGGER.warning("Emparejado fallido: %s", err)
             return "cannot_connect", ""
         finally:

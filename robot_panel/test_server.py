@@ -180,7 +180,11 @@ async def main():
         r1 = await c6.post("/api/push/peer", data=newer, headers={"X-Peer-Sig": psig(newer)})
         if r1.status != 404:  # sin pywebpush no hay avisos
             assert r1.status == 200
-            assert (await c6.post("/api/push/peer", data=newer, headers={"X-Peer-Sig": psig(newer)})).status == 409
+            stale = await c6.post("/api/push/peer", data=newer, headers={"X-Peer-Sig": psig(newer)})
+            assert stale.status == 409
+            # y la contesta con su lista firmada, para que la otra Pi (recién arrancada) se ponga al día
+            raw = await stale.read()
+            assert stale.headers["X-Peer-Sig"] == psig(raw) and _json.loads(raw)["v"] == 9e12 and _json.loads(raw)["subs"] == []
             assert (await c6.post("/api/push/peer", data=b"[]", headers={"X-Peer-Sig": psig(b"[]")})).status == 400
     del os.environ["ROBOTS"]
     print("servidor: todo OK")
