@@ -2,6 +2,16 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.22 · La app abre sin red y recupera la conexión sola
+
+_Con el móvil sin cobertura la app se quedaba en blanco y tardaba hasta 5 s en reaccionar al volver la red._
+
+#### App
+- **Abre sin red con lo último que se supo.** Guarda la última lectura en el móvil: sin conexión muestra los datos con su hora («sin conexión · datos hace 12 min»), con las órdenes apagadas. Se borra al cerrar sesión.
+- **Vuelve a conectar al instante:** al recuperar la red o volver a la app se lee de inmediato, sin esperar al reloj de 5 s.
+- **Las animaciones de los dos robots se guardan al instalar** (48 vistas, ~1,2 MB), así que también se ven sin red aunque ese robot no se hubiera mirado antes.
+
+
 ## v0.3.21 · Ajustes y avisos más a prueba de cortes
 
 _Revisión del repo y de las dos Raspberry: tres fallos pequeños que solo se veían cuando algo se cortaba._
