@@ -1,4 +1,4 @@
-# Avisa (con una PR) cuando hay versiones nuevas de las acciones de la CI
+# Avisa (con una PR) cuando hay versiones nuevas de las acciones de la CI y de los paquetes del panel
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -7,3 +7,9 @@ updates:
       interval: monthly
     commit-message:
       prefix: "CI"
+  - package-ecosystem: pip
+    directory: /robot_panel
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "Panel"

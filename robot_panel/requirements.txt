@@ -1,0 +1,5 @@
+# Panel «Mi robot». Mínimos con los arreglos de seguridad: aiohttp 3.14.4 (8 avisos del 19-20/10/2026,
+# 3 altos) y certifi 2026.10.19 (raíces emSign comprometidas, crítico). El CI los revisa con pip-audit.
+aiohttp>=3.14.4
+certifi>=2026.10.19
+pywebpush>=2.5.0

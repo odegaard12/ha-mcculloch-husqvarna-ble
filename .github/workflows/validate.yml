@@ -52,3 +52,5 @@ jobs:
         run: python -m pytest -q tests
       - name: Pruebas del servidor de la app (PIN, lista blanca, contraseñas por robot, copia entre servidores)
         run: python robot_panel/test_server.py
+      - name: Vulnerabilidades conocidas en los paquetes del panel
+        run: pip install -q pip-audit && pip-audit -r robot_panel/requirements.txt

@@ -2,6 +2,20 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.23 · Seguridad del panel: aiohttp y certifi al día
+
+_El 19 y 20/10/2026 se publicaron 9 vulnerabilidades en dos paquetes del panel (una crítica y tres altas)._
+
+#### Panel (Raspberry, Docker y complemento de HA)
+- **certifi 2026.10.19 (crítica):** la versión anterior incluía certificados raíz emSign con claves intermedias comprometidas.
+- **aiohttp 3.14.4 (8 avisos, 3 altos):** servidor sin tiempo límite para las cabeceras, agotamiento de memoria y de descriptores, contrabando de peticiones y cookies.
+- `robot_panel/requirements.txt` con esas versiones mínimas. La imagen Docker ya no usa el aiohttp de Alpine, que se quedaba atrás.
+- **Docker suelto: las claves ya no se pierden.** `docker-compose.yml` guarda `/data`: antes, cada `up --build` regeneraba la clave de sesión y la de avisos, y se perdían los móviles suscritos y las contraseñas de los robots. El contenedor corre además sin privilegios extra (`no-new-privileges`, sin capacidades).
+
+#### Repositorio
+- La CI revisa con pip-audit los paquetes del panel en cada cambio y cada lunes, Dependabot propone las versiones nuevas cada semana y las alertas de seguridad de GitHub están activadas.
+
+
 ## v0.3.22 · La app abre sin red y recupera la conexión sola
 
 _Con el móvil sin cobertura la app se quedaba en blanco y tardaba hasta 5 s en reaccionar al volver la red._

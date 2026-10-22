@@ -9,3 +9,11 @@ services:
     ports:
       - "8106:8106"
     env_file: robot_app.env
+    # claves de sesión y de avisos, suscripciones y contraseñas de cada robot: sin esta carpeta se perdían
+    # en cada «up --build» (y con ellas todos los móviles suscritos y las contraseñas)
+    volumes:
+      - ./data:/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
