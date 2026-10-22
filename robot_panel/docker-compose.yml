@@ -7,7 +7,8 @@ services:
     build: .
     restart: unless-stopped
     ports:
-      - "8106:8106"
+      # solo en este equipo (detrás de un túnel o proxy). Para abrirlo en la red de casa quita 127.0.0.1 y pon PIN
+      - "127.0.0.1:8106:8106"
     env_file: robot_app.env
     # claves de sesión y de avisos, suscripciones y contraseñas de cada robot: sin esta carpeta se perdían
     # en cada «up --build» (y con ellas todos los móviles suscritos y las contraseñas)

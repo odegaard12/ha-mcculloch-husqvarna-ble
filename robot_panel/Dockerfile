@@ -1,7 +1,7 @@
 # Vale para las dos formas de usarlo:
 #  - complemento de HA: el builder pasa BUILD_FROM (imagen base de HA)
 #  - Docker suelto (Raspberry, NAS...): docker build -t robot-panel robot_panel
-ARG BUILD_FROM=alpine:3.20
+ARG BUILD_FROM=alpine:3.22
 FROM ${BUILD_FROM}
 # aiohttp y certifi de PyPI (las de Alpine se quedan atrás en arreglos de seguridad); cryptography va del sistema
 # para no compilarla

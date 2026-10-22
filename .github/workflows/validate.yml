@@ -6,6 +6,10 @@ on:
   schedule:
     - cron: "0 4 * * 1"  # cada lunes: avisa si una versión nueva de HA rompe algo
 
+# el token de la CI solo lee: una acción de terceros comprometida no puede escribir en el repo
+permissions:
+  contents: read
+
 # una sola ejecución por rama: un push nuevo cancela la anterior
 concurrency:
   group: validar-${{ github.ref }}
@@ -16,14 +20,13 @@ jobs:
     name: Validación de Home Assistant (hassfest)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
-      - uses: home-assistant/actions/hassfest@master
-
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+      - uses: home-assistant/actions/hassfest@cd6f3635a740c84d8a14f6121a90068b8ece6bf6  # master
   hacs:
     name: Validación de HACS
     runs-on: ubuntu-24.04
     steps:
-      - uses: hacs/action@main
+      - uses: hacs/action@1ebf01c408f29afcb6406bd431bc98fd8cbb15aa  # main
         with:
           category: integration
 
@@ -31,8 +34,8 @@ jobs:
     name: Pruebas (integración y servidor de la app)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7
         with:
           python-version: "3.14"
           cache: pip

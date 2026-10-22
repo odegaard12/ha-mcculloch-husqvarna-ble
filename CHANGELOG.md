@@ -2,6 +2,19 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.24 · Auditoría de seguridad: sesiones, CI y Docker
+
+_Revisión a raíz de php2shell (CVE-2026-109618/109619): el proyecto no usa PHP, pero salieron cuatro puntos a reforzar._
+
+#### Panel
+- **Cerrar sesión ahora cierra también los robots desbloqueados en ese móvil.** Antes la contraseña de un robot (p. ej. el Landroid) seguía abierta 180 días aunque se saliera y volviera a entrar. Prueba nueva.
+- **Docker suelto:** el puerto solo escucha en el propio equipo (`127.0.0.1:8106`), pensado para ir detrás de un túnel o proxy. El ejemplo de configuración pide PIN siempre que el panel se vea desde la red: sin PIN, cualquiera de la wifi podía mandar órdenes al robot.
+- Imagen base fijada a Alpine 3.22 (antes `latest`, cada compilación podía traer una base distinta).
+
+#### Repositorio
+- El token de la CI solo puede leer, y las acciones de GitHub van fijadas a un commit concreto: una acción de terceros comprometida ya no puede escribir en el repo.
+
+
 ## v0.3.23 · Seguridad del panel: aiohttp y certifi al día
 
 _El 19 y 20/10/2026 se publicaron 9 vulnerabilidades en dos paquetes del panel (una crítica y tres altas)._
