@@ -7,3 +7,8 @@ robot_panel/.app_secret
 robot.webp
 # claves y suscripciones del panel en Docker suelto (docker-compose): nunca al repo
 robot_panel/data/
+
+# Segredos locais (23/10/2026)
+.env
+.env.*
+!.env.example
