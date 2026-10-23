@@ -2,6 +2,17 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.25 · Cabecera con los robots en avatares y «Cargando» limpio
+
+_La franja de arriba con dos robots y la etiqueta «Cargando» con su barrita pegada se veían mal en el móvil._
+
+#### App
+- **Con dos o más robots, arriba van como avatares redondos** (su foto, el estado en el puntito y un aro de su color en el que se ve), y al lado el nombre y estado del robot elegido. Sustituye a la franja con un bloque de color macizo. Tocar cambia de robot y mantener pulsado le cambia el nombre, como antes. Con un solo robot no cambia nada.
+- **«Cargando» sin barrita pegada:** la barra de carga del centro se pisaba con la etiqueta. Ahora la carga se ve dentro del icono de la pila de la derecha, que se llena en azul con un brillo que avanza.
+- La etiqueta de estado ya no lleva el borde de color que, en una píldora redonda, se veía como una media luna torcida (también en la tarjeta de Home Assistant).
+- **Móviles estrechos (iPhone SE):** avatares algo más pequeños y la conexión solo con su puntito, para que el nombre del robot no se parta letra a letra.
+
+
 ## v0.3.24 · Auditoría de seguridad: sesiones, CI y Docker
 
 _Revisión a raíz de php2shell (CVE-2026-109618/109619): el proyecto no usa PHP, pero salieron cuatro puntos a reforzar._

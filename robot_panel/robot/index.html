@@ -50,16 +50,18 @@ header.top h1{font-size:18px;margin:0;font-weight:750;flex:1}
 .pick{flex:1;display:flex;align-items:center;gap:6px;border:0;background:none;padding:4px 0;cursor:pointer;text-align:left;min-width:0}
 .pick h1{font-size:18px;margin:0;font-weight:750}
 .pick .cnt{font-size:12px;font-weight:700;padding:3px 8px;border-radius:99px;background:var(--brand-soft);color:var(--ink);white-space:nowrap}
-.rbar{display:grid;grid-template-columns:repeat(var(--n,2),1fr);gap:6px;padding:4px;margin:0 0 12px;border-radius:16px;background:var(--card);border:1px solid var(--line)}
+/* dos o más robots: avatares redondos en la cabecera (propuesta C, 23/10/2026). El elegido con aro de su color,
+   el estado en el puntito; tocar cambia de robot, mantener pulsado le cambia el nombre */
+.rbar{display:flex;gap:9px;flex:none}
 .rbar[hidden]{display:none}
-/* cada robot en dos líneas (nombre / estado · batería): el nombre cabe entero aunque sea largo */
-.rbar button{display:flex;align-items:center;gap:9px;border:0;background:none;border-radius:12px;padding:8px 10px;cursor:pointer;min-width:0;min-height:52px;text-align:left;transition:background .25s,color .25s,transform .15s}
-.rbar button:active{transform:scale(.97)}
-.rbar button.on{background:var(--brand);color:var(--brand-ink)}
-.rbar .rtx{display:flex;flex-direction:column;min-width:0;flex:1}
-.rbar b{font-size:13.5px;line-height:1.2}  /* sin puntos suspensivos: si no cabe, a dos líneas */
-.rbar small .dotc{display:inline-block;width:7px;height:7px;margin-right:5px;vertical-align:1px;box-shadow:none}
-.rbar small{font-size:12px;font-weight:600;opacity:.72;line-height:1.25;margin-top:2px;white-space:nowrap}
+.rbar button{--k:#ffc20e;position:relative;width:44px;height:44px;flex:none;border:0;border-radius:50%;padding:0;cursor:pointer;display:grid;place-items:center;
+  background:radial-gradient(90% 80% at 50% 35%,#3a3d40,#17191a);box-shadow:0 0 0 2px var(--bg),0 0 0 4px transparent;transition:box-shadow .25s,transform .15s;-webkit-touch-callout:none;user-select:none}
+.rbar button.ld{--k:#f38a12}
+.rbar button.on{box-shadow:0 0 0 2px var(--bg),0 0 0 4.5px var(--k)}
+.rbar button:active{transform:scale(.94)}
+.rbar img{width:36px;height:27px;object-fit:contain;pointer-events:none}
+.rbar button.off img{filter:grayscale(1) opacity(.5)}
+.rbar .dotc{position:absolute;right:-1px;bottom:-1px;width:13px;height:13px;border:2.5px solid var(--bg);box-shadow:none}
 .dotc{width:9px;height:9px;border-radius:50%;flex:none;background:var(--c,#8a8f92);box-shadow:0 0 0 2px rgba(255,255,255,.5)}
 .sheet{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
 .sheet[hidden]{display:none}
@@ -79,8 +81,6 @@ header.top h1{font-size:18px;margin:0;font-weight:750;flex:1}
 /* el Landroid usa el mismo modelo 3D teñido a su naranja; lo que solo tiene el McCulloch se esconde */
 /* sin renders propios del Landroid (aún no desplegados) se tiñe el del McCulloch */
 .stage.tint .tilt img,.stage.tint .dock3d,.rcard img.ld{filter:hue-rotate(-24deg) saturate(1.35)}
-.rbar .pen{display:inline-flex;width:26px;height:26px;margin:-4px -4px -4px 0;align-items:center;justify-content:center;border-radius:8px;background:rgba(0,0,0,.08)}
-.rbar .pen svg{width:15px;height:15px}
 .rwrap + .rwrap{margin-top:12px}
 .racts{margin-top:8px;padding:0 4px}
 .racts .chip{min-height:36px;padding:6px 12px;font-size:13px}
@@ -163,14 +163,14 @@ nav.tabs button.on{color:var(--brand-ink);background:var(--brand);font-weight:70
 /* móvil bajo (SE): jardín más bajo y bloque más apretado para que los botones queden por encima de la barra */
 @media (orientation:portrait) and (max-height:620px){
   .scene{--sh:clamp(140px,25vh,250px)}
-  header.top{margin-bottom:8px}.rbar{margin-bottom:8px}
+  header.top{margin-bottom:8px}
   .nowb .daybar,.nowb .dayl{display:none}.scene .bot{width:min(64%,calc(var(--sh) * 1.1))}  /* la frase de «Ahora» ya dice hasta cuándo corta */
   .nowb{padding:10px 16px 0}.actions{padding:10px 14px 10px}
 }
 /* horizontal en el móvil: jardín a la izquierda, «Ahora» y botones a la derecha; cabecera y barra más finas */
 @media (orientation:landscape) and (max-height:520px){
   header.top{margin-bottom:6px}header.top img{width:30px;height:30px}
-  .rbar{margin-bottom:8px}.rbar button{min-height:40px;padding:4px 10px}
+  .rbar button{width:36px;height:36px}.rbar img{width:30px;height:22px}
   nav.tabs{padding:3px 8px max(3px,calc(env(safe-area-inset-bottom) - 18px))}
   nav.tabs button{flex-direction:row;gap:6px;padding:6px 10px;font-size:13px}nav.tabs button svg{width:20px;height:20px}
   .app{padding-bottom:calc(60px + env(safe-area-inset-bottom))}
@@ -184,7 +184,7 @@ nav.tabs button.on{color:var(--brand-ink);background:var(--brand);font-weight:70
 .scene .fallback{position:absolute;inset:0;display:grid;place-items:center}
 .scene .fallback svg{width:60%;max-width:260px}
 .sstate{position:absolute;left:12px;top:10px;display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;padding:6px 12px;border-radius:18px;max-width:calc(100% - 24px);line-height:1.25;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:#fff}
-.sstate{z-index:5;border-left:3px solid var(--c,#ffc20e)}
+.sstate{z-index:5}  /* sin borde de color: en una píldora redonda se dibujaba como una media luna torcida; el color ya va en el icono */
 .sstate svg{width:16px;height:16px;flex:none;fill:none;stroke:var(--c,#ffc20e);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 @keyframes beat{70%{box-shadow:0 0 0 8px transparent}}
 .scene .hint{position:absolute;right:12px;top:10px;font-size:11px;opacity:.75;background:rgba(255,255,255,.1);padding:3px 8px;border-radius:99px}
@@ -313,9 +313,20 @@ details.all td:last-child{text-align:right;font-weight:560;overflow-wrap:anywher
 .batchip i{width:20px;height:10px;border:1.5px solid currentColor;border-radius:3px;position:relative}
 .batchip i::after{content:"";position:absolute;inset:1px;right:auto;width:calc(var(--lvl,0%) - 2px);background:#7bd77f;border-radius:1px}
 .batchip.low i::after{background:#ff6b5b}
+/* cargando: la pila se rellena en azul con un brillo que avanza (antes, una barra aparte que se pisaba con «Cargando») */
+.batchip.chg i{overflow:hidden}.batchip.chg i::after{background:#3fa9ff}
+.batchip.chg i::before{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(90deg,transparent,rgba(255,255,255,.75),transparent);animation:sweep 1.6s linear infinite}
+@media (prefers-reduced-motion:reduce){.batchip.chg i::before{animation:none}}
 /* cabecera: el robot que se ve y su estado en una frase */
 .pick .rtt{display:flex;flex-direction:column;min-width:0;text-align:left}
-.pick .rtt h1{font-size:17px;line-height:1.2;overflow-wrap:anywhere}  /* nombre largo: dos líneas, nunca cortado */
+.pick .rtt h1{font-size:17px;line-height:1.2;overflow-wrap:break-word}  /* nombre largo: dos líneas, nunca cortado */
+/* móvil estrecho (SE) con varios robots: avatares más pequeños y la conexión solo con su puntito de color,
+   para que el nombre quepa por palabras (antes se partía letra a letra: «Sant / abai / a») */
+@media (max-width:380px){
+  .rbar{gap:7px}.rbar button{width:38px;height:38px}.rbar img{width:31px;height:23px}
+  header.top:has(.rbar:not([hidden])) .live{padding:7px}
+  header.top:has(.rbar:not([hidden])) .live span{display:none}
+}
 .pick .rtt small{font-size:12.5px;color:var(--muted);font-weight:550}
 /* órdenes rápidas en filas: etiqueta y botones del mismo ancho */
 .qrow{display:flex;flex-direction:column;align-items:stretch;gap:6px;margin:10px 0}  /* etiqueta encima: los botones usan todo el ancho y caben en una fila */
@@ -383,11 +394,7 @@ details.all td:last-child{text-align:right;font-weight:560;overflow-wrap:anywher
 @keyframes nudge{50%{transform:translateX(5px)}}
 .stage.charging .ic{animation:blink 1.4s infinite}
 .fx{position:absolute;inset:0;pointer-events:none}
-.charge{position:absolute;left:50%;top:14px;transform:translateX(-50%);width:120px;height:8px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden;opacity:0;transition:.4s}
-.charge b{display:block;height:100%;width:var(--lvl,50%);background:linear-gradient(90deg,#3fa9ff,#7cc8ff);position:relative}
-.charge b::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.7),transparent);animation:sweep 1.6s linear infinite}
 @keyframes sweep{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
-.stage.charging .charge{opacity:1}
 .fx{z-index:3}
 .fx b{position:absolute;bottom:6%;width:3px;height:8px;border-radius:2px;background:#8fdc6f;opacity:0;animation:clip 1s linear infinite}
 .fx b:nth-child(3n){background:#5fae4b;height:6px}
@@ -488,10 +495,10 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
 <div class="app">
   <header class="top">
     <img id="ricon" src="static/icon-192.png?v=6" alt="">
+    <div class="rbar" id="rbar" hidden></div>
     <button class="pick" id="pick" aria-label="Mis robots"><span class="rtt"><h1 id="rname">Mi robot</h1><small id="rsub"></small></span><span class="cnt" id="rcnt" hidden></span></button>
     <span class="live off" id="live"><i></i><span>conectando</span></span>
   </header>
-  <div class="rbar" id="rbar" hidden></div>
   <div class="sheet" id="sheet" hidden><div class="panel" role="dialog" aria-label="Mis robots"><h2>Mis robots<button id="sheetx" aria-label="Cerrar">✕</button></h2><div id="rlist"></div></div></div>
   <div class="sheet" id="dlg" hidden><div class="panel" role="dialog" aria-labelledby="dlgt"><h2 id="dlgt"></h2><p class="muted" id="dlgp" style="margin:-4px 4px 12px;font-size:14px"></p><div id="dlgf"></div><div class="dlgm" id="dlgm"></div><div class="bar-actions"><button class="btn ghost" id="dlgc">Cancelar</button><span style="flex:1"></span><button class="btn" id="dlgo">Aceptar</button></div></div></div>
   <!-- robot con contraseña y sin desbloquear en este móvil -->
@@ -537,7 +544,6 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
                 </div>
                 <span class="glow"></span>
               </div>
-              <div class="charge" id="charge"><b></b></div>
               <div class="blades" id="blades"></div>
             </div>
             <span class="sstate" id="sstate"><svg viewBox="0 0 24 24" aria-hidden="true"></svg><span>—</span></span>
@@ -807,7 +813,7 @@ let states = {};
 const st = (dom, key) => states[`${dom}.${P}${key ? '_' + key : ''}`];
 const val = (dom, key) => { const s = st(dom, key); return s && !['unknown','unavailable'].includes(s.state) ? s.state : null; };
 const on = (dom, key) => val(dom, key) === 'on';
-function setLive(ok, txt){ const l = $('#live'); l.classList.toggle('off', !ok); l.lastChild.textContent = txt || (ok ? 'en directo' : 'sin conexión'); }
+function setLive(ok, txt){ const l = $('#live'); l.classList.toggle('off', !ok); l.lastChild.textContent = txt || (ok ? 'en directo' : 'sin conexión'); l.title = l.lastChild.textContent; l.setAttribute('aria-label', l.title); }
 let pollN = 0, polling = null;
 // una sola lectura a la vez: si llegan varias peticiones (cada 5 s, tras una orden, al tirar hacia abajo)
 // se espera a la que está en marcha; así una respuesta lenta y vieja nunca pisa una nueva
@@ -887,23 +893,24 @@ function summary(r){
 }
 function renderRobots(){
   const many = ROBOTS.length > 1, me = curRobot(), ms = summary(me);
-  // arriba, el robot que se ve y cómo está en una frase (tocar abre «Mis robots»: nombre, contraseña…)
-  // con dos robots, nombre y estado van SOLO en la barra de robots (antes salían dos veces seguidas)
-  $('#rname').textContent = many ? 'Mis robots' : me.name;
-  $('#rsub').textContent = many ? '' : isLocked(me) ? 'Con contraseña' : [ms.txt, ms.bat != null ? ms.bat + ' %' : null].filter(Boolean).join(' · ');
-  $('#rsub').hidden = many;
+  // arriba, el robot que se ve y cómo está en una frase (tocar el nombre abre «Mis robots»: nombre, contraseña…).
+  // Con dos o más robots, delante van los avatares (uno por robot) y el nombre es el del que se ve
+  $('#rname').textContent = me.name;
+  $('#rsub').textContent = isLocked(me) ? 'Con contraseña' : [ms.txt, ms.bat != null ? ms.bat + ' %' : null].filter(Boolean).join(' · ');
+  $('#rsub').hidden = false;
   // el icono de arriba es el robot que se ve (su propio modelo), nunca el del otro
   const icon = `static/${KIND === 'landroid' ? 'rob3d_landroid' : 'rob3d'}/icono.webp?v=1`;  // recorte justo del robot
   if ($('#ricon').getAttribute('src') !== icon) $('#ricon').src = icon;
-  $('#rcnt').hidden = true;  // la barra de robots ya dice cuántos hay
+  $('#ricon').hidden = many;
+  $('#rcnt').hidden = true;
   $('#rbar').hidden = !many;
   if (!many) return;
-  $('#rbar').style.setProperty('--n', ROBOTS.length);
-  // un toque cambia de robot; mantenerlo pulsado le cambia el nombre (sin lápiz que le quite sitio al nombre)
+  // un toque cambia de robot; mantenerlo pulsado le cambia el nombre
   setHTML($('#rbar'), ROBOTS.map(r => {
-    const s = summary(r), on = r.id === P;
-    const sub = isLocked(r) ? '\u{1F512} Con contraseña' : [s.txt, s.bat != null ? s.bat + ' %' : null].filter(Boolean).join(' · ');
-    return `<button data-r="${esc(r.id)}" class="${on ? 'on' : ''}" aria-pressed="${on}" title="Mantén pulsado para cambiar el nombre"><span class="rtx"><b>${esc(r.name)}</b><small><span class="dotc" style="--c:${s.col}"></span>${esc(sub)}</small></span></button>`;
+    const s = summary(r), on = r.id === P, ld = r.kind === 'landroid';
+    const sub = isLocked(r) ? 'con contraseña' : [s.txt, s.bat != null ? s.bat + ' %' : null].filter(Boolean).join(' · ');
+    const cls = [on ? 'on' : '', ld ? 'ld' : '', s.txt === 'Sin conexión' ? 'off' : ''].filter(Boolean).join(' ');
+    return `<button data-r="${esc(r.id)}" class="${cls}" aria-pressed="${on}" aria-label="${esc(r.name)}: ${esc(sub)}" title="${esc(r.name)} · ${esc(sub)} (mantén pulsado para cambiar el nombre)"><img src="static/${ld ? 'rob3d_landroid' : 'rob3d'}/icono.webp?v=1" alt=""><span class="dotc" style="--c:${s.col}"></span></button>`;
   }).join(''));
   if (!$('#sheet').hidden) drawSheet();
 }
@@ -1285,7 +1292,8 @@ function render(){
   $('#bat').textContent = isNaN(bat) ? '–' : bat + ' %';
   $('#batsub').textContent = flags.charging ? '⚡' : '';
   $('#batbar').style.setProperty('--lvl', (isNaN(bat) ? 0 : bat) + '%');
-  $('#batchip').classList.toggle('low', bat < 20);
+  $('#batchip').classList.toggle('low', bat < 20 && !flags.charging);
+  $('#batchip').classList.toggle('chg', !!flags.charging);
   $('#alerts').innerHTML = d.alerts.join('');
 
   const unknownSched = d.tasks == null, tasks = d.tasks || [];
@@ -1713,7 +1721,6 @@ setInterval(loadHistory, 10 * 60 * 1000);
     fx.style.display = cls.mowing ? '' : 'none';
     if (s.collision && !wasHit) { stage.classList.remove('hit'); void stage.offsetWidth; stage.classList.add('hit'); }
     wasHit = s.collision;
-    document.getElementById('charge').style.setProperty('--lvl', (isNaN(s.battery) ? 50 : s.battery) + '%');
     // indicación de abajo: qué está haciendo y qué viene (la etiqueta de arriba ya dice el estado)
     const pct = isNaN(s.battery) ? '' : ` · ${s.battery} %`;
     const ld = s.kind === 'landroid';
