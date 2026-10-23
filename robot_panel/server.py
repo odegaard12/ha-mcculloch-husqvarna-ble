@@ -379,6 +379,8 @@ def make_app() -> web.Application:
     async def logout(_):
         resp = web.json_response({"ok": True})
         resp.del_cookie(COOKIE)
+        for rid in ids:  # también los robots desbloqueados en este móvil (antes seguían abiertos 180 días)
+            resp.del_cookie(ul_cookie(rid))
         return resp
     token = os.environ.get("HA_TOKEN", "") or supervisor
     headers = {"Authorization": f"Bearer {token}"}

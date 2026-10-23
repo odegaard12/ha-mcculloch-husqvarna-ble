@@ -145,6 +145,11 @@ async def main():
         assert (await c5.post("/api/servicio", json=ok)).status == 502
         assert (await c5.post("/api/robots/cerrar", json={"id": "landroid"})).status == 200
         assert (await c5.post("/api/servicio", json=ok)).status == 423
+        # cerrar sesión también vuelve a cerrar los robots que se desbloquearon en ese móvil
+        assert (await c5.post("/api/robots/abrir", json={"id": "landroid", "pin": "2468"})).status == 200
+        await c5.post("/api/logout")
+        await c5.post("/api/login", json={"pin": "4321"})
+        assert (await c5.post("/api/servicio", json=ok)).status == 423
         # la copia entre Pis va firmada
         assert (await c5.post("/api/robots/peer", data=b"{}", headers={"X-Peer-Sig": "falsa"})).status == 403
         # quitarla con la actual
