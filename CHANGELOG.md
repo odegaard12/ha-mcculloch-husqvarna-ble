@@ -2,6 +2,14 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.26 · Icono nuevo y un ajuste menos que pisaba el horario
+
+_El icono era un dibujo plano con los colores de McCulloch y confundía con el otro robot; el «Horario automático» del Landroid podía sustituir el horario puesto a mano._
+
+#### App
+- **Icono nuevo, renderizado en 3D:** un cortacésped robot genérico (perla, cristal oscuro y un aro de luz verde) sobre fondo verde, sin marca ni colores de ningún fabricante. Vale para la pantalla de inicio, el icono maskable, las notificaciones y la imagen de respaldo del robot.
+- **Quitado «Horario automático» de los ajustes del Landroid:** al activarlo, Worx calculaba el horario y sustituía el que se había puesto a mano, y sus opciones (césped, suelo, impulso) no se pueden poner desde la app.
+
 ## v0.3.25 · Cabecera con los robots en avatares y «Cargando» limpio
 
 _La franja de arriba con dos robots y la etiqueta «Cargando» con su barrita pegada se veían mal en el móvil._

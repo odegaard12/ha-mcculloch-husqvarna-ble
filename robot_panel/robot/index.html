@@ -12,8 +12,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Mi robot">
 <link rel="manifest" href="static/manifest.webmanifest">
-<link rel="icon" href="static/icon-192.png?v=6">
-<link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=6">
+<link rel="icon" href="static/icon-192.png?v=7">
+<link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=7">
 <title>Mi robot</title>
 <style>
 :root{
@@ -482,7 +482,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
 </head>
 <body>
 <div class="lock" id="lock" hidden>
-  <img src="static/icon-192.png?v=6" alt="">
+  <img src="static/icon-192.png?v=7" alt="">
   <h2>Introduce el PIN</h2>
   <div class="pins" id="pins"><i></i><i></i><i></i><i></i></div>
   <div class="msgpin" id="msgpin"></div>
@@ -494,7 +494,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
 
 <div class="app">
   <header class="top">
-    <img id="ricon" src="static/icon-192.png?v=6" alt="">
+    <img id="ricon" src="static/icon-192.png?v=7" alt="">
     <div class="rbar" id="rbar" hidden></div>
     <button class="pick" id="pick" aria-label="Mis robots"><span class="rtt"><h1 id="rname">Mi robot</h1><small id="rsub"></small></span><span class="cnt" id="rcnt" hidden></span></button>
     <span class="live off" id="live"><i></i><span>conectando</span></span>
@@ -540,7 +540,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
                 <!-- body3d gira en 3D (vueltas al cortar, vuelco...); la estela y los recortes van dentro para salir siempre por detrás -->
                 <div class="body3d" id="body3d">
                   <div class="rear"><div class="trail"></div><div class="fx" id="fx"></div></div>
-                  <div class="tilt" id="tilt"><img src="static/robot.webp?v=6" onerror="this.onerror=null;this.src='static/robot.svg'" alt="Robot cortacésped" draggable="false"><span class="shine"></span></div>
+                  <div class="tilt" id="tilt"><img src="static/robot.webp?v=6" onerror="this.onerror=null;this.src='static/robot_generico.webp?v=1'" alt="Robot cortacésped" draggable="false"><span class="shine"></span></div>
                 </div>
                 <span class="glow"></span>
               </div>
@@ -1514,7 +1514,7 @@ function renderDatos(){
 
 /* ---------- ajustes ---------- */
 const TOGGLES = [['modo_eco','Modo ECO','Gasta menos batería con el motor de corte más suave'],['sensorcontrol_ritmo_segun_crecimiento','SensorControl','Corta más o menos según lo que crezca el césped'],['modo_garaje','Modo garaje','Entra en la base como si fuera un garaje']];
-const TOGGLES_LD = [['modo_pausa','Modo fiesta','Se salta el horario hasta que lo quites'],['bloqueo','Bloqueo','Pide el PIN en el propio robot para moverlo'],['off_limits','Off Limits','Respeta las zonas prohibidas'],['accesos_directos_de_off_limits','Atajos de Off Limits','Cruza las zonas prohibidas por los pasos marcados'],['auto_schedule','Horario automático','Worx calcula el horario según el césped'],['actualizacion_automatica_de_firmware','Actualizar solo','Instala las versiones nuevas del robot sin preguntar']];
+const TOGGLES_LD = [['modo_pausa','Modo fiesta','Se salta el horario hasta que lo quites'],['bloqueo','Bloqueo','Pide el PIN en el propio robot para moverlo'],['off_limits','Off Limits','Respeta las zonas prohibidas'],['accesos_directos_de_off_limits','Atajos de Off Limits','Cruza las zonas prohibidas por los pasos marcados'],['actualizacion_automatica_de_firmware','Actualizar solo','Instala las versiones nuevas del robot sin preguntar']];
 // [entidad, título, explicación, unidad] — número que se guarda al cambiarlo
 const NUMBERS_LD = [['retraso_por_lluvia','Espera tras la lluvia','Tiempo que espera en la base después de llover','min'],['extension_de_tiempo','Extensión del horario','Alarga o acorta todas las franjas a la vez','%'],['par_motor','Fuerza de las ruedas','Más para cuestas o césped alto; menos gasta menos','%']];
 $('#toggles').onchange = e => {
