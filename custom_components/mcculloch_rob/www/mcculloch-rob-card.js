@@ -144,7 +144,7 @@ ha-card{overflow:hidden}
 @keyframes clip{0%{opacity:0;transform:none}12%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(260deg)}}
 /* etiqueta y batería en la misma fila: nunca se pisan (la etiqueta es corta; el detalle va en el aviso de abajo) */
 .top{position:absolute;left:12px;right:12px;top:10px;z-index:3;display:flex;gap:8px;justify-content:space-between;align-items:flex-start;pointer-events:none}
-.pill{display:inline-flex;align-items:center;gap:7px;min-width:0;font:700 13px/1.25 system-ui,sans-serif;color:#fff;padding:7px 12px;border-radius:16px;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);border-left:3px solid var(--c);transition:border-color .4s}
+.pill{display:inline-flex;align-items:center;gap:7px;min-width:0;font:700 13px/1.25 system-ui,sans-serif;color:#fff;padding:7px 12px;border-radius:16px;background:rgba(0,0,0,.5);backdrop-filter:blur(6px)}  /* sin borde de color (media luna torcida): el color va en el icono */
 .pill span{overflow-wrap:anywhere}
 .pill.bump{animation:pillin .35s cubic-bezier(.2,.8,.2,1)}
 @keyframes pillin{from{opacity:0;transform:translateY(-4px)}}
