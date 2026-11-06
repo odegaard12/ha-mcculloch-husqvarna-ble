@@ -2,6 +2,17 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.27 · Ajustes rediseñado
+
+_La pestaña Ajustes era una columna de tarjetas iguales, con mucho texto y cuadros para escribir números._
+
+#### App
+- **Ajustes en grupos con icono:** cada ajuste es una fila con su icono y, a la derecha, un interruptor, un **+/−** o una lista. En el Landroid: «Cortar» (modo fiesta, zona, espera tras la lluvia, extensión del horario, fuerza de las ruedas) y «Seguridad y sistema».
+- **El +/− cambia el número al instante** y manda una sola orden al robot cuando se deja de pulsar, en vez de una por cada toque.
+- **Lo delicado, plegado en «Avanzado»:** poner contadores a cero (cuchillas y batería nuevas, ahora en rojo suave y con confirmación), el reloj del McCulloch, y instalar la app o bloquearla con PIN.
+- **«Avisos» más corto:** una fila con su botón y la explicación larga plegada en «¿Qué avisa exactamente?».
+- Sin conexión, cada ajuste sale apagado con «se sabrá al conectar» en vez de «Sin ajustes disponibles».
+
 ## v0.3.26 · Icono nuevo y un ajuste menos que pisaba el horario
 
 _El icono era un dibujo plano con los colores de McCulloch y confundía con el otro robot; el «Horario automático» del Landroid podía sustituir el horario puesto a mano._
