@@ -2,6 +2,25 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.28 · El tiempo cortado es el cortado, no el programado
+
+_Debajo del robot ponía «Semana 25 h» y parecía lo que había cortado, pero eran las horas programadas._
+
+#### App
+- **«Cortado hoy» y «En 7 días»:** debajo de la escena se ve lo que el robot ha cortado de verdad, hoy y en los últimos 7 días, sacado de su actividad. Antes ponía «Semana 25 h», que eran las horas del horario.
+- **Lo programado, con su nombre:** en Horario el título pasa de «Semana» a «Programado» («25 h a la semana»), y en Datos, bajo «Cortado por día», se ve lo cortado junto a lo programado («6,5 h cortadas · 25 h programadas»).
+
+## v0.3.27 · Ajustes rediseñado
+
+_La pestaña Ajustes era una columna de tarjetas iguales, con mucho texto y cuadros para escribir números._
+
+#### App
+- **Ajustes en grupos con icono:** cada ajuste es una fila con su icono y, a la derecha, un interruptor, un **+/−** o una lista. En el Landroid: «Cortar» (modo fiesta, zona, espera tras la lluvia, extensión del horario, fuerza de las ruedas) y «Seguridad y sistema».
+- **El +/− cambia el número al instante** y manda una sola orden al robot cuando se deja de pulsar, en vez de una por cada toque.
+- **Lo delicado, plegado en «Avanzado»:** poner contadores a cero (cuchillas y batería nuevas, ahora en rojo suave y con confirmación), el reloj del McCulloch, y instalar la app o bloquearla con PIN.
+- **«Avisos» más corto:** una fila con su botón y la explicación larga plegada en «¿Qué avisa exactamente?».
+- Sin conexión, cada ajuste sale apagado con «se sabrá al conectar» en vez de «Sin ajustes disponibles».
+
 ## v0.3.26 · Icono nuevo y un ajuste menos que pisaba el horario
 
 _El icono era un dibujo plano con los colores de McCulloch y confundía con el otro robot; el «Horario automático» del Landroid podía sustituir el horario puesto a mano._
