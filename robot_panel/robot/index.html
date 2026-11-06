@@ -1330,7 +1330,7 @@ function readLandroid(){
   else if (chargeFail) al.push(`<div class="alert"><span><b>⚠ Error al cargar</b><br><small>Está en la base pero no carga${err === 'wire_missing' ? ' (el robot dice «falta el cable», pero estando aquí casi siempre es que no conecta bien)' : ''}. Colócalo recto, limpia con un paño los contactos de la base y los del robot, y comprueba que la base tiene luz.</small></span></div>`);
   else if (fence) al.push(`<div class="alert"><span><b>⚠ Salió de la zona permitida</b><br><small>El robot cruzó una zona prohibida (Off Limits). Mira dónde está y llévalo a la base.</small></span></div>`);
   else if (errOn) al.push(`<div class="alert"><span><b>⚠ ${esc(errText(err))}</b><br><small>Revísalo y pulsa OK en el robot; luego Cortar o A la base.</small></span></div>`);
-  else if (stuck) al.push(`<div class="alert"><span><b>⚠ Parado sin avisar de ningún error</b><br><small>Lleva ${Math.round(mins)} min parado fuera de la base y no ha dado error: puede estar atascado, levantado o sin ver el cable. Ve a verlo y pulsa START.</small></span></div>`);
+  else if (stuck) al.push(`<div class="alert"><span><b>⚠ Parado por atasco</b><br><small>Lleva ${Math.round(mins)} min parado fuera de la base y no ha dado ningún error: lo más probable es que esté atascado (también puede estar levantado o no ver el cable). Ve a verlo y pulsa START.</small></span></div>`);
   const wait = durTxt(st('sensor','retraso_por_lluvia_restante'));
   if (!offline && rain) al.push(`<div class="alert info">Llueve: el robot espera${wait ? ` unas ${wait}` : ''} a que se seque el césped.</div>`);
   const prog = val('sensor','progreso_diario'), zone = val('select','zona');
@@ -1391,7 +1391,7 @@ function nowText(f, run, nx, unknownSched){
   if (f.lifted) return {v: 'Levantado', d: 'Déjalo en el césped: sigue solo', main: 'start', mainLabel: 'Cortar'};
   if (f.error) return {v: 'Avería', d: 'Mira el aviso de abajo', main: 'start', mainLabel: 'Cortar'};
   if (f.chargeFail) return {v: 'Error al cargar', d: 'Está en la base pero no carga: revisa los contactos', main: 'start', mainLabel: 'Cortar'};
-  if (f.stuck) return {v: 'Parado sin aviso', d: 'Fuera de la base y sin error: puede estar atascado', main: 'start', mainLabel: 'Cortar'};
+  if (f.stuck) return {v: 'Parado por atasco', d: 'Fuera de la base y sin error: lo más probable es que esté atascado', main: 'start', mainLabel: 'Cortar'};
   const a = f.activity;
   if (a === 'mowing' || a === 'going_out') return {v: a === 'going_out' ? 'Saliendo a cortar' : 'Cortando', d: until ? 'Hasta las ' + until : 'Hasta que termine o lo pares', main: 'pause', mainLabel: 'Pausa'};
   if (a === 'going_home') return {v: 'Volviendo a la base', d: next, main: 'start', mainLabel: 'Seguir'};  // «Seguir cortando» no cabía en el botón
@@ -1841,7 +1841,7 @@ setInterval(loadHistory, 10 * 60 * 1000);
       : cls.lifted ? ['up', 'Déjalo en el césped para que siga']
       : cls.error ? ['warn', s.errorText && s.errorText !== '—' ? s.errorText : ld ? 'Revísalo y pulsa OK en el robot' : 'Revisa el robot y confírmalo en su teclado']
       : cls.chargeFail ? ['warn', 'No carga: limpia y alinea los contactos de la base']
-      : cls.stuck ? ['warn', 'Parado sin ningún error: ve a verlo, puede estar atascado']
+      : cls.stuck ? ['warn', 'Parado, lo más probable es que esté atascado: ve a verlo']
       : s.rain && cls.docked ? ['pause', 'Llueve: espera en la base a que se seque']
       : cls.charging ? ['bolt', s.chargeMin ? `Cargada en ~${s.chargeMin} min${pct}` : `Cargando${pct}` + (s.next ? ` · corta ${s.next}` : '')]
       : cls.homing ? ['home', (s.battery < 30 ? 'Va a la base a cargar' : 'Vuelve a la base') + pct]
@@ -1855,7 +1855,7 @@ setInterval(loadHistory, 10 * 60 * 1000);
     // la etiqueta sale de las mismas clases que la escena: nunca dicen cosas distintas
     const [lbl, col, ic] = cls.offline ? [ld ? 'Sin conexión' : 'Fuera de alcance', '#8a8f92', 'off'] : cls.upside ? ['Volcado', '#ff3b30', 'warn']
       : cls.lifted ? ['Levantado', '#ff9f0a', 'up'] : cls.error ? ['Avería', '#ff3b30', 'warn']
-      : cls.chargeFail ? ['Error al cargar', '#ff3b30', 'warn'] : cls.stuck ? ['Parado sin aviso', '#ff9f0a', 'warn']
+      : cls.chargeFail ? ['Error al cargar', '#ff3b30', 'warn'] : cls.stuck ? ['Parado por atasco', '#ff9f0a', 'warn']
       : cls.charging ? ['Cargando', '#3fa9ff', 'bolt'] : cls.mowing ? ['Cortando', '#47d35a', 'mow']
       : cls.homing ? ['Volviendo a la base', '#47d35a', 'home'] : cls.leaving ? ['Saliendo de la base', '#47d35a', 'out']
       : cls.docked ? ['En la base', 'var(--brand)', 'home'] : cls.paused ? ['En pausa', 'var(--brand)', 'pause'] : ['Parado', 'var(--brand)', 'idle'];

@@ -2,6 +2,13 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.31 · «Parado por atasco»
+
+_«Parado sin aviso» no decía lo que casi siempre es: el robot atascado._
+
+#### App
+- **«Parado por atasco»** sustituye a «Parado sin aviso» (etiqueta, escena y aviso): si el Landroid lleva más de 3 minutos parado fuera de la base y sin ningún error, lo más probable es que esté atascado, y así lo dice. También puede estar levantado o no ver el cable.
+
 ## v0.3.30 · Landroid: ya no disimula los fallos de carga ni las paradas sin error
 
 _Con el Landroid, la app daba por «aparcado» o «en la base» cosas que eran fallos, y mostraba «falta el cable» cuando lo que pasaba era que no cargaba._
