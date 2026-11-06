@@ -204,6 +204,12 @@ nav.tabs button.on{color:var(--brand-ink);background:var(--brand);font-weight:70
 .wbars div.today i{background:linear-gradient(#47d35a,#2e9b3f)}
 .wbars b{font-size:12px;color:var(--ink);font-weight:700}
 .wbars div.today span{color:var(--ink);font-weight:700}
+.wbars.err i{background:var(--bad)}.wbars.err div.today i{background:linear-gradient(#ff8a7f,var(--bad))}
+.wbars.err{height:110px}
+/* pulsar un botón se nota: se hunde un poco */
+.actions button,.chip,.btn,.rbar button{transition:transform .12s,background .2s}
+.actions button:active,.chip:active,.btn:active{transform:scale(.97)}
+@media (prefers-reduced-motion:reduce){.actions button:active,.chip:active,.btn:active{transform:none}}
 .facts{grid-template-columns:repeat(auto-fit,minmax(0,1fr))!important}
 .quick h3{display:flex;align-items:center;gap:8px}
 .quick h3 svg{width:16px;height:16px;flex:none}
@@ -656,6 +662,11 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
         <div class="card">
           <h2>Cortado por día · 7 días <span class="muted" id="weekmowtot"></span></h2>
           <div class="wbars" id="wbars"></div>
+        </div>
+        <div class="card">
+          <h2>Paradas por error · 7 días <span class="muted" id="errtot"></span></h2>
+          <div class="wbars err" id="ebars"></div>
+          <div class="legend" id="elegend"></div>
         </div>
         <div class="card"><h2>Ahora mismo</h2><dl class="kv" id="sensors"></dl></div>
         <div class="card"><h2>Uso acumulado</h2><div class="grid2" id="stats"></div></div>
@@ -1304,7 +1315,7 @@ function readLandroid(){
     error: ls === 'error' || (errOn && !['lifted', 'upside_down'].includes(err)), inBase: ls === 'docked', errorText: errText(err)};
   const seen = val('sensor','ultima_actualizacion');
   const al = [];
-  if (offline) al.push(`<div class="alert warn">${esc(curRobot().name)} no llega a la nube de Worx (sin Wi-Fi o apagado).${seen ? ` Datos de ${esc(ago(seen))}.` : ''}</div>`);
+  if (offline) al.push(`<div class="alert warn"><span><b>${esc(curRobot().name)} sin conexión${seen ? ` desde ${esc(ago(seen))}` : ''}</b><br><small>${errOn ? `Último error: ${esc(errText(err))}. ` : ''}Si está parado, pulsa START en el propio robot para despertarlo: la app no puede hacerlo a distancia.</small></span></div>`);
   else if (errOn) al.push(`<div class="alert"><span><b>⚠ ${esc(errText(err))}</b><br><small>Revísalo y pulsa OK en el robot; luego Cortar o A la base.</small></span></div>`);
   const wait = durTxt(st('sensor','retraso_por_lluvia_restante'));
   if (!offline && rain) al.push(`<div class="alert info">Llueve: el robot espera${wait ? ` unas ${wait}` : ''} a que se seque el césped.</div>`);
@@ -1655,8 +1666,28 @@ async function loadWeekMow(){
     $('#weekmowtot').textContent = h1(tot / 36e5) + ' h cortadas' + (weekMin ? ' · ' + Math.round(weekMin / 60) + ' h programadas' : '');
   } catch(e) {}
 }
+// paradas por avería cada día de los últimos 7: cuenta cada vez que el robot pasa a un error (no el tiempo que dura)
+async function loadErrors(){
+  if (locked) return;
+  try {
+    const pts = (await hist('&e=errores&d=7')).map(p => ({t: new Date(p.t).getTime(), v: p.v}));
+    const ok = v => !v || ['no_error', 'ninguno', 'unknown', 'unavailable', 'none', 'rain_delay'].includes(v);
+    const days = [];
+    for (let k = 6; k >= 0; k--) { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - k); const e = new Date(d); e.setDate(e.getDate() + 1); days.push({a: d.getTime(), b: e.getTime(), n: 0, dow: (d.getDay() + 6) % 7, today: k === 0}); }
+    const kinds = {}; let prev = null;
+    pts.forEach(p => {
+      const day = !ok(p.v) && p.v !== prev && p.t >= days[0].a ? days.find(d => p.t >= d.a && p.t < d.b) : null;  // el estado de arrastre de antes de la semana no cuenta
+      if (day) { day.n++; kinds[p.v] = (kinds[p.v] || 0) + 1; }
+      prev = p.v;
+    });
+    const max = Math.max(3, ...days.map(d => d.n)), tot = days.reduce((s, d) => s + d.n, 0);
+    $('#ebars').innerHTML = days.map(d => `<div class="${d.today ? 'today' : ''}" title="${d.n} paradas"><b>${d.n || ''}</b><i style="height:${d.n ? Math.max(6, Math.round(d.n / max * 80)) : 3}px"></i><span>${d.today ? 'hoy' : 'LMXJVSD'[d.dow]}</span></div>`).join('');
+    $('#errtot').textContent = tot ? tot + ' en total' : 'ninguna';
+    $('#elegend').innerHTML = Object.entries(kinds).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, n]) => `<span>${esc(errText(k))} ×${n}</span>`).join('') || 'Sin paradas por error en estos días.';
+  } catch(e) {}
+}
 async function loadHistory(){
-  loadActivity(); loadWeekMow();
+  loadActivity(); loadWeekMow(); loadErrors();
   if (locked) return;
   try {
     const pts = (await hist('')).map(p => ({t: new Date(p.t).getTime(), v: Number(p.v)})).filter(p => !isNaN(p.v));

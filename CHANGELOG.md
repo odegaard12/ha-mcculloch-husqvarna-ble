@@ -2,6 +2,18 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.29 · Paradas por error y aviso de «sin conexión» útil
+
+_Para saber si un cambio (ruedas, potencia, cable) mejora algo hacía falta ver las paradas día a día, y el aviso de «sin conexión» no decía qué hacer._
+
+#### App
+- **Datos → «Paradas por error · 7 días»:** una gráfica con las veces que el robot ha pasado a un error cada día (fuera del cable, atrapado…), el total y los errores más repetidos. Cuenta paradas, no el tiempo que duran, y vale para los dos robots.
+- **Landroid sin conexión:** el aviso dice desde cuándo, el último error y qué hacer («pulsa START en el propio robot»), porque la nube de Worx no puede despertar a un robot dormido.
+- **Botones:** al pulsar Cortar, Pausa, A la base y los chips se hunden un poco (se desactiva con «reducir movimiento»).
+
+#### Panel
+- `/api/historial` admite `e=errores` (historial del sensor de error del robot).
+
 ## v0.3.28 · El tiempo cortado es el cortado, no el programado
 
 _Debajo del robot ponía «Semana 25 h» y parecía lo que había cortado, pero eran las horas programadas._
