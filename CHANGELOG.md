@@ -2,6 +2,36 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.31 · «Parado por atasco»
+
+_«Parado sin aviso» no decía lo que casi siempre es: el robot atascado._
+
+#### App
+- **«Parado por atasco»** sustituye a «Parado sin aviso» (etiqueta, escena y aviso): si el Landroid lleva más de 3 minutos parado fuera de la base y sin ningún error, lo más probable es que esté atascado, y así lo dice. También puede estar levantado o no ver el cable.
+
+## v0.3.30 · Landroid: ya no disimula los fallos de carga ni las paradas sin error
+
+_Con el Landroid, la app daba por «aparcado» o «en la base» cosas que eran fallos, y mostraba «falta el cable» cuando lo que pasaba era que no cargaba._
+
+#### App
+- **«Error al cargar»:** si el robot está en la base y no carga (o llegó y dice «falta el cable» sin cargar), la etiqueta, el aviso y la escena lo dicen, con qué revisar: colocarlo recto, limpiar los contactos de la base y del robot, y mirar que la base tenga luz. Antes salía «En la base» o «Falta el cable perimetral».
+- **«Parado sin aviso»:** si lleva más de 3 minutos parado fuera de la base y sin ningún error, avisa de que puede estar atascado, levantado o sin ver el cable. Antes salía «Parado» como si fuera normal. Los «parado» de segundos al llegar a la base no avisan.
+- **«Salió de la zona permitida»:** nuevo aviso cuando el robot cruza una zona de Off Limits.
+- **Todos los textos de error de Worx** en español (carga, base inalcanzable, pendiente, temperatura de batería, bloqueo con PIN, etc.), no solo los más comunes. También los estados «Parado» y «Arrancando».
+- **Paradas por error:** los rebotes de segundos (en la base salta de error a «sin error» varias veces seguidas) cuentan como una sola parada.
+
+## v0.3.29 · Paradas por error y aviso de «sin conexión» útil
+
+_Para saber si un cambio (ruedas, potencia, cable) mejora algo hacía falta ver las paradas día a día, y el aviso de «sin conexión» no decía qué hacer._
+
+#### App
+- **Datos → «Paradas por error · 7 días»:** una gráfica con las veces que el robot ha pasado a un error cada día (fuera del cable, atrapado…), el total y los errores más repetidos. Cuenta paradas, no el tiempo que duran, y vale para los dos robots.
+- **Landroid sin conexión:** el aviso dice desde cuándo, el último error y qué hacer («pulsa START en el propio robot»), porque la nube de Worx no puede despertar a un robot dormido.
+- **Botones:** al pulsar Cortar, Pausa, A la base y los chips se hunden un poco (se desactiva con «reducir movimiento»).
+
+#### Panel
+- `/api/historial` admite `e=errores` (historial del sensor de error del robot).
+
 ## v0.3.28 · El tiempo cortado es el cortado, no el programado
 
 _Debajo del robot ponía «Semana 25 h» y parecía lo que había cortado, pero eran las horas programadas._

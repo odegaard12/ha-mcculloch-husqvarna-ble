@@ -602,7 +602,9 @@ def make_app() -> web.Application:
         rid = req.query.get("r") if req.query.get("r") in ids else PREFIX
         if not is_open(req, rid):
             return locked_resp()
-        if req.query.get("e") != "actividad":
+        if req.query.get("e") == "errores":  # avisos de avería: la gráfica de paradas por día
+            entity = f"sensor.{rid}_error"
+        elif req.query.get("e") != "actividad":
             entity = f"sensor.{rid}_bateria"
         elif kinds[rid] == "landroid":  # Landroid no tiene sensor de actividad: su estado sale del cortacésped
             entity = f"lawn_mower.{rid}"
