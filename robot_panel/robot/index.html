@@ -612,7 +612,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
   <section class="view" id="v-horario">
     <div class="cols">
       <div class="card">
-        <h2>Semana <span class="muted" id="weekhours"></span></h2>
+        <h2>Programado <span class="muted" id="weekhours"></span></h2>
         <div id="week"></div>
         <div class="chips mc-only" style="margin-top:14px"><button class="chip wide" data-btn="volver_a_la_programacion">Volver a la programación</button></div>
       </div>
@@ -1388,13 +1388,13 @@ function setActions(main, label){
   setHTML($('.actions'), html);
 }
 // cifras en una línea pequeña; las que no tienen valor no salen
-let mowed24 = null, weekMin = 0, LINK = '';
+let mowed24 = null, mowedWeek = null, weekMin = 0, LINK = '';
 function renderFacts(){
   const bk = KIND === 'landroid' ? 'tiempo_de_uso_de_las_cuchillas_desde_el_reinicio' : 'uso_de_las_cuchillas';
   const blades = Number(val('sensor', bk));
   const f = [
-    mowed24 != null ? ['Hoy', (mowed24 < 18e4 ? '0' : h1(mowed24 / 36e5)) + ' h'] : null,  // menos de 3 min: «0 h», no «0,0 h»
-    weekMin ? ['Semana', Math.round(weekMin / 60) + ' h'] : null,
+    mowed24 != null ? ['Cortado hoy', (mowed24 < 18e4 ? '0' : h1(mowed24 / 36e5)) + ' h'] : null,  // menos de 3 min: «0 h», no «0,0 h»
+    mowedWeek != null ? ['En 7 días', (mowedWeek < 18e4 ? '0' : h1(mowedWeek / 36e5)) + ' h'] : null,  // lo cortado de verdad, no lo programado
     !isNaN(blades) && val('sensor', bk) != null ? ['Cuchillas', Math.round(blades) + ' h'] : null,
   ].filter(Boolean);
   $('#facts').innerHTML = f.map(([s, b]) => `<span>${s} <b>${esc(b)}</b></span>`).join('');
@@ -1409,7 +1409,7 @@ function renderWeek(tasks){
   }
   const now = new Date(), today = (now.getDay() + 6) % 7, nowPct = (now.getHours() * 60 + now.getMinutes()) / 14.4;
   const total = tasks.reduce((acc, t) => acc + t.duration_in_minutes * DAYS.filter(d => t['on_' + d]).length, 0);
-  $('#weekhours').textContent = tasks.length ? Math.round(total / 60) + ' h/semana' : '';
+  $('#weekhours').textContent = tasks.length ? Math.round(total / 60) + ' h a la semana' : '';
   $('#week').innerHTML = tasks.length ? `<div class="week">${DAYS.map((d, i) => `<span${i === today ? ' style="font-weight:800"' : ''}>${DN[i]}</span><div class="bar">${tasks.filter(t => t['on_' + d]).map(t => { const a = t.start_time_in_minutes / 14.4, w = Math.min(t.duration_in_minutes / 14.4, 100 - a); return `<b style="left:${a}%;width:${w}%" title="${hm(t.start_time_in_minutes)}–${hm(t.start_time_in_minutes + t.duration_in_minutes)}"></b>`; }).join('')}${i === today ? `<span class="now" style="left:${nowPct}%"></span>` : ''}</div>`).join('')}<div class="hours"><span>0h</span><span>6</span><span>12</span><span>18</span><span>24</span></div></div>` : '<div class="empty">El robot no tiene programación: solo corta cuando se lo mandas.</div>';
 }
 let editing = false, draft = [], original = '', schedLocked = false;
@@ -1651,7 +1651,8 @@ async function loadWeekMow(){
     });
     const max = Math.max(36e5, ...days.map(d => d.ms)), tot = days.reduce((s, d) => s + d.ms, 0);
     $('#wbars').innerHTML = days.map(d => `<div class="${d.today ? 'today' : ''}" title="${h1(d.ms / 36e5)} h"><b>${d.ms >= 6e5 ? h1(d.ms / 36e5) : ''}</b><i style="height:${Math.round(d.ms / max * 110)}px"></i><span>${d.today ? 'hoy' : 'LMXJVSD'[d.dow]}</span></div>`).join('');
-    $('#weekmowtot').textContent = h1(tot / 36e5) + ' h en total';
+    mowedWeek = tot; renderFacts();
+    $('#weekmowtot').textContent = h1(tot / 36e5) + ' h cortadas' + (weekMin ? ' · ' + Math.round(weekMin / 60) + ' h programadas' : '');
   } catch(e) {}
 }
 async function loadHistory(){
