@@ -725,11 +725,13 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;
 const STATE = {off:'Apagado',wait_for_safetypin:'Esperando PIN',stopped:'Parado',fatal_error:'Error grave',pending_start:'Arrancando',paused:'En pausa',in_operation:'Trabajando',restricted:'En espera',error:'Error'};
 const ACTIVITY = {none:'Sin actividad',charging:'Cargando',going_out:'Saliendo de la base',mowing:'Cortando el césped',going_home:'Volviendo a la base',parked:'Aparcado en la base',stopped_in_garden:'Parado en el jardín',
   // estados del cortacésped del Landroid (su historial de actividad sale de ahí)
-  docked:'En la base',returning:'Volviendo a la base',paused:'En pausa',edgecut:'Cortando bordes',error:'Error',unavailable:'Sin conexión'};
+  docked:'En la base',returning:'Volviendo a la base',paused:'En pausa',edgecut:'Cortando bordes',error:'Error',unavailable:'Sin conexión',idle:'Parado',starting:'Arrancando',escaped_digital_fence:'Salió de la zona permitida'};
 const MODE = {auto:'automático',manual:'manual',home:'aparcado siempre',demo:'demo',poi:'punto de interés'};
 const ERR = {no_loop_signal:'Sin señal del cable',outside_working_area:'Fuera de la zona de trabajo',wrong_loop_signal:'Señal del cable incorrecta',trapped:'Atrapado',lifted:'Levantado',upside_down:'Volcado',low_battery:'Batería baja',empty_battery:'Batería vacía',stuck_in_charging_station:'Atascado en la base',collision_sensor_problem_front:'Sensor de choque delantero',collision_sensor_problem_rear:'Sensor de choque trasero',wheel_motor_blocked_left:'Rueda izquierda bloqueada',wheel_motor_blocked_right:'Rueda derecha bloqueada',cutting_system_blocked:'Cuchillas bloqueadas',mower_tilted:'Robot inclinado',no_drive:'No avanza',temporary_battery_problem:'Problema temporal de batería',alarm_mower_lifted:'Alarma: robot levantado',alarm_mower_switched_off:'Alarma: robot apagado',guide_1_not_found:'No encuentra el cable guía',charging_station_blocked:'Base bloqueada',ninguno:'Sin avisos',
   // códigos del Landroid
-  no_error:'Sin errores',wire_missing:'Falta el cable perimetral',outside_wire:'Fuera del cable perimetral',rain_delay:'Esperando por la lluvia',close_door_to_mow:'Cierra la tapa para cortar',close_door_to_go_home:'Cierra la tapa para volver',blade_motor_blocked:'Motor de las cuchillas bloqueado',wheel_motor_blocked:'Motor de una rueda bloqueado',trapped_timeout:'Atrapado demasiado tiempo',battery_low:'Batería baja',reverse_wire:'Cable perimetral al revés',charge_error:'Error de carga',timeout_finding_home:'No encuentra la base'};
+  no_error:'Sin errores',wire_missing:'Falta el cable perimetral',outside_wire:'Fuera del cable perimetral',rain_delay:'Esperando por la lluvia',close_door_to_mow:'Cierra la tapa para cortar',close_door_to_go_home:'Cierra la tapa para volver',blade_motor_blocked:'Motor de las cuchillas bloqueado',wheel_motor_blocked:'Motor de una rueda bloqueado',trapped_timeout:'Atrapado demasiado tiempo',battery_low:'Batería baja',reverse_wire:'Cable perimetral al revés',charge_error:'Error de carga',timeout_finding_home:'No encuentra la base',
+  // resto de códigos de error de Worx (lista de pyworxcloud)
+  locked:'Bloqueado con PIN en el robot',battery_temperature_error:'Batería demasiado caliente o fría',battery_trunk_open_timeout:'Tapa de la batería abierta demasiado tiempo',wire_sync:'Sincronizando el cable',charging_station_docking_error:'Error al acoplarse a la base',hbi_error:'Error interno del robot',ota_error:'Error al actualizar el robot',map_error:'Error de mapa',excessive_slope:'Pendiente demasiado fuerte',unreachable_zone:'Zona inalcanzable',unreachable_charging_station:'Base inalcanzable',insufficient_sensor_data:'Faltan datos de los sensores',camera_error:'Error de cámara',rfid_reader_error:'Error del lector RFID',headlight_error:'Error del faro',missing_charging_station:'No encuentra la base',blade_height_adjustment_blocked:'Altura de corte bloqueada'};
 // textos de todas las averías (los mismos que la integración y la tarjeta); ERR queda de respaldo sin red
 let ERRS = {};
 fetch('static/errores_es.json?v=1', {cache: 'no-cache'}).then(r => r.json()).then(j => { ERRS = j; if (Object.keys(states).length) render(); }).catch(() => {});
@@ -913,7 +915,7 @@ function show(v){
 $('nav.tabs').onclick = e => { const b = e.target.closest('button'); if (b) show(b.dataset.v); };
 
 /* ---------- varios robots ---------- */
-const LMS = {mowing:'Cortando', edgecut:'Cortando bordes', returning:'Volviendo a la base', docked:'En la base', paused:'En pausa', error:'Error'};
+const LMS = {mowing:'Cortando', edgecut:'Cortando bordes', returning:'Volviendo a la base', docked:'En la base', paused:'En pausa', error:'Error', idle:'Parado', starting:'Arrancando', escaped_digital_fence:'Salió de la zona permitida'};
 // resumen de cualquier robot (no solo el que se ve) para la barra y «Mis robots»
 const curRobot = () => ROBOTS.find(r => r.id === P) || ROBOTS[0];
 const isLocked = r => !!(r && r.locked && !r.open);
@@ -924,7 +926,7 @@ function summary(r){
   const lm = g('lawn_mower'), off = !lm || ['unavailable', 'unknown'].includes(lm.state);
   let txt, col;
   if (off) { txt = 'Sin conexión'; col = '#8a8f92'; }
-  else if (r.kind === 'landroid') { txt = LMS[lm.state] || lm.state; col = {mowing:'#47d35a', edgecut:'#47d35a', returning:'#47d35a', error:'#ff3b30'}[lm.state] || '#ffc20e'; }
+  else if (r.kind === 'landroid') { txt = LMS[lm.state] || lm.state; col = {mowing:'#47d35a', edgecut:'#47d35a', returning:'#47d35a', error:'#ff3b30', escaped_digital_fence:'#ff3b30', idle:'#ff9f0a'}[lm.state] || '#ffc20e'; }
   else {
     const a = v('sensor','actividad'), bad = v('binary_sensor','averia') === 'on';
     // «sin actividad» es su código; para quien lo mira es «Parado» (lo mismo que dice el «Ahora» de abajo)
@@ -1309,14 +1311,26 @@ function readLandroid(){
   const bat = num('sensor','bateria'), charging = on('binary_sensor','cargando');
   const err = val('sensor','error'), rain = on('binary_sensor','sensor_de_lluvia') || err === 'rain_delay';
   const errOn = !!err && !['no_error', 'unknown', 'rain_delay'].includes(err);
+  // cuánto lleva en este estado (HA manda last_changed): un «parado» de segundos al llegar a la base es normal, uno de minutos no
+  const since = lm ? Date.parse(lm.last_changed || lm.last_updated) : NaN, mins = isNaN(since) ? 0 : (Date.now() - since) / 6e4;
+  const fence = ls === 'escaped_digital_fence';
+  // 1) en la base y sin cargar, o llegó y «falta el cable» (casi siempre es que no conecta bien con la carga)
+  const chargeFail = !offline && !charging && bat != null && bat < 98 && !fence
+    && ((ls === 'docked' && mins >= 2) || (['docked', 'idle'].includes(ls) && err === 'wire_missing'));
+  // 2) parado fuera de la base y sin ningún error: no es «aparcado», es que algo le pasa
+  const stuck = !offline && !charging && !errOn && !fence && ls === 'idle' && mins >= 3 && !chargeFail;
   const activity = ['mowing', 'edgecut'].includes(ls) ? 'mowing' : ls === 'returning' ? 'going_home' : ls === 'docked' ? (charging ? 'charging' : 'parked') : null;
   const flags = {kind: 'landroid', battery: bat, activity, state: ls === 'paused' ? 'paused' : null, charging, offline, rain,
     lifted: err === 'lifted', upsideDown: err === 'upside_down', collision: false,
-    error: ls === 'error' || (errOn && !['lifted', 'upside_down'].includes(err)), inBase: ls === 'docked', errorText: errText(err)};
+    error: ls === 'error' || fence || (errOn && !['lifted', 'upside_down'].includes(err) && !chargeFail), chargeFail, stuck,
+    inBase: ls === 'docked', errorText: fence ? 'Salió de la zona permitida (Off Limits)' : errText(err)};
   const seen = val('sensor','ultima_actualizacion');
   const al = [];
   if (offline) al.push(`<div class="alert warn"><span><b>${esc(curRobot().name)} sin conexión${seen ? ` desde ${esc(ago(seen))}` : ''}</b><br><small>${errOn ? `Último error: ${esc(errText(err))}. ` : ''}Si está parado, pulsa START en el propio robot para despertarlo: la app no puede hacerlo a distancia.</small></span></div>`);
+  else if (chargeFail) al.push(`<div class="alert"><span><b>⚠ Error al cargar</b><br><small>Está en la base pero no carga${err === 'wire_missing' ? ' (el robot dice «falta el cable», pero estando aquí casi siempre es que no conecta bien)' : ''}. Colócalo recto, limpia con un paño los contactos de la base y los del robot, y comprueba que la base tiene luz.</small></span></div>`);
+  else if (fence) al.push(`<div class="alert"><span><b>⚠ Salió de la zona permitida</b><br><small>El robot cruzó una zona prohibida (Off Limits). Mira dónde está y llévalo a la base.</small></span></div>`);
   else if (errOn) al.push(`<div class="alert"><span><b>⚠ ${esc(errText(err))}</b><br><small>Revísalo y pulsa OK en el robot; luego Cortar o A la base.</small></span></div>`);
+  else if (stuck) al.push(`<div class="alert"><span><b>⚠ Parado sin avisar de ningún error</b><br><small>Lleva ${Math.round(mins)} min parado fuera de la base y no ha dado error: puede estar atascado, levantado o sin ver el cable. Ve a verlo y pulsa START.</small></span></div>`);
   const wait = durTxt(st('sensor','retraso_por_lluvia_restante'));
   if (!offline && rain) al.push(`<div class="alert info">Llueve: el robot espera${wait ? ` unas ${wait}` : ''} a que se seque el césped.</div>`);
   const prog = val('sensor','progreso_diario'), zone = val('select','zona');
@@ -1376,6 +1390,8 @@ function nowText(f, run, nx, unknownSched){
   if (f.upsideDown) return {v: 'Volcado', d: 'Dale la vuelta y confírmalo en el robot', main: 'start', mainLabel: 'Cortar'};
   if (f.lifted) return {v: 'Levantado', d: 'Déjalo en el césped: sigue solo', main: 'start', mainLabel: 'Cortar'};
   if (f.error) return {v: 'Avería', d: 'Mira el aviso de abajo', main: 'start', mainLabel: 'Cortar'};
+  if (f.chargeFail) return {v: 'Error al cargar', d: 'Está en la base pero no carga: revisa los contactos', main: 'start', mainLabel: 'Cortar'};
+  if (f.stuck) return {v: 'Parado sin aviso', d: 'Fuera de la base y sin error: puede estar atascado', main: 'start', mainLabel: 'Cortar'};
   const a = f.activity;
   if (a === 'mowing' || a === 'going_out') return {v: a === 'going_out' ? 'Saliendo a cortar' : 'Cortando', d: until ? 'Hasta las ' + until : 'Hasta que termine o lo pares', main: 'pause', mainLabel: 'Pausa'};
   if (a === 'going_home') return {v: 'Volviendo a la base', d: next, main: 'start', mainLabel: 'Seguir'};  // «Seguir cortando» no cabía en el botón
@@ -1631,7 +1647,7 @@ function renderRobot(){
 }
 
 const ACOL = {mowing:'#47d35a', going_out:'#9be27c', going_home:'#ffd257', charging:'#3fa9ff', parked:'#8a8f92', stopped_in_garden:'#ff9f0a', none:'#5b6064',
-  edgecut:'#47d35a', returning:'#ffd257', docked:'#8a8f92', paused:'#ff9f0a', error:'#ff3b30', unavailable:'#3a3d40'};
+  edgecut:'#47d35a', returning:'#ffd257', docked:'#8a8f92', paused:'#ff9f0a', error:'#ff3b30', unavailable:'#3a3d40', idle:'#ff9f0a', escaped_digital_fence:'#ff3b30'};
 // historial del robot que se ve; si se cambia de robot a medias, la respuesta vieja se tira
 const hist = async q => { const me = P, j = await (await api(`api/historial?r=${encodeURIComponent(me)}${q}`)).json(); if (me !== P) throw new Error('otro robot'); return j; };
 async function loadActivity(){
@@ -1674,10 +1690,11 @@ async function loadErrors(){
     const ok = v => !v || ['no_error', 'ninguno', 'unknown', 'unavailable', 'none', 'rain_delay'].includes(v);
     const days = [];
     for (let k = 6; k >= 0; k--) { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - k); const e = new Date(d); e.setDate(e.getDate() + 1); days.push({a: d.getTime(), b: e.getTime(), n: 0, dow: (d.getDay() + 6) % 7, today: k === 0}); }
-    const kinds = {}; let prev = null;
+    const kinds = {}; let prev = null, lastT = 0;
     pts.forEach(p => {
-      const day = !ok(p.v) && p.v !== prev && p.t >= days[0].a ? days.find(d => p.t >= d.a && p.t < d.b) : null;  // el estado de arrastre de antes de la semana no cuenta
-      if (day) { day.n++; kinds[p.v] = (kinds[p.v] || 0) + 1; }
+      // el estado de arrastre de antes de la semana no cuenta, ni los rebotes de segundos (en la base salta de error a «sin error» varias veces seguidas)
+      const day = !ok(p.v) && p.v !== prev && p.t >= days[0].a && p.t - lastT > 5 * 60e3 ? days.find(d => p.t >= d.a && p.t < d.b) : null;
+      if (day) { day.n++; kinds[p.v] = (kinds[p.v] || 0) + 1; lastT = p.t; }
       prev = p.v;
     });
     const max = Math.max(3, ...days.map(d => d.n)), tot = days.reduce((s, d) => s + d.n, 0);
@@ -1803,6 +1820,8 @@ setInterval(loadHistory, 10 * 60 * 1000);
       upside: !s.offline && s.upsideDown,
       lifted: !s.offline && !s.upsideDown && s.lifted,
       error: !s.offline && s.error && !s.upsideDown,
+      chargeFail: !s.offline && !!s.chargeFail && !s.error && !s.upsideDown,
+      stuck: !s.offline && !!s.stuck && !s.error && !s.upsideDown && !s.lifted,
       charging: !s.offline && s.charging,
       docked: !s.offline && !moving && (s.inBase || s.charging || s.activity === 'parked' || s.activity === 'charging'),
       mowing: !s.offline && s.activity === 'mowing' && !s.lifted && !s.upsideDown,
@@ -1821,6 +1840,8 @@ setInterval(loadHistory, 10 * 60 * 1000);
       : cls.upside ? ['warn', 'Dale la vuelta y confirma en el robot']
       : cls.lifted ? ['up', 'Déjalo en el césped para que siga']
       : cls.error ? ['warn', s.errorText && s.errorText !== '—' ? s.errorText : ld ? 'Revísalo y pulsa OK en el robot' : 'Revisa el robot y confírmalo en su teclado']
+      : cls.chargeFail ? ['warn', 'No carga: limpia y alinea los contactos de la base']
+      : cls.stuck ? ['warn', 'Parado sin ningún error: ve a verlo, puede estar atascado']
       : s.rain && cls.docked ? ['pause', 'Llueve: espera en la base a que se seque']
       : cls.charging ? ['bolt', s.chargeMin ? `Cargada en ~${s.chargeMin} min${pct}` : `Cargando${pct}` + (s.next ? ` · corta ${s.next}` : '')]
       : cls.homing ? ['home', (s.battery < 30 ? 'Va a la base a cargar' : 'Vuelve a la base') + pct]
@@ -1834,6 +1855,7 @@ setInterval(loadHistory, 10 * 60 * 1000);
     // la etiqueta sale de las mismas clases que la escena: nunca dicen cosas distintas
     const [lbl, col, ic] = cls.offline ? [ld ? 'Sin conexión' : 'Fuera de alcance', '#8a8f92', 'off'] : cls.upside ? ['Volcado', '#ff3b30', 'warn']
       : cls.lifted ? ['Levantado', '#ff9f0a', 'up'] : cls.error ? ['Avería', '#ff3b30', 'warn']
+      : cls.chargeFail ? ['Error al cargar', '#ff3b30', 'warn'] : cls.stuck ? ['Parado sin aviso', '#ff9f0a', 'warn']
       : cls.charging ? ['Cargando', '#3fa9ff', 'bolt'] : cls.mowing ? ['Cortando', '#47d35a', 'mow']
       : cls.homing ? ['Volviendo a la base', '#47d35a', 'home'] : cls.leaving ? ['Saliendo de la base', '#47d35a', 'out']
       : cls.docked ? ['En la base', 'var(--brand)', 'home'] : cls.paused ? ['En pausa', 'var(--brand)', 'pause'] : ['Parado', 'var(--brand)', 'idle'];
