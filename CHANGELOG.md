@@ -2,6 +2,38 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.34 · Horas como en un reloj y un solo «Sin conexión»
+
+#### App
+- **Duraciones en horas y minutos**: «5:20 h» y «45 min» en lugar de «5,3 h» y «0,7 h» (cifras de arriba, leyenda de 24 h y gráfica de 7 días). Sin nada cortado dice «nada».
+- **El estado ya no se repite**: con el robot sin conexión, la píldora de arriba se quita (la escena, «Ahora» y la cabecera ya lo dicen) y se usa la misma palabra en todo: «Sin conexión» (antes mezclaba «Fuera de alcance»). La píldora sigue saliendo si lo que falla es el servidor.
+- **Órdenes rápidas apagadas sin conexión**, como Cortar/Pausa/Base; al tocarlas lo explica en vez de mandar una orden que no llega.
+- **Paradas por error**: «levantado» o «volcado» de menos de 5 minutos no cuentan (es alguien que lo coge para recolocarlo).
+- La leyenda de 24 h no enseña estados de menos de un minuto.
+
+## v0.3.33 · La semana trae los 7 días (y datos que ya no mienten sin conexión)
+
+_La gráfica de 7 días solo recibía el primer día: Home Assistant corta en «inicio + 1 día» si no se le pide hasta ahora. El último estado de ese día se estiraba hasta hoy: 6 días «cortando» daban más de 100 h, o 0 h si era «en la base». Lo mismo con las paradas por error._
+
+#### App
+- **Cortado y paradas de 7 días** con la semana entera (el servidor pide a HA hasta ahora).
+- **«Cortado hoy»** cuenta el día de hoy, como la barra «hoy» de la gráfica, no las últimas 24 h (a las 00:05 contaba lo de ayer).
+- **Sin conexión, «Ahora mismo» ya no pone «no» ni «ninguna»**: no hay dato y no se pinta; sale «Sin conexión».
+- «Uso acumulado» vacío avisa de que se verá al conectar.
+- **«Todos los datos»**: «—» cuando no hay dato (antes «unavailable %»), sí/no en vez de on/off, el estado del cortacésped en castellano, fechas legibles y cifras redondeadas («524,6 h», no «524.583333333333 h»).
+- Aviso del McCulloch sin conexión: puede estar lejos del receptor **o sin batería**, no solo lejos.
+- Cabecera de la gráfica semanal en una línea («3,1 de 25 h»).
+
+#### Avisos al móvil
+- Landroid en la base con «falta el cable»: el aviso dice que **no carga** y que limpies los contactos, como la app, en vez de mandarte a revisar el cable.
+
+## v0.3.32 · Las horas de la semana ya no se confunden con las de cuchillas
+
+_En la fila de cifras de la pantalla principal salía «Cuchillas 113 h» junto a «En 7 días 0 h», y se leía como si la semana hubiera sumado más de 100 horas._
+
+#### App
+- La fila de arriba enseña solo lo cortado: **«Cortado hoy»** y **«Cortado en 7 días»**. Las horas de cuchillas desde el último cambio siguen en Datos.
+
 ## v0.3.31 · «Parado por atasco»
 
 _«Parado sin aviso» no decía lo que casi siempre es: el robot atascado._

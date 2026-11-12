@@ -598,7 +598,8 @@ def make_app() -> web.Application:
             days = min(7, max(1, int(req.query.get("d", "1"))))
         except ValueError:
             days = 1
-        start = (datetime.now(UTC) - timedelta(days=days)).isoformat()
+        now = datetime.now(UTC)
+        start = (now - timedelta(days=days)).isoformat()
         rid = req.query.get("r") if req.query.get("r") in ids else PREFIX
         if not is_open(req, rid):
             return locked_resp()
@@ -611,7 +612,9 @@ def make_app() -> web.Application:
         else:
             entity = f"sensor.{rid}_actividad"
         url = f"{ha}/api/history/period/{start}"
-        params = {"filter_entity_id": entity, "minimal_response": "", "no_attributes": ""}
+        # end_time siempre: sin él HA corta en inicio + 1 día, y la semana traía solo el primer día (el último
+        # estado de ese día se estiraba hasta hoy: 6 días «cortando» = más de 100 h, o 0 h si era «en la base»)
+        params = {"filter_entity_id": entity, "end_time": now.isoformat(), "minimal_response": "", "no_attributes": ""}
         try:
             async with req.app["http"].get(url, params=params) as r:
                 data = await r.json() if r.status == 200 else []

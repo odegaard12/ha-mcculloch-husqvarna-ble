@@ -313,9 +313,13 @@ def setup_push(app: web.Application, here: Path, ha: str, token: str, robots: li
                 online = g("lm") not in (None, "unavailable", "unknown")
                 err = g("error")
                 bad = online and err not in (None, "no_error", "unknown", "unavailable", "rain_delay")
+                # en la base con «falta el cable» es que no conecta con la carga (lo mismo que dice la app: «Error al cargar»)
+                no_carga = err == "wire_missing" and g("lm") in ("docked", "idle")
+                texto = (f"⚠️ {name} está en la base pero no carga. Colócalo recto y limpia los contactos de la base y del robot."
+                         if no_carga else f"⚠️ {name}: {err_text('landroid', err)}. Revísalo y pulsa OK en el robot.")
                 rule = {
                     # el error se queda con su último valor sin conexión: solo cuenta con el robot conectado
-                    "averia": (bad, 120, f"⚠️ {name}: {err_text('landroid', err)}. Revísalo y pulsa OK en el robot."),
+                    "averia": (bad, 120, texto),
                 }
                 tip = "¿Sin Wi-Fi o apagado?"
             else:
