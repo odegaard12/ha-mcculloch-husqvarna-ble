@@ -812,6 +812,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) chec
 const h1 = v => Number(v).toLocaleString('es-ES', {minimumFractionDigits: 1, maximumFractionDigits: 1});
 // duraciones como en un reloj: «5:20 h» y «45 min», no «5,3 h» ni «0,7 h»; corto = para las barras estrechas («5:20», «45m»)
 const hhmm = (ms, corto) => { const m = Math.round(ms / 6e4); if (m < 60) return m + (corto ? 'm' : ' min');
+  if (m % 60 === 0) return m / 60 + (corto ? 'h' : ' h');  // horas justas: «24 h», que «24:00 h» parece una hora del día
   const t = Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0'); return corto ? t : t + ' h'; };
 function toast(m){ const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 3200); }
 
@@ -989,7 +990,9 @@ function pickRobot(id){
   const app = $('.app'); app.classList.remove('swap'); void app.offsetWidth; app.classList.add('swap');
   document.body.classList.add('stale');  // hasta pintar este robot, nada del anterior a la vista
   lkBuf = ''; drawLkPins(); $('#lkmsg').textContent = '';
-  editing = false; mowed24 = null;
+  editing = false; mowed24 = mowedWeek = null;
+  // las gráficas del robot anterior no se quedan a la vista mientras llegan (o si no llegan) las del nuevo
+  ['#wbars', '#ebars', '#elegend', '#tl', '#legend'].forEach(q => { $(q).innerHTML = ''; }); $('#errtot').textContent = $('#weekmowtot').textContent = '';
   ['#tl','#wbars','#spark'].forEach(s => $(s).innerHTML = ''); $('#legend').textContent = ''; $('#weekmowtot').textContent = ''; $('#sparkinfo').textContent = '';
   window.robot3d && window.robot3d.load(KIND);
   if (Object.keys(states).length) { render(); renderRobots(); } else applyLock();
@@ -1083,7 +1086,8 @@ async function closeRobot(id){
   toast('Bloqueado en este móvil');
   afterRobotsChange();
 }
-$('#pick').onclick = () => { if (ROBOTS.length > 1) { drawSheet(); $('#sheet').hidden = false; } };
+// también con un solo robot: es donde se le cambia el nombre y se le pone contraseña
+$('#pick').onclick = () => { drawSheet(); $('#sheet').hidden = false; };
 $('#sheetx').onclick = () => { $('#sheet').hidden = true; };
 $('#sheet').onclick = e => {
   if (e.target === e.currentTarget) { $('#sheet').hidden = true; return; }
@@ -1190,7 +1194,8 @@ const num = (dom, key) => { const v = val(dom, key); return v == null ? NaN : Nu
 function readMcCulloch(){
   const bat = num('sensor','bateria'), charging = on('binary_sensor','cargando');
   const s = val('sensor','estado'), a = val('sensor','actividad'), m = val('sensor','modo');
-  const offline = !st('lawn_mower') || st('lawn_mower').state === 'unavailable';
+  // «unknown» = conectado pero sin leer aún el estado: tampoco se le pueden dar órdenes (la cabecera ya decía «Sin conexión»)
+  const offline = !st('lawn_mower') || ['unavailable', 'unknown'].includes(st('lawn_mower').state);
   const flags = {kind: 'mcculloch', battery: bat, activity: a, state: s, charging, offline,
     lifted: on('binary_sensor','levantado'), upsideDown: on('binary_sensor','volcado'), collision: on('binary_sensor','choque'),
     error: on('binary_sensor','averia') || s === 'error' || s === 'fatal_error', inBase: on('binary_sensor','en_la_base')};
@@ -1291,7 +1296,8 @@ async function ldDialog(x){  // x: franja a cambiar, o null para añadir
     text: 'Se manda sola y la nube de Worx tarda unos minutos en aplicarla.', fields: [
       {k: 'day', label: 'Día', type: 'select', options: DAYS.map((d, j) => [d, cap(DLONG[j])]), value: x?.day || DAYS[0]},
       {k: 'start', label: 'Empieza', type: 'time', value: x?.start || '09:00'},
-      {k: 'end', label: 'Termina', type: 'time', value: x ? hm(toMin(x.start) + x.duration) : '12:00'},
+      // una franja hasta medianoche es «24:00», que el campo de hora no admite y salía vacío: va como 00:00
+      {k: 'end', label: 'Termina', type: 'time', value: x ? hm(toMin(x.start) + x.duration).replace('24:00', '00:00') : '12:00'},
       {k: 'b', label: 'Repasar los bordes al empezar', type: 'checkbox', value: x?.boundary}]});
   if (!v) return;
   const dur = endMin(v.end) - toMin(v.start);
@@ -1321,7 +1327,8 @@ function readLandroid(){
   const since = lm ? Date.parse(lm.last_changed || lm.last_updated) : NaN, mins = isNaN(since) ? 0 : (Date.now() - since) / 6e4;
   const fence = ls === 'escaped_digital_fence';
   // 1) en la base y sin cargar, o llegó y «falta el cable» (casi siempre es que no conecta bien con la carga)
-  const chargeFail = !offline && !charging && bat != null && bat < 98 && !fence
+  // solo si HA dice que NO carga (un «cargando» sin dato no es un fallo de carga) y hay cifra de batería
+  const chargeFail = !offline && val('binary_sensor','cargando') === 'off' && !isNaN(bat) && bat < 98 && !fence
     && ((ls === 'docked' && mins >= 2) || (['docked', 'idle'].includes(ls) && err === 'wire_missing'));
   // 2) parado fuera de la base y sin ningún error: no es «aparcado», es que algo le pasa
   const stuck = !offline && !charging && !errOn && !fence && ls === 'idle' && mins >= 3 && !chargeFail;
@@ -1383,7 +1390,8 @@ function render(){
   // mientras se elige una hora (el selector abierto aún no ha dado «change») no se rehace el editor
   if (!editing && KIND === 'mcculloch' && !$('#tasks').contains(document.activeElement)) loadEditor(tasks);
   renderDatos(); renderRobot();
-  const upd = st('sensor','bateria')?.last_updated;
+  // el último contacto con el robot; la batería solo cambia de fecha cuando cambia de valor (6 h al 100 % = «hace 6 h»)
+  const upd = d.seen && !isNaN(new Date(d.seen)) ? d.seen : st('sensor','bateria')?.last_updated;
   $('#foot').textContent = upd ? 'Última lectura ' + ago(upd) : '';
   if (st('lawn_mower')) document.body.classList.remove('stale');
 }
@@ -1666,7 +1674,9 @@ function renderRobot(){
 const ACOL = {mowing:'#47d35a', going_out:'#9be27c', going_home:'#ffd257', charging:'#3fa9ff', parked:'#8a8f92', stopped_in_garden:'#ff9f0a', none:'#5b6064',
   edgecut:'#47d35a', returning:'#ffd257', docked:'#8a8f92', paused:'#ff9f0a', error:'#ff3b30', unavailable:'#3a3d40', idle:'#ff9f0a', escaped_digital_fence:'#ff3b30'};
 // historial del robot que se ve; si se cambia de robot a medias, la respuesta vieja se tira
-const hist = async q => { const me = P, j = await (await api(`api/historial?r=${encodeURIComponent(me)}${q}`)).json(); if (me !== P) throw new Error('otro robot'); return j; };
+// un fallo del servidor o de HA no es «sin historial»: se lanza y la gráfica se queda como estaba, sin pintar «nada»
+const hist = async q => { const me = P, r = await api(`api/historial?r=${encodeURIComponent(me)}${q}`), j = r.ok ? await r.json() : null;
+  if (me !== P) throw new Error('otro robot'); if (!Array.isArray(j)) throw new Error('sin historial'); return j; };
 async function loadActivity(){
   if (locked) return;
   try {

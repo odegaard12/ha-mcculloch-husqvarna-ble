@@ -2,6 +2,33 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.35 · Pasada de fallos: historial, avisos y capturas nuevas
+
+_Revisión completa del servidor, los avisos y la app._
+
+#### App
+- **No se cuentan horas «cortando» con el McCulloch sin conexión**: su sensor de actividad guarda el último valor, y si se quedaba sin batería a medio cortar seguía sumando hasta que volviera. El servidor recorta esos tramos.
+- **Un fallo de Home Assistant ya no se pinta como «nada cortado»**: las gráficas se quedan como estaban.
+- **«Error al cargar» solo si HA dice que no carga**: un «cargando» sin dato ya no lo dispara.
+- **Con un solo robot se puede abrir «Mis robots»** (cambiarle el nombre, ponerle contraseña): antes no se abría.
+- Franja del Landroid **hasta medianoche**: al cambiarla, la hora de fin salía vacía y no dejaba guardar.
+- **«Última lectura»** usa el último contacto con el robot (antes, la fecha de la batería: 6 h al 100 % era «hace 6 h»).
+- Al **cambiar de robot** no se quedan a la vista las gráficas ni «Cortado en 7 días» del anterior.
+- McCulloch conectado pero sin leer aún el estado: «Sin conexión» en toda la pantalla (la escena decía «Parado» con los botones activos).
+- Horas justas como «24 h» (no «24:00 h»).
+
+#### Avisos al móvil
+- **Sin duplicados al cambiar de Pi**: la que está de reserva apunta también cada aviso, así que al tomar el relevo no repite el «lleva 1 día sin conexión» ni se salta el tope diario.
+- **Una avería distinta ya no se calla** por las 6 h de espera de la anterior (la espera va por avería).
+- **Una avería vieja del McCulloch no se repite** cada 6 h mientras está sin conexión.
+- El «último contacto» no se pierde si el sensor pasa un momento a «no disponible» (se quedaba sin aviso de sin conexión y de vuelta).
+
+#### Servidor
+- Respuestas de error de HA en texto plano, un cuerpo de login que no es un objeto o un número desbordado ya no dan un error 500.
+
+#### Repo
+- **Capturas del README al día** (pantalla principal, Landroid, bloqueo y tarjetas) y dos nuevas: **Horario** y **Datos**.
+
 ## v0.3.34 · Horas como en un reloj y un solo «Sin conexión»
 
 #### App

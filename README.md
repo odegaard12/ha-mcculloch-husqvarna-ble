@@ -21,6 +21,11 @@ Tus robots cortacésped en Home Assistant, en una tarjeta y en una app para el m
   &nbsp;
   <img src="docs/bloqueo.png" alt="Robot con contraseña: teclado para desbloquearlo" width="250">
 </p>
+<p align="center">
+  <img src="docs/horario.png" alt="Pestaña Horario: la semana programada de un vistazo y el editor de franjas con plantillas" width="250">
+  &nbsp;
+  <img src="docs/datos.png" alt="Pestaña Datos: actividad y batería de las últimas 24 horas, lo cortado cada día de la semana y las paradas por error" width="250">
+</p>
 
 <p align="center"><b>Tarjeta de Home Assistant</b>: uno o dos robots, cada uno con su modelo, su color y sus órdenes.</p>
 <p align="center"><img src="docs/tarjeta.png" alt="Tarjeta con el McCulloch: cortando, cargando y volviendo a la base (se queda a medio entrar)" width="860"></p>

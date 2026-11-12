@@ -16,6 +16,13 @@ server.HERE = Path(tempfile.mkdtemp())  # .app_secret de usar y tirar
 
 
 async def main():
+    # historial: el robot se queda sin conexión a medio cortar; ese tramo no cuenta como «cortando»
+    T = "2026-11-10T%02d:00:00+00:00"
+    got = server.cut_offline([{"t": T % 9, "v": "mowing"}, {"t": T % 20, "v": "parked"}],
+                             [{"t": T % 8, "v": "mowing"}, {"t": T % 11, "v": "unavailable"}, {"t": T % 19, "v": "mowing"}])
+    assert got == [{"t": T % 9, "v": "mowing"}, {"t": T % 11, "v": "unavailable"}, {"t": T % 19, "v": "mowing"},
+                   {"t": T % 20, "v": "parked"}], got
+    assert server.cut_offline([{"t": T % 9, "v": "mowing"}], []) == [{"t": T % 9, "v": "mowing"}]  # sin cortacésped: tal cual
     # avisos al cumplirse el plazo: los de plazo fijo (avería, vuelco...) basta con que sigan activos;
     # los «sin conexión» solo cuando ya no falta nada
     from push import _due

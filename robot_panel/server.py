@@ -59,6 +59,26 @@ ALLOWED = {
 WEEK = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
 
 
+def cut_offline(act: list[dict], live: list[dict]) -> list[dict]:
+    """Historial de actividad con «unavailable» mientras el cortacésped no está conectado.
+
+    `act` (sensor de actividad, guarda su último valor sin conexión) y `live` (lawn_mower, que sí se cae) son
+    listas {t, v} ordenadas; sale una sola lista {t, v} donde cada tramo sin conexión vale «unavailable»."""
+    off = ("unavailable", "unknown")
+    ev = sorted([(p["t"], 0, p["v"]) for p in act] + [(p["t"], 1, p["v"]) for p in live],
+                key=lambda e: (datetime.fromisoformat(e[0]), e[1]))
+    out, cur, online = [], None, not live  # sin historial del cortacésped no se recorta nada
+    for t, src, v in ev:
+        if src:
+            online = v not in off
+        else:
+            cur = v
+        val = cur if online else "unavailable"
+        if val is not None and (not out or out[-1]["v"] != val):
+            out.append({"t": t, "v": val})
+    return out
+
+
 def load_env() -> None:
     env = HERE / "robot_app.env"
     if env.exists():
@@ -170,10 +190,7 @@ def make_app() -> web.Application:
         ip = client_ip(req)
         if too_many(ip):
             return web.json_response({"error": "Demasiados intentos. Espera unos minutos."}, status=429)
-        try:
-            body = await req.json()
-        except ValueError:
-            body = {}
+        body = await body_of(req)  # un cuerpo que no es un objeto (p. ej. «[]») no tumba la petición
         if not pin or not hmac.compare_digest(str(body.get("pin", "")).encode(), pin.encode()):
             failed(ip)
             return web.json_response({"error": "PIN incorrecto"}, status=403)
@@ -438,6 +455,13 @@ def make_app() -> web.Application:
             return {}
         return body if isinstance(body, dict) else {}
 
+    async def ha_json(r):
+        """Cuerpo de una respuesta de HA; sus errores 401/500 vienen en texto plano y no deben dar un 500 nuestro."""
+        try:
+            return await r.json(content_type=None) if r.content_length != 0 else {}
+        except ValueError:
+            return {}
+
     async def servicio(req):
         if not token:
             return no_token()
@@ -472,7 +496,7 @@ def make_app() -> web.Application:
                                             timeout=ClientTimeout(total=timeout)) as r:
                 if r.status == 200:
                     return True, None
-                j = await r.json(content_type=None) if r.content_length != 0 else {}
+                j = await ha_json(r)
                 return False, (j.get("message") if isinstance(j, dict) else None) or f"HA respondió {r.status}"
         except (ClientError, TimeoutError) as e:
             return False, f"No llego a Home Assistant: {type(e).__name__}"
@@ -508,7 +532,7 @@ def make_app() -> web.Application:
         try:
             # grabar 15 turnos por Bluetooth puede pasar de 20 s: este pide más margen
             async with req.app["http"].post(url, json={"tasks": clean}, timeout=ClientTimeout(total=90)) as r:
-                data = await r.json(content_type=None) if r.content_length != 0 else {}
+                data = await ha_json(r)
                 if r.status != 200:
                     msg = data.get("message") if isinstance(data, dict) else None
                     return web.json_response({"error": msg or f"HA respondio {r.status}"}, status=400 if r.status == 400 else 502)
@@ -537,7 +561,7 @@ def make_app() -> web.Application:
         else:
             try:
                 minutes = int(body.get("duration"))
-            except (TypeError, ValueError):
+            except (TypeError, ValueError, OverflowError):  # OverflowError: un «1e999» del cliente
                 minutes = 0
             if not 1 <= minutes <= 1440 - (int(start[:2]) * 60 + int(start[3:])):
                 return web.json_response({"error": "la hora de fin tiene que ser después del inicio (y el mismo día)"}, status=400)
@@ -566,7 +590,7 @@ def make_app() -> web.Application:
         if kinds[rid] == "landroid":
             try:
                 minutes = round(float(body.get("horas")) * 60)
-            except (TypeError, ValueError):
+            except (TypeError, ValueError, OverflowError):
                 minutes = 0
             if body.get("accion") != "cortar" or not 10 <= minutes <= 120:  # lo que admite su «one-time schedule»
                 return web.json_response({"error": "El Landroid corta de 10 min a 2 h seguidas"}, status=400)
@@ -584,7 +608,7 @@ def make_app() -> web.Application:
             async with req.app["http"].post(f"{ha}/api/services/mcculloch_rob/{service}", json={"hours": hours},
                                             timeout=ClientTimeout(total=60)) as r:
                 if r.status != 200:
-                    data = await r.json(content_type=None) if r.content_length != 0 else {}
+                    data = await ha_json(r)
                     msg = data.get("message") if isinstance(data, dict) else None
                     return web.json_response({"error": msg or f"HA respondio {r.status}"}, status=502)
         except (ClientError, TimeoutError) as e:
@@ -614,14 +638,22 @@ def make_app() -> web.Application:
         url = f"{ha}/api/history/period/{start}"
         # end_time siempre: sin él HA corta en inicio + 1 día, y la semana traía solo el primer día (el último
         # estado de ese día se estiraba hasta hoy: 6 días «cortando» = más de 100 h, o 0 h si era «en la base»)
-        params = {"filter_entity_id": entity, "end_time": now.isoformat(), "minimal_response": "", "no_attributes": ""}
+        # la actividad del McCulloch se queda con su último valor sin conexión (es un sensor): se pide también el
+        # cortacésped, que sí pasa a «unavailable», para no contar horas «cortando» con el robot lejos o sin batería
+        live = f"lawn_mower.{rid}" if entity.endswith("_actividad") else None
+        params = {"filter_entity_id": f"{entity},{live}" if live else entity, "end_time": now.isoformat(),
+                  "minimal_response": "", "no_attributes": ""}
         try:
             async with req.app["http"].get(url, params=params) as r:
-                data = await r.json() if r.status == 200 else []
+                if r.status != 200:  # un fallo de HA no es «sin historial»: la app no debe pintar «nada cortado»
+                    return web.json_response({"error": f"HA respondió {r.status}"}, status=502)
+                data = await ha_json(r)
         except (ClientError, TimeoutError) as e:
             return unreachable(e)
-        pts = [{"t": p["last_changed"], "v": p["state"]} for serie in data for p in serie]
-        return web.json_response(pts)
+        series = {s[0].get("entity_id"): [{"t": p["last_changed"], "v": p["state"]} for p in s]
+                  for s in data if isinstance(s, list) and s}
+        pts = series.get(entity, [])
+        return web.json_response(cut_offline(pts, series.get(live, [])) if live else pts)
 
     @web.middleware
     async def no_cache(req, handler):
