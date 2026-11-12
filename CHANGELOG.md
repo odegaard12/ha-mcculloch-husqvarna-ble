@@ -2,6 +2,13 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.32 · Las horas de la semana ya no se confunden con las de cuchillas
+
+_En la fila de cifras de la pantalla principal salía «Cuchillas 113 h» junto a «En 7 días 0 h», y se leía como si la semana hubiera sumado más de 100 horas._
+
+#### App
+- La fila de arriba enseña solo lo cortado: **«Cortado hoy»** y **«Cortado en 7 días»**. Las horas de cuchillas desde el último cambio siguen en Datos.
+
 ## v0.3.31 · «Parado por atasco»
 
 _«Parado sin aviso» no decía lo que casi siempre es: el robot atascado._

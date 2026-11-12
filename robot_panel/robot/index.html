@@ -1416,13 +1416,11 @@ function setActions(main, label){
 }
 // cifras en una línea pequeña; las que no tienen valor no salen
 let mowed24 = null, mowedWeek = null, weekMin = 0, LINK = '';
+// solo lo cortado: las horas de cuchillas (113 h desde el cambio) al lado se leían como horas de la semana; van en Datos
 function renderFacts(){
-  const bk = KIND === 'landroid' ? 'tiempo_de_uso_de_las_cuchillas_desde_el_reinicio' : 'uso_de_las_cuchillas';
-  const blades = Number(val('sensor', bk));
   const f = [
     mowed24 != null ? ['Cortado hoy', (mowed24 < 18e4 ? '0' : h1(mowed24 / 36e5)) + ' h'] : null,  // menos de 3 min: «0 h», no «0,0 h»
-    mowedWeek != null ? ['En 7 días', (mowedWeek < 18e4 ? '0' : h1(mowedWeek / 36e5)) + ' h'] : null,  // lo cortado de verdad, no lo programado
-    !isNaN(blades) && val('sensor', bk) != null ? ['Cuchillas', Math.round(blades) + ' h'] : null,
+    mowedWeek != null ? ['Cortado en 7 días', (mowedWeek < 18e4 ? '0' : h1(mowedWeek / 36e5)) + ' h'] : null,  // lo cortado de verdad, no lo programado
   ].filter(Boolean);
   $('#facts').innerHTML = f.map(([s, b]) => `<span>${s} <b>${esc(b)}</b></span>`).join('');
 }
