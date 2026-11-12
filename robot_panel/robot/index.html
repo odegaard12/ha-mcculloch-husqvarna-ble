@@ -222,7 +222,8 @@ nav.tabs button.on{color:var(--brand-ink);background:var(--brand);font-weight:70
 .actions button:active{transform:scale(.97)}
 .actions button.main{background:var(--brand);color:var(--brand-ink)}
 button:disabled{opacity:.5;cursor:wait}
-.actions.na button{opacity:.4;filter:grayscale(.6);cursor:not-allowed}
+.actions.na button,.quick.na .chip{opacity:.4;filter:grayscale(.6);cursor:not-allowed}
+.live[hidden]{display:none}
 .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:16px;box-shadow:var(--shadow)}
 .card h2{margin:0 0 12px;font-size:12.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:750;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .card h3{margin:14px 0 8px;font-size:13px;color:var(--muted);font-weight:650}
@@ -809,6 +810,9 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) chec
 
 // una cifra decimal con coma, como se escribe en español
 const h1 = v => Number(v).toLocaleString('es-ES', {minimumFractionDigits: 1, maximumFractionDigits: 1});
+// duraciones como en un reloj: «5:20 h» y «45 min», no «5,3 h» ni «0,7 h»; corto = para las barras estrechas («5:20», «45m»)
+const hhmm = (ms, corto) => { const m = Math.round(ms / 6e4); if (m < 60) return m + (corto ? 'm' : ' min');
+  const t = Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0'); return corto ? t : t + ' h'; };
 function toast(m){ const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 3200); }
 
 /* ---------- PIN ---------- */
@@ -858,7 +862,7 @@ let states = {};
 const st = (dom, key) => states[`${dom}.${P}${key ? '_' + key : ''}`];
 const val = (dom, key) => { const s = st(dom, key); return s && !['unknown','unavailable'].includes(s.state) ? s.state : null; };
 const on = (dom, key) => val(dom, key) === 'on';
-function setLive(ok, txt){ const l = $('#live'); l.classList.toggle('off', !ok); l.lastChild.textContent = txt || (ok ? 'en directo' : 'sin conexión'); l.title = l.lastChild.textContent; l.setAttribute('aria-label', l.title); }
+function setLive(ok, txt){ const l = $('#live'); l.hidden = false; l.classList.toggle('off', !ok); l.lastChild.textContent = txt || (ok ? 'en directo' : 'sin conexión'); l.title = l.lastChild.textContent; l.setAttribute('aria-label', l.title); }
 let pollN = 0, polling = null;
 // una sola lectura a la vez: si llegan varias peticiones (cada 5 s, tras una orden, al tirar hacia abajo)
 // se espera a la que está en marcha; así una respuesta lenta y vieja nunca pisa una nueva
@@ -1153,11 +1157,13 @@ async function durante(accion, horas){
 let OFFLINE = false;  // sin conexión: los botones avisan en vez de esperar a que falle la orden
 document.querySelector('.actions').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
-  if (OFFLINE) return toast(KIND === 'landroid' ? 'Sin conexión: el robot no llega a la nube de Worx' : 'Fuera de alcance: acércalo al receptor Bluetooth');
+  if (OFFLINE) return toast(KIND === 'landroid' ? 'Sin conexión: el robot no llega a la nube de Worx' : 'Sin conexión: el robot no responde por Bluetooth');
   const LM = `lawn_mower.${P}`;
   ({start: () => svc('lawn_mower','start_mowing',LM,'Cortando'), pause: () => svc('lawn_mower','pause',LM,'En pausa'), dock: () => svc('lawn_mower','dock',LM,'Volviendo a la base')})[b.dataset.act]();
 };
 document.addEventListener('click', e => {
+  // órdenes rápidas apagadas sin conexión: se explica en vez de mandar algo que el robot no va a recibir
+  if (OFFLINE && e.target.closest('.quick [data-btn],.quick [data-mow],.quick [data-park]')) return toast('Sin conexión: se podrá cuando el robot conecte');
   const b = e.target.closest('[data-btn]'); if (b) svc('button','press',`button.${P}_${b.dataset.btn}`, b.textContent);
   const g = e.target.closest('[data-go]'); if (g) show(g.dataset.go);
   const mw = e.target.closest('[data-mow]'); if (mw) durante('cortar', Number(mw.dataset.mow));
@@ -1343,8 +1349,10 @@ function render(){
   if (applyLock()) return;  // con contraseña: el servidor no manda sus datos y no hay nada que pintar
   const d = KIND === 'landroid' ? readLandroid() : readMcCulloch(), flags = d.flags, bat = flags.battery, a = flags.activity;
   LINK = d.foot;  // «Bluetooth → ESP32 → Home Assistant»: se enseña en Ajustes, no al pie de cada pantalla
-  setLive(!flags.offline, flags.offline ? (KIND === 'landroid' ? 'sin conexión' : 'fuera de alcance') : null);
+  // robot sin conexión: ya lo dicen la escena, «Ahora» y la cabecera; la píldora queda para cuando falla el servidor
+  setLive(!flags.offline, null); $('#live').hidden = !!flags.offline;
   OFFLINE = !!flags.offline; $('.actions').classList.toggle('na', OFFLINE);
+  document.querySelectorAll('.quick').forEach(c => c.classList.toggle('na', OFFLINE));  // órdenes rápidas, igual de apagadas
   // batería arriba a la derecha de la escena: cifra, barrita de nivel, rayo si carga y roja si queda poca
   $('#bat').textContent = isNaN(bat) ? '–' : bat + ' %';
   $('#batsub').textContent = flags.charging ? '⚡' : '';
@@ -1386,7 +1394,7 @@ function nowText(f, run, nx, unknownSched){
   const next = nx ? 'Próximo corte: ' + (nx.k === 0 ? 'hoy' : nx.k === 1 ? 'mañana' : 'el ' + DLONG[nx.d]) + ' a las ' + hm(nx.m)
     : unknownSched || f.offline ? 'El horario se sabrá al conectar' : 'Sin horario: corta cuando se lo mandes';
   const ld = KIND === 'landroid';
-  if (f.offline) return {v: ld ? 'Sin conexión' : 'Fuera de alcance', d: f.lastSeen ? 'Último dato ' + f.lastSeen : next, main: 'start', mainLabel: 'Cortar'};
+  if (f.offline) return {v: 'Sin conexión', d: f.lastSeen ? 'Último dato ' + f.lastSeen : next, main: 'start', mainLabel: 'Cortar'};
   if (f.upsideDown) return {v: 'Volcado', d: 'Dale la vuelta y confírmalo en el robot', main: 'start', mainLabel: 'Cortar'};
   if (f.lifted) return {v: 'Levantado', d: 'Déjalo en el césped: sigue solo', main: 'start', mainLabel: 'Cortar'};
   if (f.error) return {v: 'Avería', d: 'Mira el aviso de abajo', main: 'start', mainLabel: 'Cortar'};
@@ -1419,8 +1427,8 @@ let mowed24 = null, mowedWeek = null, weekMin = 0, LINK = '';
 // solo lo cortado: las horas de cuchillas (113 h desde el cambio) al lado se leían como horas de la semana; van en Datos
 function renderFacts(){
   const f = [
-    mowed24 != null ? ['Cortado hoy', (mowed24 < 18e4 ? '0' : h1(mowed24 / 36e5)) + ' h'] : null,  // menos de 3 min: «0 h», no «0,0 h»
-    mowedWeek != null ? ['Cortado en 7 días', (mowedWeek < 18e4 ? '0' : h1(mowedWeek / 36e5)) + ' h'] : null,  // lo cortado de verdad, no lo programado
+    mowed24 != null ? ['Cortado hoy', mowed24 < 6e4 ? 'nada' : hhmm(mowed24)] : null,
+    mowedWeek != null ? ['Cortado en 7 días', mowedWeek < 6e4 ? 'nada' : hhmm(mowedWeek)] : null,  // lo cortado de verdad, no lo programado
   ].filter(Boolean);
   $('#facts').innerHTML = f.map(([s, b]) => `<span>${s} <b>${esc(b)}</b></span>`).join('');
 }
@@ -1668,7 +1676,7 @@ async function loadActivity(){
     const segs = pts.map((p, i) => ({v: p.v, a: Math.max(p.t, t0), b: i + 1 < pts.length ? pts[i + 1].t : Date.now()})).filter(x => x.b > t0);
     $('#tl').innerHTML = segs.map(x => `<b style="width:${(x.b - x.a) / 864e5 * 100}%;background:${ACOL[x.v] || '#5b6064'}" title="${esc(ACTIVITY[x.v] || x.v)}"></b>`).join('');
     const tot = {}; segs.forEach(x => tot[x.v] = (tot[x.v] || 0) + (x.b - x.a));
-    $('#legend').innerHTML = Object.entries(tot).sort((a, b) => b[1] - a[1]).map(([k, ms]) => `<span><i style="background:${ACOL[k] || '#5b6064'}"></i>${esc(ACTIVITY[k] || k)} ${h1(ms / 36e5)} h</span>`).join('');
+    $('#legend').innerHTML = Object.entries(tot).filter(([, ms]) => ms >= 6e4).sort((a, b) => b[1] - a[1]).map(([k, ms]) => `<span><i style="background:${ACOL[k] || '#5b6064'}"></i>${esc(ACTIVITY[k] || k)} ${hhmm(ms)}</span>`).join('');
   } catch(e) {}
 }
 // horas cortadas cada día de los últimos 7 (días naturales, hora local)
@@ -1685,10 +1693,10 @@ async function loadWeekMow(){
       days.forEach(d => { d.ms += Math.max(0, Math.min(b, d.b) - Math.max(a, d.a)); });
     });
     const max = Math.max(36e5, ...days.map(d => d.ms)), tot = days.reduce((s, d) => s + d.ms, 0);
-    $('#wbars').innerHTML = days.map(d => `<div class="${d.today ? 'today' : ''}" title="${h1(d.ms / 36e5)} h"><b>${d.ms >= 6e5 ? h1(d.ms / 36e5) : ''}</b><i style="height:${Math.round(d.ms / max * 110)}px"></i><span>${d.today ? 'hoy' : 'LMXJVSD'[d.dow]}</span></div>`).join('');
+    $('#wbars').innerHTML = days.map(d => `<div class="${d.today ? 'today' : ''}" title="${hhmm(d.ms)}"><b>${d.ms >= 6e4 ? hhmm(d.ms, true) : ''}</b><i style="height:${Math.round(d.ms / max * 110)}px"></i><span>${d.today ? 'hoy' : 'LMXJVSD'[d.dow]}</span></div>`).join('');
     // «hoy» = el día natural, como la barra «hoy» de la gráfica (con las últimas 24 h, a las 00:05 contaba lo de ayer)
     mowedWeek = tot; mowed24 = days[6].ms; renderFacts();
-    $('#weekmowtot').textContent = h1(tot / 36e5) + (weekMin ? ' de ' + Math.round(weekMin / 60) + ' h' : ' h');  // corto: no cabía en una línea
+    $('#weekmowtot').textContent = hhmm(tot) + (weekMin ? ' de ' + Math.round(weekMin / 60) + ' h' : '');  // corto: no cabía en una línea
   } catch(e) {}
 }
 // paradas por avería cada día de los últimos 7: cuenta cada vez que el robot pasa a un error (no el tiempo que dura)
@@ -1700,9 +1708,11 @@ async function loadErrors(){
     const days = [];
     for (let k = 6; k >= 0; k--) { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - k); const e = new Date(d); e.setDate(e.getDate() + 1); days.push({a: d.getTime(), b: e.getTime(), n: 0, dow: (d.getDay() + 6) % 7, today: k === 0}); }
     const kinds = {}; let prev = null, lastT = 0;
-    pts.forEach(p => {
+    pts.forEach((p, i) => {
+      // levantado/volcado de menos de 5 min es que alguien lo ha cogido (para recolocarlo o limpiarlo), no una avería
+      const corto = ['lifted', 'upside_down'].includes(p.v) && (i + 1 < pts.length ? pts[i + 1].t : Date.now()) - p.t < 5 * 60e3;
       // el estado de arrastre de antes de la semana no cuenta, ni los rebotes de segundos (en la base salta de error a «sin error» varias veces seguidas)
-      const day = !ok(p.v) && p.v !== prev && p.t >= days[0].a && p.t - lastT > 5 * 60e3 ? days.find(d => p.t >= d.a && p.t < d.b) : null;
+      const day = !ok(p.v) && !corto && p.v !== prev && p.t >= days[0].a && p.t - lastT > 5 * 60e3 ? days.find(d => p.t >= d.a && p.t < d.b) : null;
       if (day) { day.n++; kinds[p.v] = (kinds[p.v] || 0) + 1; lastT = p.t; }
       prev = p.v;
     });
@@ -1862,7 +1872,7 @@ setInterval(loadHistory, 10 * 60 * 1000);
     stage.classList.toggle('cap', !!cap);
     if (cap) { document.getElementById('capic').innerHTML = `<svg viewBox="0 0 24 24">${ICON[cap[0]]}</svg>`; document.getElementById('captxt').textContent = cap[1]; }
     // la etiqueta sale de las mismas clases que la escena: nunca dicen cosas distintas
-    const [lbl, col, ic] = cls.offline ? [ld ? 'Sin conexión' : 'Fuera de alcance', '#8a8f92', 'off'] : cls.upside ? ['Volcado', '#ff3b30', 'warn']
+    const [lbl, col, ic] = cls.offline ? ['Sin conexión', '#8a8f92', 'off'] : cls.upside ? ['Volcado', '#ff3b30', 'warn']
       : cls.lifted ? ['Levantado', '#ff9f0a', 'up'] : cls.error ? ['Avería', '#ff3b30', 'warn']
       : cls.chargeFail ? ['Error al cargar', '#ff3b30', 'warn'] : cls.stuck ? ['Parado por atasco', '#ff9f0a', 'warn']
       : cls.charging ? ['Cargando', '#3fa9ff', 'bolt'] : cls.mowing ? ['Cortando', '#47d35a', 'mow']

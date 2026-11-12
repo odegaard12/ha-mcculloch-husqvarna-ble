@@ -2,6 +2,15 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.34 · Horas como en un reloj y un solo «Sin conexión»
+
+#### App
+- **Duraciones en horas y minutos**: «5:20 h» y «45 min» en lugar de «5,3 h» y «0,7 h» (cifras de arriba, leyenda de 24 h y gráfica de 7 días). Sin nada cortado dice «nada».
+- **El estado ya no se repite**: con el robot sin conexión, la píldora de arriba se quita (la escena, «Ahora» y la cabecera ya lo dicen) y se usa la misma palabra en todo: «Sin conexión» (antes mezclaba «Fuera de alcance»). La píldora sigue saliendo si lo que falla es el servidor.
+- **Órdenes rápidas apagadas sin conexión**, como Cortar/Pausa/Base; al tocarlas lo explica en vez de mandar una orden que no llega.
+- **Paradas por error**: «levantado» o «volcado» de menos de 5 minutos no cuentan (es alguien que lo coge para recolocarlo).
+- La leyenda de 24 h no enseña estados de menos de un minuto.
+
 ## v0.3.33 · La semana trae los 7 días (y datos que ya no mienten sin conexión)
 
 _La gráfica de 7 días solo recibía el primer día: Home Assistant corta en «inicio + 1 día» si no se le pide hasta ahora. El último estado de ese día se estiraba hasta hoy: 6 días «cortando» daban más de 100 h, o 0 h si era «en la base». Lo mismo con las paradas por error._
