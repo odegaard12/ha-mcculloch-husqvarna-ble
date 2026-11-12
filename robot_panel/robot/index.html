@@ -660,7 +660,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
           <svg class="spark" id="spark" viewBox="0 0 300 90" preserveAspectRatio="none"></svg>
         </div>
         <div class="card">
-          <h2>Cortado por día · 7 días <span class="muted" id="weekmowtot"></span></h2>
+          <h2>Cortado · 7 días <span class="muted" id="weekmowtot"></span></h2>
           <div class="wbars" id="wbars"></div>
         </div>
         <div class="card">
@@ -1193,7 +1193,7 @@ function readMcCulloch(){
   flags.chargeMin = cmin > 0 ? Math.round(cmin) : null;
 
   const al = [];
-  if (offline && st('lawn_mower')) al.push(`<div class="alert warn">El robot no está al alcance del Bluetooth. Se reconecta solo al volver cerca del receptor.</div>`);
+  if (offline && st('lawn_mower')) al.push(`<div class="alert warn">El robot no responde por Bluetooth: está lejos del receptor o se ha quedado sin batería (sin base que cargue, se apaga). Se reconecta solo en cuanto vuelva a responder.</div>`);
   if (on('binary_sensor','averia')) al.push(`<div class="alert"><span><b>⚠ ${esc(errText(val('sensor','error')))}</b><br><small>Revisa el robot y confírmalo en su teclado; luego pulsa Cortar o A la base.</small></span></div>`);
   if (on('binary_sensor','levantado')) al.push(`<div class="alert warn"><span><b>El robot está levantado</b><br><small>Déjalo en el césped: sigue solo.</small></span></div>`);
   if (on('binary_sensor','volcado')) al.push(`<div class="alert"><span><b>El robot está volcado</b><br><small>Dale la vuelta y confírmalo en su teclado; luego pulsa Cortar o A la base.</small></span></div>`);
@@ -1511,7 +1511,16 @@ function renderAll(){
     .sort((a, b) => (a.attributes.friendly_name || '').localeCompare(b.attributes.friendly_name || '', 'es'));
   const name = x => { const n = x.attributes.friendly_name || x.entity_id; return (base && n.startsWith(base + ' ') ? n.slice(base.length + 1) : n.replace(/^Robot cortacésped\s*/i, '')) || n; };
   $('#allcount').textContent = all.length + ' datos';
-  $('#all').innerHTML = all.map(x => `<tr><td>${esc(name(x))}</td><td>${esc(x.state)}${x.attributes.unit_of_measurement ? ' ' + esc(x.attributes.unit_of_measurement) : ''}</td></tr>`).join('');
+  // sin dato: «—» y sin unidad (antes «unavailable %»); on/off en castellano; la fila del propio robot es su estado
+  const self = x => x.entity_id.split('.')[1] === P;
+  const shown = x => ['unavailable', 'unknown'].includes(x.state) ? '—' : x.state === 'on' ? 'sí' : x.state === 'off' ? 'no'
+    : self(x) ? (LMS[x.state] || x.state)
+    : /^\d{4}-\d\d-\d\dT/.test(x.state) ? fmtDate(x.state)  // fechas legibles, no «2026-11-13T08:00:00+00:00»
+    : (x.state !== '' && !isNaN(x.state) ? Number(x.state).toLocaleString('es-ES', {maximumFractionDigits: 1}) : x.state)  // «524,6», no «524.583333333333»
+      + (x.attributes.unit_of_measurement ? ' ' + x.attributes.unit_of_measurement : '');
+  $('#all').innerHTML = all.map(x => `<tr><td>${esc(self(x) ? 'Cortacésped' : name(x))}</td><td>${esc(shown(x))}</td></tr>`).join('');
+  // sin conexión desde que arrancó HA no hay contadores: un aviso en vez de una tarjeta vacía
+  if (!$('#stats').textContent.trim()) $('#stats').innerHTML = '<div class="empty" style="grid-column:1/-1">Se verán cuando el robot conecte.</div>';
 }
 const stat = (v, l) => (v == null || v === '–' || v === '') ? '' : `<div class="stat"><b>${v}</b><small>${l}</small></div>`;
 function renderDatosLandroid(){
@@ -1542,12 +1551,14 @@ function renderDatosLandroid(){
 }
 function renderDatos(){
   if (KIND === 'landroid') return renderDatosLandroid();
-  const yn = k => st('binary_sensor', k) ? (on('binary_sensor', k) ? 'sí' : 'no') : null;
+  // sin conexión no hay dato: no se pinta («no» o «ninguna» serían falsos)
+  const yn = k => val('binary_sensor', k) != null ? (on('binary_sensor', k) ? 'sí' : 'no') : null;
   const row = (k, v) => v != null && v !== '' ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : '';
   const temp = val('sensor','temperatura_interna_crudo');
-  $('#sensors').innerHTML = row('Estado', STATE[val('sensor','estado')] || val('sensor','estado'))
+  $('#sensors').innerHTML = (val('sensor','estado') == null ? row('Estado', 'Sin conexión') : '')
+    + row('Estado', STATE[val('sensor','estado')] || val('sensor','estado'))
     + row('Actividad', ACTIVITY[val('sensor','actividad')] || val('sensor','actividad'))
-    + row('Avería', on('binary_sensor','averia') ? errText(val('sensor','error')) : 'ninguna')
+    + row('Avería', val('binary_sensor','averia') == null ? null : on('binary_sensor','averia') ? errText(val('sensor','error')) : 'ninguna')
     + row('En la base', yn('en_la_base')) + row('Cargando', yn('cargando'))
     + row('Carga restante', val('sensor','carga_restante') != null ? Math.round(Number(val('sensor','carga_restante'))) + ' min' : null)
     + row('Señal del cable', val('sensor','calidad_senal_del_cable') != null ? val('sensor','calidad_senal_del_cable') + ' %' : null)
@@ -1658,7 +1669,6 @@ async function loadActivity(){
     $('#tl').innerHTML = segs.map(x => `<b style="width:${(x.b - x.a) / 864e5 * 100}%;background:${ACOL[x.v] || '#5b6064'}" title="${esc(ACTIVITY[x.v] || x.v)}"></b>`).join('');
     const tot = {}; segs.forEach(x => tot[x.v] = (tot[x.v] || 0) + (x.b - x.a));
     $('#legend').innerHTML = Object.entries(tot).sort((a, b) => b[1] - a[1]).map(([k, ms]) => `<span><i style="background:${ACOL[k] || '#5b6064'}"></i>${esc(ACTIVITY[k] || k)} ${h1(ms / 36e5)} h</span>`).join('');
-    mowed24 = (tot.mowing || 0) + (tot.edgecut || 0); renderFacts();
   } catch(e) {}
 }
 // horas cortadas cada día de los últimos 7 (días naturales, hora local)
@@ -1676,8 +1686,9 @@ async function loadWeekMow(){
     });
     const max = Math.max(36e5, ...days.map(d => d.ms)), tot = days.reduce((s, d) => s + d.ms, 0);
     $('#wbars').innerHTML = days.map(d => `<div class="${d.today ? 'today' : ''}" title="${h1(d.ms / 36e5)} h"><b>${d.ms >= 6e5 ? h1(d.ms / 36e5) : ''}</b><i style="height:${Math.round(d.ms / max * 110)}px"></i><span>${d.today ? 'hoy' : 'LMXJVSD'[d.dow]}</span></div>`).join('');
-    mowedWeek = tot; renderFacts();
-    $('#weekmowtot').textContent = h1(tot / 36e5) + ' h cortadas' + (weekMin ? ' · ' + Math.round(weekMin / 60) + ' h programadas' : '');
+    // «hoy» = el día natural, como la barra «hoy» de la gráfica (con las últimas 24 h, a las 00:05 contaba lo de ayer)
+    mowedWeek = tot; mowed24 = days[6].ms; renderFacts();
+    $('#weekmowtot').textContent = h1(tot / 36e5) + (weekMin ? ' de ' + Math.round(weekMin / 60) + ' h' : ' h');  // corto: no cabía en una línea
   } catch(e) {}
 }
 // paradas por avería cada día de los últimos 7: cuenta cada vez que el robot pasa a un error (no el tiempo que dura)
@@ -1706,7 +1717,7 @@ async function loadHistory(){
   if (locked) return;
   try {
     const pts = (await hist('')).map(p => ({t: new Date(p.t).getTime(), v: Number(p.v)})).filter(p => !isNaN(p.v));
-    if (pts.length < 2) { $('#spark').innerHTML = '<text x="150" y="48" text-anchor="middle" fill="currentColor" opacity=".5" font-size="11">Aún no hay historial</text>'; return; }
+    if (pts.length < 2) { $('#spark').innerHTML = '<text x="150" y="48" text-anchor="middle" fill="currentColor" opacity=".5" font-size="11">Sin datos de batería en estas 24 h</text>'; return; }
     const t0 = Date.now() - 864e5, x = t => Math.max(0, (t - t0) / 864e5 * 300), y = v => 84 - v * 0.78;
     const d = pts.map((p, i) => `${i ? 'L' : 'M'}${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ') + ` L300,${y(pts.at(-1).v).toFixed(1)}`;
     $('#spark').innerHTML = `<path d="${d} L300,88 L${x(pts[0].t).toFixed(1)},88Z" fill="var(--brand-soft)"/><path d="${d}" fill="none" stroke="var(--brand)" stroke-width="2.4" vector-effect="non-scaling-stroke"/>`;
