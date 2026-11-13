@@ -1,5 +1,6 @@
 """Pruebas del servidor del panel: lista blanca de órdenes, PIN y sesiones. Ejecutar: python ha_app/test_server.py"""
 import asyncio
+import json
 import os
 import sys
 import tempfile
@@ -16,6 +17,13 @@ server.HERE = Path(tempfile.mkdtemp())  # .app_secret de usar y tirar
 
 
 async def main():
+    # historial: el robot se queda sin conexión a medio cortar; ese tramo no cuenta como «cortando»
+    T = "2026-11-10T%02d:00:00+00:00"
+    got = server.cut_offline([{"t": T % 9, "v": "mowing"}, {"t": T % 20, "v": "parked"}],
+                             [{"t": T % 8, "v": "mowing"}, {"t": T % 11, "v": "unavailable"}, {"t": T % 19, "v": "mowing"}])
+    assert got == [{"t": T % 9, "v": "mowing"}, {"t": T % 11, "v": "unavailable"}, {"t": T % 19, "v": "mowing"},
+                   {"t": T % 20, "v": "parked"}], got
+    assert server.cut_offline([{"t": T % 9, "v": "mowing"}], []) == [{"t": T % 9, "v": "mowing"}]  # sin cortacésped: tal cual
     # avisos al cumplirse el plazo: los de plazo fijo (avería, vuelco...) basta con que sigan activos;
     # los «sin conexión» solo cuando ya no falta nada
     from push import _due
@@ -62,8 +70,20 @@ async def main():
         for b in bad:
             r = await c.post("/api/servicio", json=b)
             assert r.status == 403, (b, r.status)
-        r = await c.post("/api/servicio", data="[1,2]")
+        r = await c.post("/api/servicio", data="[1,2]", headers={"Content-Type": "application/json"})
         assert r.status == 403
+        # otra página web no puede dar órdenes con la sesión del móvil: ni con la cabecera del navegador ni, sin ella,
+        # con un tipo de contenido que no sea JSON (un formulario o un fetch no-cors no puede mandar application/json)
+        orden = {"domain": "switch", "service": "turn_on", "entity_id": "switch.robot_cortacesped_eco"}
+        for h in ({"Sec-Fetch-Site": "cross-site"}, {"Sec-Fetch-Site": "same-site"}):
+            r = await c.post("/api/servicio", json=orden, headers=h)
+            assert r.status == 403 and (await r.json())["error"] == "origen no permitido", (h, r.status)
+        r = await c.post("/api/servicio", data=json.dumps(orden), headers={"Content-Type": "text/plain"})
+        assert r.status == 403 and (await r.json())["error"] == "origen no permitido"
+        r = await c.post("/api/servicio", json=orden, headers={"Sec-Fetch-Site": "same-origin"})
+        assert r.status == 502  # la propia app: llega a HA (que aquí no existe)
+        assert (await c.post("/api/logout")).status == 200  # sin cuerpo ni tipo, como lo manda la app
+        assert (await c.post("/api/login", json={"pin": "4321"})).status == 200
         # orden válida: pasa el filtro y falla al llegar a HA (no hay HA en el puerto 9) con 502 en JSON
         r = await c.post("/api/servicio", json={"domain": "switch", "service": "turn_on", "entity_id": "switch.robot_cortacesped_eco"})
         assert r.status == 502 and "error" in await r.json(), r.status

@@ -2,6 +2,42 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.36 · Franjas que cruzan la medianoche, órdenes de otras webs y app sin red
+
+#### App
+- **Franjas que pasan de medianoche** (por ejemplo 22:00 + 4 h, puestas desde el teclado del robot): la pantalla principal decía «hasta las 24:00» y a las 00:30 ya no las veía en marcha; las barras del día y de la semana las cortaban a las 24:00; y el editor las enseñaba hasta las 24:00, de modo que **al guardar cualquier otro cambio se acortaban sin avisar**. Ahora el tramo sigue en el día siguiente en la barra del día y en la semana, «Ahora» dice «Hasta las 02:00», y el editor la enseña **partida en dos franjas** (hasta las 24:00 y desde las 00:00 del día siguiente) con un aviso, de forma que guardar no pierde nada. Si por eso pasan de 15 franjas, lo dice.
+- **Abrir la app sin red** ya no salta al McCulloch cuando se miraba el Landroid: la lista de robots se guarda en el móvil y se usa si no llega, y sin lista se respeta el robot que se veía.
+
+#### Servidor
+- **Una página web ajena ya no puede dar órdenes con la sesión del móvil** (ni, sin PIN, desde cualquier equipo de la red): se rechazan los POST que vienen de otro origen (cabecera `Sec-Fetch-Site`) y, en navegadores sin ella, los que no son `application/json`. La propia app y las copias firmadas entre las dos Pis no se ven afectadas.
+
+## v0.3.35 · Pasada de fallos: historial, avisos y capturas nuevas
+
+_Revisión completa del servidor, los avisos y la app._
+
+#### App
+- **No se cuentan horas «cortando» con el McCulloch sin conexión**: su sensor de actividad guarda el último valor, y si se quedaba sin batería a medio cortar seguía sumando hasta que volviera. El servidor recorta esos tramos.
+- **Un fallo de Home Assistant ya no se pinta como «nada cortado»**: las gráficas se quedan como estaban.
+- **«Error al cargar» solo si HA dice que no carga**: un «cargando» sin dato ya no lo dispara.
+- **Con un solo robot se puede abrir «Mis robots»** (cambiarle el nombre, ponerle contraseña): antes no se abría.
+- Franja del Landroid **hasta medianoche**: al cambiarla, la hora de fin salía vacía y no dejaba guardar.
+- **«Última lectura»** usa el último contacto con el robot (antes, la fecha de la batería: 6 h al 100 % era «hace 6 h»).
+- Al **cambiar de robot** no se quedan a la vista las gráficas ni «Cortado en 7 días» del anterior.
+- McCulloch conectado pero sin leer aún el estado: «Sin conexión» en toda la pantalla (la escena decía «Parado» con los botones activos).
+- Horas justas como «24 h» (no «24:00 h»).
+
+#### Avisos al móvil
+- **Sin duplicados al cambiar de Pi**: la que está de reserva apunta también cada aviso, así que al tomar el relevo no repite el «lleva 1 día sin conexión» ni se salta el tope diario.
+- **Una avería distinta ya no se calla** por las 6 h de espera de la anterior (la espera va por avería).
+- **Una avería vieja del McCulloch no se repite** cada 6 h mientras está sin conexión.
+- El «último contacto» no se pierde si el sensor pasa un momento a «no disponible» (se quedaba sin aviso de sin conexión y de vuelta).
+
+#### Servidor
+- Respuestas de error de HA en texto plano, un cuerpo de login que no es un objeto o un número desbordado ya no dan un error 500.
+
+#### Repo
+- **Capturas del README al día** (pantalla principal, Landroid, bloqueo y tarjetas) y dos nuevas: **Horario** y **Datos**.
+
 ## v0.3.34 · Horas como en un reloj y un solo «Sin conexión»
 
 #### App

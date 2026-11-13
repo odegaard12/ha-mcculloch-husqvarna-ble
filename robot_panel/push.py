@@ -283,7 +283,7 @@ def setup_push(app: web.Application, here: Path, ha: str, token: str, robots: li
         p = r["id"]
         if r["kind"] == "landroid":
             return {"lm": f"lawn_mower.{p}", "error": f"sensor.{p}_error", "seen": f"sensor.{p}_ultima_actualizacion"}
-        return {"averia": f"binary_sensor.{p}_averia", "volcado": f"binary_sensor.{p}_volcado",
+        return {"lm": f"lawn_mower.{p}", "averia": f"binary_sensor.{p}_averia", "volcado": f"binary_sensor.{p}_volcado",
                 "levantado": f"binary_sensor.{p}_levantado", "actividad": f"sensor.{p}_actividad",
                 "error": f"sensor.{p}_error", "seen": f"sensor.{p}_ultima_conexion"}
 
@@ -323,11 +323,14 @@ def setup_push(app: web.Application, here: Path, ha: str, token: str, robots: li
                 }
                 tip = "¿Sin Wi-Fi o apagado?"
             else:
+                # sus sensores guardan el último valor sin conexión: una avería vieja no se repite cada 6 h con el robot lejos
+                vivo = g("lm") not in (None, "unavailable", "unknown")
+                on = lambda k: vivo and g(k) == "on"  # noqa: E731
                 rule = {
                     "averia": (on("averia"), 60, f"⚠️ {name}: {err_text('mcculloch', g('error'))}. Revísalo y confírmalo en su teclado."),
                     "volcado": (on("volcado"), 30, f"⚠️ {name} está volcado. Dale la vuelta y confirma en el robot."),
                     "levantado": (on("levantado"), 120, f"{name} lleva un rato levantado. Déjalo en el césped para que siga."),
-                    "parado": (g("actividad") == "stopped_in_garden", 600, f"{name} se ha parado en el jardín y espera que alguien lo atienda."),
+                    "parado": (vivo and g("actividad") == "stopped_in_garden", 600, f"{name} se ha parado en el jardín y espera que alguien lo atienda."),
                 }
                 tip = "¿Lejos del receptor o sin batería?"
             # activos desde el principio; la espera es lo que falta para cumplir el plazo
@@ -352,12 +355,17 @@ def setup_push(app: web.Application, here: Path, ha: str, token: str, robots: li
         seen = seen_dt(rid)
         if "sin_conexion" in cid and seen and offline_for.get(cid) == seen.isoformat():
             return  # ya se avisó de esta misma desconexión
-        if not subs or now - last.get(cid, 0) < COOLDOWN or len(day) >= DAY_MAX:
+        # el enfriamiento de una avería va por avería (su texto): otra distinta a las 2 h no se calla
+        key = f"{cid}:{text}" if cid.endswith(":averia") else cid
+        if not subs or now - last.get(key, 0) < COOLDOWN or len(day) >= DAY_MAX:
             return
-        if not await asyncio.get_running_loop().run_in_executor(None, holds_vip):
-            return  # avisa la otra Pi (la que tiene la IP virtual)
-        if await send({"title": info().get(rid, {}).get("name") or "Mis robots", "body": text, "tag": cid, "url": "./"}, robot=rid):
-            last[cid] = now
+        # avisa la Pi que tiene la IP virtual; la otra lo apunta igual (las dos ven lo mismo), para no repetirlo
+        # ni saltarse el tope si le toca tomar el relevo
+        vip = await asyncio.get_running_loop().run_in_executor(None, holds_vip)
+        if not vip or await send({"title": info().get(rid, {}).get("name") or "Mis robots", "body": text, "tag": cid, "url": "./"}, robot=rid):
+            for k in [k for k, t in last.items() if k.count(":") > 1 and now - t > 86400]:
+                del last[k]  # las claves por avería no se acumulan
+            last[key] = now
             mem["day"] = day + [now]
             if "sin_conexion" in cid and seen:
                 offline_for[cid] = seen.isoformat()
@@ -417,11 +425,18 @@ def setup_push(app: web.Application, here: Path, ha: str, token: str, robots: li
                         if not ev:
                             continue
                         prev = {rid: seen_dt(rid) for rid in E}
+                        seen_ids = {ent["seen"] for ent in E.values()}
+
+                        def put(eid, s):
+                            # el «último contacto» no se pisa con «no disponible»: sin fecha no hay aviso de
+                            # sin conexión ni de que vuelve
+                            if not (eid in seen_ids and s in (None, "unavailable", "unknown") and cur.get(eid)):
+                                cur[eid] = s
                         for eid, v in (ev.get("a") or {}).items():
-                            cur[eid] = v.get("s")
+                            put(eid, v.get("s"))
                         for eid, v in (ev.get("c") or {}).items():
                             if "s" in (v.get("+") or {}):
-                                cur[eid] = v["+"]["s"]
+                                put(eid, v["+"]["s"])
                         evaluate(prev)
             except asyncio.CancelledError:
                 raise
