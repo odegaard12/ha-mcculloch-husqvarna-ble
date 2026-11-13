@@ -31,6 +31,7 @@ Tus robots cortacésped en Home Assistant, en una tarjeta y en una app para el m
 <p align="center"><img src="docs/tarjeta.png" alt="Tarjeta con el McCulloch: cortando, cargando y volviendo a la base (se queda a medio entrar)" width="860"></p>
 <p align="center"><img src="docs/landroid.png" alt="Tarjeta con el Worx Landroid: cortando, volviendo a la base y esperando por la lluvia" width="860"></p>
 <p align="center"><img src="docs/averias.png" alt="Averías traducidas: motor de la rueda trasera izquierda bloqueado, motor de una rueda bloqueado, sin conexión" width="860"></p>
+<p align="center"><img src="docs/diagnostico.png" alt="Lo que el robot no da como error pero se ve: el Landroid en la base sin cargar, el Landroid parado por atasco y el McCulloch parado en el jardín, cada uno con qué hacer" width="860"></p>
 
 ## Qué incluye
 
@@ -83,7 +84,7 @@ Luego: *Ajustes → Dispositivos y servicios → Añadir integración → McCull
 
 ### 2. Tarjeta en el panel principal
 
-*Editar panel → Añadir tarjeta → "Robots cortacésped (McCulloch / Husqvarna / Landroid)"*. Tiene editor visual: robot, nombre, segundo robot y su nombre. En YAML:
+*Editar panel → Añadir tarjeta → "Robots cortacésped (McCulloch / Husqvarna / Landroid)"*. Tiene editor visual: robot, nombre, segundo robot y su nombre, y foto propia. En YAML:
 
 ```yaml
 type: custom:mcculloch-rob-card
@@ -96,6 +97,8 @@ image: /local/robot.webp     # opcional: foto propia del primer robot
 
 - Con dos robots sale arriba una barra con el estado y la batería de cada uno para cambiar de uno a otro.
 - El robot **se gira con el dedo**: arrástralo a los lados y, a los 3 segundos, vuelve solo a lo que estaba haciendo.
+- **Dice qué le pasa y qué hacer**, igual que la app: «Con error» con el error concreto, «Levantado» o «Volcado», «Sin conexión» con el último dato, y dos diagnósticos que el robot no da como error: el Landroid **«Error al cargar»** (en la base sin cargar) y **«Parado por atasco»** (parado fuera de la base sin ningún error), y el McCulloch **«Parado en el jardín»**.
+- Textos en español e inglés (con Home Assistant en gallego, catalán o euskera salen en español).
 - Cada robot enseña solo sus botones: el McCulloch "1 h", "3 h", "aparcar hasta el próximo turno" y "volver al horario"; el Landroid "cortar solo los bordes".
 
 **Foto propia:** guarda una imagen PNG o WebP con fondo transparente y el morro mirando a la izquierda en `/config/www/robot.webp` y añade `image: /local/robot.webp`. Así no se pierde al actualizar.
@@ -217,10 +220,12 @@ GPL-3.0, la misma que AutoMower-BLE.
 - Bluetooth integration (`mcculloch_rob`), no cloud: 98 protocol commands, schedule editing, mow/park for N hours, ~50 entities. An extended alternative to the core *Husqvarna Automower BLE* integration.
 - Lovelace card (`custom:mcculloch-rob-card`) for one or two mowers. The second one can be a Worx Landroid from the Landroid Cloud integration. It has custom Blender 3D models you can spin with your finger.
 - Installable web app (HA add-on, Docker or plain Python):
-  - push notifications;
+  - push notifications (tapping one opens the mower it is about);
   - a name and a password per mower;
+  - schedule editor (including slots that cross midnight) and history charts: 24 h activity and battery, and hours mown and error stops per day over the last 7 days;
   - last known data when out of range;
-  - auto-update.
+  - dark mode, auto-update.
+- Plain-language diagnostics, in the card and in the app, with what to do about each: *Charging error* (docked but not charging), *Stopped, probably stuck*, *Stopped in the garden*, lifted, upside down, offline.
 - All 161 error codes translated to Spanish.
 
 Install via HACS as a custom repository. For Bluetooth you need a proxy **close to the mower** (≈ –60 dBm; an ESP32-WROOM-32U with an external antenna is recommended), and the mower must be in pairing mode the first time.
