@@ -2,6 +2,30 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.38 · Textos coherentes, avisos informativos fuera de «Avería» y una plantilla de HA que no funcionaba
+
+_Revisión de textos y de la tarjeta, las traducciones y la plantilla de avisos de Home Assistant._
+
+#### App
+- **«Con error» en vez de «Avería»** como estado del robot (un Landroid fuera del cable no está averiado), con el error concreto debajo. En Datos, «Error» / «Sin errores» igual en los dos robots.
+- **«Base»** en todos los textos (algunos decían «A la base», que no es lo que pone el botón).
+- **Con lluvia y en la base**: «Llueve: espera a que se seque» (decía «En su franja, hasta las 14:00», como si fuera a cortar).
+- **McCulloch levantado o volcado**: la cabecera dice lo mismo que la pantalla (decía «Parado en el jardín»).
+- **McCulloch sin conexión**: «Se reconecta solo cuando vuelva a responder» (puede ser que esté sin batería, no solo lejos del receptor).
+- **Datos**: la señal Wi-Fi del Landroid con su calidad («−77 dBm · débil») y «Orden manual» en castellano (salía `forcedpark`).
+
+#### Integración y tarjeta
+- **Los avisos informativos del robot** (ajustes restaurados, calibración del cable hecha, cambio de conexión) **ya no encienden «Avería»**: ponían la tarjeta en rojo y mandaban un aviso por algo que no es un fallo.
+- **Tarjeta**: un robot apagado, esperando PIN o parado en el jardín ya no sale como «En pausa».
+- **Alta del robot**: se puede escribir la MAC aunque se vea otro robot (el desplegable cerrado lo impedía, y el propio texto decía «si no sale, escribe la MAC»).
+- **Traducciones**: `en.json` tenía la configuración y los servicios a medias en español («Emparejar», «Comando», «Parámetros»); corregido, y `es.json` dice «pulsa Enviar». Hay un test que exige las mismas claves en `es.json`, `en.json` y `strings.json`.
+
+#### Plantilla de Home Assistant
+- **«Lleva días sin conexión» no se disparaba nunca**: un disparador de plantilla solo ve `trigger_variables`, no `variables`. Arreglado. Además, el aviso de avería sale con el texto en español (antes `wheel motor blocked left`) y no falla si «Última conexión» aún está en `unknown`.
+
+#### Repo
+- README: son 161 códigos de error, no 160.
+
 ## v0.3.37 · Los avisos abren su robot
 
 #### Avisos al móvil
