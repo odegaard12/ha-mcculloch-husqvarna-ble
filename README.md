@@ -9,7 +9,7 @@ Tus robots cortacésped en Home Assistant, en una tarjeta y en una app para el m
 - **McCulloch ROB, Husqvarna Automower, Gardena SILENO y Flymo Easilife** por **Bluetooth**, sin nube y sin cuenta, con su propia integración (`mcculloch_rob`): unas 50 entidades, horario editable, cortar o aparcar X horas.
 - **Worx Landroid**, con la integración [Landroid Cloud](https://github.com/MTrab/landroid_cloud), en la **misma tarjeta y la misma app**: estado, horario, averías, lluvia, sus órdenes y sus avisos.
 - **Modelos 3D propios** de los dos robots (hechos en Blender), animados según lo que hacen y que **se giran con el dedo**.
-- **Averías en español**: los 160 códigos del protocolo, en HA, en la tarjeta, en la app y en los avisos.
+- **Averías en español**: los 161 códigos del protocolo, en HA, en la tarjeta, en la app y en los avisos.
 - **App instalable** (PWA) con avisos push, **nombre y contraseña por robot** y actualización automática.
 
 > 🇬🇧 *English summary at the bottom.*
@@ -42,7 +42,7 @@ Tus robots cortacésped en Home Assistant, en una tarjeta y en una app para el m
 | Modelo 3D que se gira con el dedo | ✅ amarillo y negro | ✅ naranja con su base |
 | Horario | ver y **editar** | ver (se edita en la app de Worx) |
 | Órdenes | cortar, pausa, a la base, 1 h / 3 h, aparcar hasta el próximo turno, volver al horario | cortar, pausa, a la base, **cortar solo los bordes** |
-| Averías en español | ✅ los 160 códigos | ✅ |
+| Averías en español | ✅ los 161 códigos | ✅ |
 | Avisos push | avería, vuelco, levantado, parado en el jardín, 1 y 3 días sin conexión | avería, 1 y 3 días sin conexión, vuelve a conectarse |
 | Últimos datos sin cobertura | ✅ guardados en disco | ✅ |
 
@@ -221,6 +221,6 @@ GPL-3.0, la misma que AutoMower-BLE.
   - a name and a password per mower;
   - last known data when out of range;
   - auto-update.
-- All 160 error codes translated to Spanish.
+- All 161 error codes translated to Spanish.
 
 Install via HACS as a custom repository. For Bluetooth you need a proxy **close to the mower** (≈ –60 dBm; an ESP32-WROOM-32U with an external antenna is recommended), and the mower must be in pairing mode the first time.

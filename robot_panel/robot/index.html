@@ -593,7 +593,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
           <div class="actions">
             <button class="main" data-act="start"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Cortar</button>
             <button data-act="pause"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>Pausa</button>
-            <button data-act="dock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>A la base</button>
+            <button data-act="dock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Base</button>
           </div>
           <div class="facts" id="facts"></div>
         </div>
@@ -944,9 +944,10 @@ function summary(r){
   else if (r.kind === 'landroid') { txt = LMS[lm.state] || lm.state; col = {mowing:'#47d35a', edgecut:'#47d35a', returning:'#47d35a', error:'#ff3b30', escaped_digital_fence:'#ff3b30', idle:'#ff9f0a'}[lm.state] || '#ffc20e'; }
   else {
     const a = v('sensor','actividad'), bad = v('binary_sensor','averia') === 'on';
+    const up = v('binary_sensor','volcado') === 'on', lift = v('binary_sensor','levantado') === 'on';  // igual de prioritarios que en la pantalla
     // «sin actividad» es su código; para quien lo mira es «Parado» (lo mismo que dice el «Ahora» de abajo)
-    txt = bad ? 'Avería' : (a && a !== 'none' ? ACTIVITY[a] : null) || 'Parado';
-    col = bad ? '#ff3b30' : ['mowing','going_out','going_home'].includes(a) ? '#47d35a' : a === 'charging' ? '#3fa9ff' : '#ffc20e';
+    txt = up ? 'Volcado' : lift ? 'Levantado' : bad ? 'Con error' : (a && a !== 'none' ? ACTIVITY[a] : null) || 'Parado';
+    col = up || bad ? '#ff3b30' : lift ? '#ff9f0a' : ['mowing','going_out','going_home'].includes(a) ? '#47d35a' : a === 'charging' ? '#3fa9ff' : '#ffc20e';
   }
   const seen = v('sensor', r.kind === 'landroid' ? 'ultima_actualizacion' : 'ultima_conexion');
   return {txt, col, bat: v('sensor','bateria'), seen: off && seen && !isNaN(new Date(seen)) ? ago(seen) : null};
@@ -1228,9 +1229,9 @@ function readMcCulloch(){
 
   const al = [];
   if (offline && st('lawn_mower')) al.push(`<div class="alert warn">El robot no responde por Bluetooth: está lejos del receptor o se ha quedado sin batería (sin base que cargue, se apaga). Se reconecta solo en cuanto vuelva a responder.</div>`);
-  if (on('binary_sensor','averia')) al.push(`<div class="alert"><span><b>⚠ ${esc(errText(val('sensor','error')))}</b><br><small>Revisa el robot y confírmalo en su teclado; luego pulsa Cortar o A la base.</small></span></div>`);
+  if (on('binary_sensor','averia')) al.push(`<div class="alert"><span><b>⚠ ${esc(errText(val('sensor','error')))}</b><br><small>Revisa el robot y confírmalo en su teclado; luego pulsa Cortar o Base.</small></span></div>`);
   if (on('binary_sensor','levantado')) al.push(`<div class="alert warn"><span><b>El robot está levantado</b><br><small>Déjalo en el césped: sigue solo.</small></span></div>`);
-  if (on('binary_sensor','volcado')) al.push(`<div class="alert"><span><b>El robot está volcado</b><br><small>Dale la vuelta y confírmalo en su teclado; luego pulsa Cortar o A la base.</small></span></div>`);
+  if (on('binary_sensor','volcado')) al.push(`<div class="alert"><span><b>El robot está volcado</b><br><small>Dale la vuelta y confírmalo en su teclado; luego pulsa Cortar o Base.</small></span></div>`);
   const clock = val('sensor','reloj_del_robot');
   // fuera de alcance no se le puede poner en hora: el aviso espera a que vuelva
   if (clock && !offline) { const readAt = new Date(st('sensor','reloj_del_robot').last_updated); const dm = (readAt - new Date(clock)) / 60000; if (Math.abs(dm) > 5) al.push(`<div class="alert info"><span>El reloj del robot va ${Math.abs(Math.round(dm))} min ${dm > 0 ? 'atrasado' : 'adelantado'}.</span><button class="chip" data-btn="poner_en_hora">Ponerlo en hora</button></div>`); }
@@ -1365,7 +1366,7 @@ function readLandroid(){
   if (offline) al.push(`<div class="alert warn"><span><b>${esc(curRobot().name)} sin conexión${seen ? ` desde ${esc(ago(seen))}` : ''}</b><br><small>${errOn ? `Último error: ${esc(errText(err))}. ` : ''}Si está parado, pulsa START en el propio robot para despertarlo: la app no puede hacerlo a distancia.</small></span></div>`);
   else if (chargeFail) al.push(`<div class="alert"><span><b>⚠ Error al cargar</b><br><small>Está en la base pero no carga${err === 'wire_missing' ? ' (el robot dice «falta el cable», pero estando aquí casi siempre es que no conecta bien)' : ''}. Colócalo recto, limpia con un paño los contactos de la base y los del robot, y comprueba que la base tiene luz.</small></span></div>`);
   else if (fence) al.push(`<div class="alert"><span><b>⚠ Salió de la zona permitida</b><br><small>El robot cruzó una zona prohibida (Off Limits). Mira dónde está y llévalo a la base.</small></span></div>`);
-  else if (errOn) al.push(`<div class="alert"><span><b>⚠ ${esc(errText(err))}</b><br><small>Revísalo y pulsa OK en el robot; luego Cortar o A la base.</small></span></div>`);
+  else if (errOn) al.push(`<div class="alert"><span><b>⚠ ${esc(errText(err))}</b><br><small>Revísalo y pulsa OK en el robot; luego Cortar o Base.</small></span></div>`);
   else if (stuck) al.push(`<div class="alert"><span><b>⚠ Parado por atasco</b><br><small>Lleva ${Math.round(mins)} min parado fuera de la base y no ha dado ningún error: lo más probable es que esté atascado (también puede estar levantado o no ver el cable). Ve a verlo y pulsa START.</small></span></div>`);
   const wait = durTxt(st('sensor','retraso_por_lluvia_restante'));
   if (!offline && rain) al.push(`<div class="alert info">Llueve: el robot espera${wait ? ` unas ${wait}` : ''} a que se seque el césped.</div>`);
@@ -1428,14 +1429,16 @@ function nowText(f, run, nx, unknownSched){
   if (f.offline) return {v: 'Sin conexión', d: f.lastSeen ? 'Último dato ' + f.lastSeen : next, main: 'start', mainLabel: 'Cortar'};
   if (f.upsideDown) return {v: 'Volcado', d: 'Dale la vuelta y confírmalo en el robot', main: 'start', mainLabel: 'Cortar'};
   if (f.lifted) return {v: 'Levantado', d: 'Déjalo en el césped: sigue solo', main: 'start', mainLabel: 'Cortar'};
-  if (f.error) return {v: 'Avería', d: 'Mira el aviso de abajo', main: 'start', mainLabel: 'Cortar'};
+  // «Con error» y no «Avería»: fuera del cable o levantado no es una avería; debajo, el error concreto
+  if (f.error) return {v: 'Con error', d: f.errorText && f.errorText !== '—' ? f.errorText : 'Mira el aviso de abajo', main: 'start', mainLabel: 'Cortar'};
   if (f.chargeFail) return {v: 'Error al cargar', d: 'Está en la base pero no carga: revisa los contactos', main: 'start', mainLabel: 'Cortar'};
   if (f.stuck) return {v: 'Parado por atasco', d: 'Fuera de la base y sin error: lo más probable es que esté atascado', main: 'start', mainLabel: 'Cortar'};
   const a = f.activity;
   if (a === 'mowing' || a === 'going_out') return {v: a === 'going_out' ? 'Saliendo a cortar' : 'Cortando', d: until ? 'Hasta las ' + until : 'Hasta que termine o lo pares', main: 'pause', mainLabel: 'Pausa'};
   if (a === 'going_home') return {v: 'Volviendo a la base', d: next, main: 'start', mainLabel: 'Seguir'};  // «Seguir cortando» no cabía en el botón
-  if (f.charging) return {v: 'Cargando en la base', d: run ? 'Sale a cortar al terminar de cargar' : next, main: 'start', mainLabel: 'Cortar'};
-  if (f.inBase) return {v: 'En la base', d: run ? 'En su franja, hasta las ' + until : next, main: 'start', mainLabel: 'Cortar'};
+  // con lluvia no sale: no se dice «en su franja, hasta las 14:00» como si fuera a cortar
+  if (f.charging) return {v: 'Cargando en la base', d: f.rain ? 'Llueve: espera a que se seque' : run ? 'Sale a cortar al terminar de cargar' : next, main: 'start', mainLabel: 'Cortar'};
+  if (f.inBase) return {v: 'En la base', d: f.rain ? 'Llueve: espera a que se seque' : run ? 'En su franja, hasta las ' + until : next, main: 'start', mainLabel: 'Cortar'};
   if (run) return {v: 'Parado en su franja', d: `Debería cortar hasta las ${until}. ¿Lo has pausado tú?`, main: 'start', mainLabel: 'Seguir'};
   return {v: f.state === 'paused' ? 'En pausa' : 'Parado', d: next, main: 'start', mainLabel: 'Cortar'};
 }
@@ -1584,7 +1587,9 @@ function renderDatosLandroid(){
     + row('Cargando', yn('cargando')) + row('Lloviendo', yn('sensor_de_lluvia'))
     + row('Espera por lluvia', durTxt(st('sensor','retraso_por_lluvia_restante')))
     + row('Hecho hoy', n('progreso_diario', ' %')) + row('Zona', val('select','zona'))
-    + row('Señal Wi-Fi', n('intensidad_de_senal', ' dBm'))
+    // con la calidad al lado: −77 dBm no dice nada, «débil» sí (y explica las desconexiones)
+    + row('Señal Wi-Fi', val('sensor','intensidad_de_senal') == null || isNaN(val('sensor','intensidad_de_senal')) ? null
+        : n('intensidad_de_senal', ' dBm') + ' · ' + (val('sensor','intensidad_de_senal') >= -60 ? 'buena' : val('sensor','intensidad_de_senal') >= -75 ? 'normal' : 'débil'))
     + row('Batería', [n('temperatura_de_la_bateria', ' °C', true), n('voltaje_de_la_bateria', ' V', true)].filter(Boolean).join(' · '))
     + row('Inclinación', pitch != null && roll != null ? `${h1(pitch)}° / ${h1(roll)}°` : null)
     + row('Última actualización', val('sensor','ultima_actualizacion') ? fmtDate(val('sensor','ultima_actualizacion')) : null);
@@ -1607,13 +1612,13 @@ function renderDatos(){
   $('#sensors').innerHTML = (val('sensor','estado') == null ? row('Estado', 'Sin conexión') : '')
     + row('Estado', STATE[val('sensor','estado')] || val('sensor','estado'))
     + row('Actividad', ACTIVITY[val('sensor','actividad')] || val('sensor','actividad'))
-    + row('Avería', val('binary_sensor','averia') == null ? null : on('binary_sensor','averia') ? errText(val('sensor','error')) : 'ninguna')
+    + row('Error', val('binary_sensor','averia') == null ? null : on('binary_sensor','averia') ? errText(val('sensor','error')) : 'Sin errores')  // igual que el Landroid
     + row('En la base', yn('en_la_base')) + row('Cargando', yn('cargando'))
     + row('Carga restante', val('sensor','carga_restante') != null ? Math.round(Number(val('sensor','carga_restante'))) + ' min' : null)
     + row('Señal del cable', val('sensor','calidad_senal_del_cable') != null ? val('sensor','calidad_senal_del_cable') + ' %' : null)
     + row('Temperatura interna', temp != null ? h1(Number(temp) / 10) + ' °C (estimada)' : null)
     + row('Levantado', yn('levantado')) + row('Choque ahora', yn('choque')) + row('Volcado', yn('volcado'))
-    + row('Orden manual', val('sensor','orden_manual'));
+    + row('Orden manual', ({none: 'Ninguna', forcedpark: 'Aparcado a la fuerza', forcedmow: 'Cortando a la fuerza'})[val('sensor','orden_manual')] || val('sensor','orden_manual'));
   // casillas sin dato (el robot no lo da) no se pintan
   const num = k => val('sensor', k) == null ? null : Number(val('sensor', k)).toLocaleString('es-ES');  // sin dato: no se pinta (nunca un 0 falso)
   const cut = Number(val('sensor','tiempo_total_cortando')), cycles = Number(val('sensor','ciclos_de_carga'));
@@ -1912,7 +1917,7 @@ setInterval(loadHistory, 10 * 60 * 1000);
     // indicación de abajo: qué está haciendo y qué viene (la etiqueta de arriba ya dice el estado)
     const pct = isNaN(s.battery) ? '' : ` · ${s.battery} %`;
     const ld = s.kind === 'landroid';
-    const cap = cls.offline ? ['off', s.lastSeen ? `Sin conexión desde ${s.lastSeen} · se reconecta solo` : ld ? 'Se reconecta solo al volver a tener Wi-Fi' : 'Se reconecta solo al acercarse al receptor']
+    const cap = cls.offline ? ['off', s.lastSeen ? `Sin conexión desde ${s.lastSeen} · se reconecta solo` : ld ? 'Se reconecta solo al volver a tener Wi-Fi' : 'Se reconecta solo cuando vuelva a responder']
       : cls.upside ? ['warn', 'Dale la vuelta y confirma en el robot']
       : cls.lifted ? ['up', 'Déjalo en el césped para que siga']
       : cls.error ? ['warn', s.errorText && s.errorText !== '—' ? s.errorText : ld ? 'Revísalo y pulsa OK en el robot' : 'Revisa el robot y confírmalo en su teclado']
@@ -1924,13 +1929,13 @@ setInterval(loadHistory, 10 * 60 * 1000);
       : cls.leaving ? ['out', s.until ? `Sale a cortar hasta las ${s.until}` : 'Sale a cortar']
       : cls.mowing ? ['mow', (s.until ? `Corta hasta las ${s.until}` : 'Cortando') + pct]
       : cls.docked ? ['home', s.next ? `Vuelve a cortar ${s.next}` : 'Sin horario: pulsa Cortar']
-      : cls.paused ? ['pause', 'Pulsa Cortar para seguir o A la base']
+      : cls.paused ? ['pause', 'Pulsa Cortar para seguir o Base']
       : null;
     stage.classList.toggle('cap', !!cap);
     if (cap) { document.getElementById('capic').innerHTML = `<svg viewBox="0 0 24 24">${ICON[cap[0]]}</svg>`; document.getElementById('captxt').textContent = cap[1]; }
     // la etiqueta sale de las mismas clases que la escena: nunca dicen cosas distintas
     const [lbl, col, ic] = cls.offline ? ['Sin conexión', '#8a8f92', 'off'] : cls.upside ? ['Volcado', '#ff3b30', 'warn']
-      : cls.lifted ? ['Levantado', '#ff9f0a', 'up'] : cls.error ? ['Avería', '#ff3b30', 'warn']
+      : cls.lifted ? ['Levantado', '#ff9f0a', 'up'] : cls.error ? ['Con error', '#ff3b30', 'warn']
       : cls.chargeFail ? ['Error al cargar', '#ff3b30', 'warn'] : cls.stuck ? ['Parado por atasco', '#ff9f0a', 'warn']
       : cls.charging ? ['Cargando', '#3fa9ff', 'bolt'] : cls.mowing ? ['Cortando', '#47d35a', 'mow']
       : cls.homing ? ['Volviendo a la base', '#47d35a', 'home'] : cls.leaving ? ['Saliendo de la base', '#47d35a', 'out']

@@ -13,6 +13,12 @@ from homeassistant.components import bluetooth
 from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_ADDRESS, CONF_CLIENT_ID, CONF_PIN
+from homeassistant.helpers.selector import (
+    SelectOptionDict,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 
 from .automower_ble.mower import Mower
 from .automower_ble.protocol import ResponseResult
@@ -55,7 +61,19 @@ class RobConfigFlow(ConfigFlow, domain=DOMAIN):
             if SERVICE_UUID in i.service_uuids
             and i.address not in self._async_current_ids(include_ignore=False)
         }
-        field = vol.In(found) if found else str
+        # lista de los detectados, pero con texto libre: un robot que no anuncia ahora mismo no puede quedar fuera
+        # solo porque se vea otro (el texto del formulario dice «si no sale, escribe la MAC»)
+        field = (
+            SelectSelector(
+                SelectSelectorConfig(
+                    options=[SelectOptionDict(value=a, label=label) for a, label in found.items()],
+                    custom_value=True,
+                    mode=SelectSelectorMode.DROPDOWN,
+                )
+            )
+            if found
+            else str
+        )
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({vol.Required(CONF_ADDRESS): field}),

@@ -122,6 +122,21 @@ async def test_switch_bluetooth_cut_is_clear_error(hass: HomeAssistant, fake) ->
         await hass.services.async_call("switch", "turn_on", {"entity_id": "switch.robot_cortacesped_modo_eco"}, blocking=True)
 
 
+async def test_config_flow_allows_typing_the_mac_when_another_mower_is_found(hass: HomeAssistant, fake) -> None:
+    """Con otro robot detectado el campo no es un desplegable cerrado: se puede escribir la MAC del que no anuncia."""
+    from types import SimpleNamespace
+
+    from custom_components.mcculloch_rob.const import SERVICE_UUID
+
+    otro = SimpleNamespace(address="AA:BB:CC:DD:EE:01", name="Otro", rssi=-70, service_uuids=[SERVICE_UUID])
+    with patch("custom_components.mcculloch_rob.config_flow.bluetooth.async_discovered_service_info", return_value=[otro]):
+        result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    assert result["type"] is FlowResultType.FORM and result["description_placeholders"] == {"count": "1"}
+    schema = result["data_schema"]
+    assert schema({"address": "AA:BB:CC:DD:EE:01"}) == {"address": "AA:BB:CC:DD:EE:01"}  # el detectado
+    assert schema({"address": ADDRESS}) == {"address": ADDRESS}  # y una MAC escrita a mano que no está en la lista
+
+
 async def test_pairing_survives_odd_model_reply(hass: HomeAssistant, fake) -> None:
     """Un robot que contesta algo raro al pedir el modelo no rompe el alta con «error desconocido»."""
     from .test_integration import FakeMower

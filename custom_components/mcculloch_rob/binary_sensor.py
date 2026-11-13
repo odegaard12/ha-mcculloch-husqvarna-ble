@@ -29,13 +29,17 @@ def _field(command: str, field: str) -> Callable[[dict], Any]:
     return lambda d: (d.get(command) or {}).get(field)
 
 
+# Avisos que el robot guarda como «error» pero no son una avería: ajustes restaurados, calibración del cable hecha,
+# cambio de conexión y ajustes de conectividad restaurados. No encienden «Avería» (ni la tarjeta en rojo ni un aviso).
+INFORMATIVE = (27, 56, 75, 76, 702)
+
 BINARY: tuple[RobBinaryDescription, ...] = (
     RobBinaryDescription(key="charging", name="Cargando", command="IsCharging",
                          device_class=BinarySensorDeviceClass.BATTERY_CHARGING,
                          value_fn=lambda d: d.get("IsCharging")),
     RobBinaryDescription(key="problem", name="Avería", command="GetError",
                          device_class=BinarySensorDeviceClass.PROBLEM,
-                         value_fn=lambda d: None if d.get("GetError") is None else d["GetError"] != 0),
+                         value_fn=lambda d: None if d.get("GetError") is None else d["GetError"] not in (0, *INFORMATIVE)),
     RobBinaryDescription(key="in_station", name="En la base", command="GetSignalQuality",
                          device_class=BinarySensorDeviceClass.PLUG,
                          value_fn=_field("GetSignalQuality", "inChargingStation")),
