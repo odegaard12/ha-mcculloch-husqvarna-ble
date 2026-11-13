@@ -155,6 +155,16 @@ def make_app() -> web.Application:
 
     @web.middleware
     async def auth(req, handler):
+        # órdenes que vienen de OTRA página web (un formulario o un fetch «no-cors» desde cualquier equipo de la red
+        # que tenga abierta una web ajena): sin PIN las daría por buenas. Las copias firmadas entre Pis no pasan por aquí
+        if req.method == "POST" and req.path.startswith("/api/") and req.path not in ("/api/push/peer", "/api/robots/peer"):
+            site = req.headers.get("Sec-Fetch-Site")  # lo pone el navegador y la página no lo puede cambiar
+            if site is not None:
+                cross = site not in ("same-origin", "none")
+            else:  # navegador antiguo: otra web no puede mandar application/json sin pedir permiso antes (y aquí no se da)
+                cross = req.path != "/api/logout" and req.content_type != "application/json"
+            if cross:
+                return web.json_response({"error": "origen no permitido"}, status=403)
         # sin sesión: login, estado de la sesión, salud, versión (para recargar la app) y las copias firmadas entre Pis
         if (req.path.startswith("/api/") and not session_ok(req)
                 and req.path not in ("/api/login", "/api/sesion", "/api/salud", "/api/version", "/api/push/peer",

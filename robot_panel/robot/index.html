@@ -1183,9 +1183,22 @@ function nextRun(tasks){
   }
   return null;
 }
+// tramos de cada día: una franja que pasa de medianoche (inicio + duración > 24 h; el robot lo admite desde su teclado)
+// sigue en el día siguiente, de 00:00 hasta donde acabe
+function daySegs(tasks){
+  const out = DAYS.map(() => []);
+  for (const t of tasks) DAYS.forEach((d, i) => {
+    if (!t['on_' + d]) return;
+    const e = t.start_time_in_minutes + t.duration_in_minutes;
+    out[i].push({a: t.start_time_in_minutes, b: Math.min(e, 1440), t});
+    if (e > 1440) out[(i + 1) % 7].push({a: 0, b: e - 1440, t});
+  });
+  return out;
+}
+const endHM = t => { const e = t.start_time_in_minutes + t.duration_in_minutes; return hm(e > 1440 ? e - 1440 : e); };  // «02:00», no «24:00»
 function runningNow(tasks){
   const now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes(), today = (now.getDay() + 6) % 7;
-  return tasks.find(t => t['on_' + DAYS[today]] && nowMin >= t.start_time_in_minutes && nowMin < t.start_time_in_minutes + t.duration_in_minutes);
+  return daySegs(tasks)[today].find(g => nowMin >= g.a && nowMin < g.b)?.t;
 }
 
 // McCulloch (Bluetooth): estado, avisos y horario tal como los da la integración propia
@@ -1372,7 +1385,7 @@ function render(){
   // junto a la batería: lo que va a pasar (el estado ya lo dice la etiqueta de la foto)
   const run = runningNow(tasks), nx = nextRun(tasks);
   // datos para la indicación de la escena (qué está haciendo y qué viene)
-  flags.until = run ? hm(run.start_time_in_minutes + run.duration_in_minutes) : null;
+  flags.until = run ? endHM(run) : null;
   flags.next = nx ? (nx.k === 0 ? 'hoy' : nx.k === 1 ? 'mañana' : 'el ' + DLONG[nx.d]) + ' a las ' + hm(nx.m) : null;
   flags.lastSeen = d.seen && !isNaN(new Date(d.seen)) ? ago(d.seen) : null;  // sigue disponible sin robot
   window.robot3d && window.robot3d.update(flags);
@@ -1398,7 +1411,7 @@ function render(){
 
 // qué hace, por qué y qué viene, en una frase; y qué orden es la que toca (botón grande)
 function nowText(f, run, nx, unknownSched){
-  const until = run ? hm(run.start_time_in_minutes + run.duration_in_minutes) : null;
+  const until = run ? endHM(run) : null;
   const next = nx ? 'Próximo corte: ' + (nx.k === 0 ? 'hoy' : nx.k === 1 ? 'mañana' : 'el ' + DLONG[nx.d]) + ' a las ' + hm(nx.m)
     : unknownSched || f.offline ? 'El horario se sabrá al conectar' : 'Sin horario: corta cuando se lo mandes';
   const ld = KIND === 'landroid';
@@ -1419,7 +1432,7 @@ function nowText(f, run, nx, unknownSched){
 // barra del día: las franjas de hoy en verde y una raya en la hora de ahora
 function drawDayBar(tasks){
   const today = DAYS[(new Date().getDay() + 6) % 7], now = new Date(), pct = m => (m / 14.4).toFixed(2) + '%';
-  const segs = (tasks || []).filter(t => t['on_' + today]).map(t => `<i style="left:${pct(t.start_time_in_minutes)};width:${pct(Math.min(t.duration_in_minutes, 1440 - t.start_time_in_minutes))}"></i>`).join('');
+  const segs = daySegs(tasks || [])[DAYS.indexOf(today)].map(g => `<i style="left:${pct(g.a)};width:${pct(g.b - g.a)}"></i>`).join('');
   $('#daybar').innerHTML = segs + `<em style="left:${pct(now.getHours() * 60 + now.getMinutes())}"></em>`;
 }
 // el botón grande hace lo que toca ahora; los otros dos quedan a su lado
@@ -1449,9 +1462,9 @@ function renderWeek(tasks){
     return;
   }
   const now = new Date(), today = (now.getDay() + 6) % 7, nowPct = (now.getHours() * 60 + now.getMinutes()) / 14.4;
-  const total = tasks.reduce((acc, t) => acc + t.duration_in_minutes * DAYS.filter(d => t['on_' + d]).length, 0);
+  const total = tasks.reduce((acc, t) => acc + t.duration_in_minutes * DAYS.filter(d => t['on_' + d]).length, 0), segs = daySegs(tasks);
   $('#weekhours').textContent = tasks.length ? Math.round(total / 60) + ' h a la semana' : '';
-  $('#week').innerHTML = tasks.length ? `<div class="week">${DAYS.map((d, i) => `<span${i === today ? ' style="font-weight:800"' : ''}>${DN[i]}</span><div class="bar">${tasks.filter(t => t['on_' + d]).map(t => { const a = t.start_time_in_minutes / 14.4, w = Math.min(t.duration_in_minutes / 14.4, 100 - a); return `<b style="left:${a}%;width:${w}%" title="${hm(t.start_time_in_minutes)}–${hm(t.start_time_in_minutes + t.duration_in_minutes)}"></b>`; }).join('')}${i === today ? `<span class="now" style="left:${nowPct}%"></span>` : ''}</div>`).join('')}<div class="hours"><span>0h</span><span>6</span><span>12</span><span>18</span><span>24</span></div></div>` : '<div class="empty">El robot no tiene programación: solo corta cuando se lo mandas.</div>';
+  $('#week').innerHTML = tasks.length ? `<div class="week">${DAYS.map((d, i) => `<span${i === today ? ' style="font-weight:800"' : ''}>${DN[i]}</span><div class="bar">${segs[i].map(g => `<b style="left:${g.a / 14.4}%;width:${(g.b - g.a) / 14.4}%" title="${hm(g.a)}–${hm(g.b)}"></b>`).join('')}${i === today ? `<span class="now" style="left:${nowPct}%"></span>` : ''}</div>`).join('')}<div class="hours"><span>0h</span><span>6</span><span>12</span><span>18</span><span>24</span></div></div>` : '<div class="empty">El robot no tiene programación: solo corta cuando se lo mandas.</div>';
 }
 let editing = false, draft = [], original = '', schedLocked = false;
 const TEMPLATES = [
@@ -1463,7 +1476,15 @@ const TEMPLATES = [
 $('#templates').innerHTML = TEMPLATES.map(([t], i) => `<button class="chip" data-tpl="${i}">${t}</button>`).join('');
 $('#templates').onclick = e => { const b = e.target.closest('[data-tpl]'); if (!b) return; draft = JSON.parse(JSON.stringify(TEMPLATES[b.dataset.tpl][1])); editing = true; drawEditor(); };
 function loadEditor(tasks){
-  draft = tasks.map(t => ({start: hm(t.start_time_in_minutes), end: hm(t.start_time_in_minutes + t.duration_in_minutes), days: DAYS.filter(d => t['on_' + d])}));
+  // el servicio de grabación exige «fin después del inicio, el mismo día»: una franja que cruza la medianoche
+  // (22:00 + 4 h, puesta desde el teclado del robot) se enseña partida en dos que hacen lo mismo; si no, al guardar
+  // cualquier otro cambio se acortaría a las 24:00 sin avisar
+  draft = tasks.flatMap(t => {
+    const days = DAYS.filter(d => t['on_' + d]), e = t.start_time_in_minutes + t.duration_in_minutes;
+    if (e <= 1440) return [{start: hm(t.start_time_in_minutes), end: hm(e), days}];
+    return [{start: hm(t.start_time_in_minutes), end: '24:00', days, split: true},
+            {start: '00:00', end: hm(e - 1440), days: DAYS.filter((d, i) => days.includes(DAYS[(i + 6) % 7])), split: true}];
+  });
   original = JSON.stringify(draft); drawEditor();
 }
 const endMin = s => s === '00:00' || s === '24:00' ? 1440 : toMin(s);
@@ -1494,8 +1515,10 @@ function drawEditor(){
       </div>
       <div class="days">${DAYS.map((dd, j) => `<button class="${t.days.includes(dd) ? 'on' : ''}" data-day="${dd}" aria-label="${DLONG[j]}">${DN[j]}</button>`).join('')}</div>
       ${errs[i] ? `<div class="err">${errs[i]}</div>` : ''}
+      ${t.split ? '<div class="muted" style="font-size:12px;margin-top:8px">Cruza la medianoche: se ve partida en dos franjas (hasta las 24:00 y desde las 00:00 del día siguiente) que juntas hacen lo mismo.</div>' : ''}
     </div>`;
-  }).join('') : '<p class="empty" style="margin:0">Sin franjas: el robot solo cortará cuando se lo mandes.</p>';
+  }).join('') + (draft.length > 15 ? '<div class="err">Son más de 15 franjas (el robot admite 15): quita alguna.</div>' : '')
+    : '<p class="empty" style="margin:0">Sin franjas: el robot solo cortará cuando se lo mandes.</p>';
 }
 $('#tasks').addEventListener('change', e => { const box = e.target.closest('.task'); if (!box || !e.target.dataset.k) return; draft[box.dataset.i][e.target.dataset.k] = e.target.value; editing = true; drawEditor(); });
 $('#tasks').addEventListener('click', e => {
@@ -1763,14 +1786,24 @@ $('#logout').onclick = async () => { await fetch('api/logout', {method:'POST'});
 })();
 // qué robots hay y cuál se veía la última vez
 // keep: tras renombrar o desbloquear se sigue en el mismo robot
+let robotsLoaded = false;
 async function loadRobots(keep){
   try {
     const r = await api('api/robots', {cache: 'no-store'});
-    if (r.ok) { const j = await r.json(); if (Array.isArray(j) && j.length) ROBOTS = j; }
+    if (r.ok) {
+      const j = await r.json();
+      if (Array.isArray(j) && j.length) { ROBOTS = j; robotsLoaded = true; try { localStorage.setItem('robots', JSON.stringify(j)); } catch(e) {} }
+    }
+  } catch(e) {}
+  // sin red al abrir: la lista de la última vez (nombres, tipos), para no volver al McCulloch cuando se miraba el Landroid
+  if (!robotsLoaded) try {
+    const c = JSON.parse(localStorage.getItem('robots') || 'null');
+    if (Array.isArray(c) && c.length && c.every(x => x && /^[a-z0-9_]+$/.test(x.id) && ['mcculloch', 'landroid'].includes(x.kind))) ROBOTS = c;
   } catch(e) {}
   let saved = keep ? P : null;
   if (!keep) try { saved = localStorage.getItem('robot'); } catch(e) {}
-  const r = ROBOTS.find(x => x.id === saved) || ROBOTS[0];
+  // sin lista (primera vez sin red) se respeta el robot que ya se veía en vez de saltar al primero
+  const r = ROBOTS.find(x => x.id === saved) || (!robotsLoaded && saved && /^[a-z0-9_]+$/.test(saved) ? {id: saved, name: 'Mi robot', kind: KIND, locked: false, open: true} : ROBOTS[0]);
   const changed = r.kind !== KIND;
   P = r.id; KIND = r.kind; document.body.dataset.kind = KIND;
   try { localStorage.setItem('robotKind', KIND); } catch(e) {}

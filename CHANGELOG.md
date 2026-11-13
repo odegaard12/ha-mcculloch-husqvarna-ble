@@ -2,6 +2,15 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.36 · Franjas que cruzan la medianoche, órdenes de otras webs y app sin red
+
+#### App
+- **Franjas que pasan de medianoche** (por ejemplo 22:00 + 4 h, puestas desde el teclado del robot): la pantalla principal decía «hasta las 24:00» y a las 00:30 ya no las veía en marcha; las barras del día y de la semana las cortaban a las 24:00; y el editor las enseñaba hasta las 24:00, de modo que **al guardar cualquier otro cambio se acortaban sin avisar**. Ahora el tramo sigue en el día siguiente en la barra del día y en la semana, «Ahora» dice «Hasta las 02:00», y el editor la enseña **partida en dos franjas** (hasta las 24:00 y desde las 00:00 del día siguiente) con un aviso, de forma que guardar no pierde nada. Si por eso pasan de 15 franjas, lo dice.
+- **Abrir la app sin red** ya no salta al McCulloch cuando se miraba el Landroid: la lista de robots se guarda en el móvil y se usa si no llega, y sin lista se respeta el robot que se veía.
+
+#### Servidor
+- **Una página web ajena ya no puede dar órdenes con la sesión del móvil** (ni, sin PIN, desde cualquier equipo de la red): se rechazan los POST que vienen de otro origen (cabecera `Sec-Fetch-Site`) y, en navegadores sin ella, los que no son `application/json`. La propia app y las copias firmadas entre las dos Pis no se ven afectadas.
+
 ## v0.3.35 · Pasada de fallos: historial, avisos y capturas nuevas
 
 _Revisión completa del servidor, los avisos y la app._
