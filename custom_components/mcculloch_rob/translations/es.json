@@ -11,7 +11,7 @@
       },
       "pair": {
         "title": "Emparejar {address}",
-        "description": "Apaga y enciende el robot y envía esto en los 3 primeros minutos (modo emparejamiento). El PIN es el del teclado del robot; déjalo vacío si no tiene.",
+        "description": "Apaga y enciende el robot y pulsa Enviar en los 3 primeros minutos (modo emparejamiento). El PIN es el del teclado del robot; déjalo vacío si no tiene.",
         "data": {
           "pin": "PIN"
         }

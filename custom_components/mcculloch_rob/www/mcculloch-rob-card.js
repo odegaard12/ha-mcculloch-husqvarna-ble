@@ -471,6 +471,8 @@ class McCullochRobCard extends HTMLElement {
     const s = offline ? 'offline' : upside ? 'upside' : lifted ? 'lifted' : error ? 'error' : charging ? 'charging'
       : act === 'going_home' || mower?.state === 'returning' ? 'homing' : act === 'going_out' ? 'leaving'
       : moving ? 'mowing' : (on('in_station') || act === 'parked' || act === 'charging' || mower?.state === 'docked') ? 'docked'
+      // la integración manda a «paused» también el robot apagado, esperando PIN o parado: eso no es una pausa
+      : ['off', 'wait_for_safetypin', 'stopped'].includes(state) || act === 'stopped_in_garden' ? 'idle'
       : state === 'paused' || mower?.state === 'paused' ? 'paused' : 'idle';
     const rain = kind === 'landroid' && (on('rain') || err === 'rain_delay');
     return {s, bat, charging, offline, err, kind, rain, mower, ids, st};

@@ -62,6 +62,11 @@ blueprint:
 mode: queued
 max_exceeded: silent
 
+# Un disparador de plantilla solo ve `trigger_variables` (no `variables`): sin esto «sin conexión» nunca se disparaba.
+trigger_variables:
+  ultima: !input ultima_conexion
+  dias: !input dias
+
 variables:
   ultima: !input ultima_conexion
   dias: !input dias
@@ -91,7 +96,7 @@ trigger:
   # «Última conexión» se guarda en disco: el plazo no se reinicia al reiniciar Home Assistant
   - platform: template
     value_template: >
-      {% set t = as_datetime(states(ultima)) %}
+      {% set t = as_datetime(states(ultima), none) %}
       {{ t is not none and now() - t > timedelta(days=dias | int) }}
     id: sin_conexion
 
@@ -101,7 +106,7 @@ action:
     type: notify
     title: Robot cortacésped
     message: >
-      {% if trigger.id == 'averia' %}⚠️ Avería: {{ states(error_ent) | replace('_', ' ') }}. Revisa el robot y confírmalo en su teclado.
+      {% if trigger.id == 'averia' %}⚠️ Avería: {{ state_attr(error_ent, 'descripcion') or (states(error_ent) | replace('_', ' ')) }}. Revisa el robot y confírmalo en su teclado.
       {% elif trigger.id == 'volcado' %}⚠️ El robot está volcado. Dale la vuelta y confirma en el robot.
       {% elif trigger.id == 'levantado' %}El robot lleva un rato levantado. Déjalo en el césped para que siga.
       {% elif trigger.id == 'parado' %}El robot se ha parado en el jardín y espera que alguien lo atienda.
