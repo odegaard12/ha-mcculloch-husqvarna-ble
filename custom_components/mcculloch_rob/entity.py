@@ -11,6 +11,9 @@ from .coordinator import RobCoordinator
 
 class RobEntity(CoordinatorEntity[RobCoordinator]):
     _attr_has_entity_name = True
+    # Los nombres de las entidades van en español FIJO a propósito (no en las traducciones): el id de cada entidad sale
+    # de su nombre (sensor.robot_cortacesped_bateria, binary_sensor.robot_cortacesped_averia...) y la app, la tarjeta y
+    # los avisos dependen de esos ids. Traducir los nombres cambiaría los ids de quien tenga Home Assistant en otro idioma.
 
     def __init__(self, coordinator: RobCoordinator, key: str, name: str | None) -> None:
         super().__init__(coordinator)
