@@ -31,6 +31,7 @@ Tus robots cortacésped en Home Assistant, en una tarjeta y en una app para el m
 <p align="center"><img src="docs/tarjeta.png" alt="Tarjeta con el McCulloch: cortando, cargando y volviendo a la base (se queda a medio entrar)" width="860"></p>
 <p align="center"><img src="docs/landroid.png" alt="Tarjeta con el Worx Landroid: cortando, volviendo a la base y esperando por la lluvia" width="860"></p>
 <p align="center"><img src="docs/averias.png" alt="Averías traducidas: motor de la rueda trasera izquierda bloqueado, motor de una rueda bloqueado, sin conexión" width="860"></p>
+<p align="center"><img src="docs/diagnostico.png" alt="Lo que el robot no da como error pero se ve: el Landroid en la base sin cargar, el Landroid parado por atasco y el McCulloch parado en el jardín, cada uno con qué hacer" width="860"></p>
 
 ## Qué incluye
 
@@ -83,7 +84,7 @@ Luego: *Ajustes → Dispositivos y servicios → Añadir integración → McCull
 
 ### 2. Tarjeta en el panel principal
 
-*Editar panel → Añadir tarjeta → "Robots cortacésped (McCulloch / Husqvarna / Landroid)"*. Tiene editor visual: robot, nombre, segundo robot y su nombre. En YAML:
+*Editar panel → Añadir tarjeta → "Robots cortacésped (McCulloch / Husqvarna / Landroid)"*. Tiene editor visual: robot, nombre, segundo robot y su nombre, y foto propia. En YAML:
 
 ```yaml
 type: custom:mcculloch-rob-card
@@ -96,6 +97,8 @@ image: /local/robot.webp     # opcional: foto propia del primer robot
 
 - Con dos robots sale arriba una barra con el estado y la batería de cada uno para cambiar de uno a otro.
 - El robot **se gira con el dedo**: arrástralo a los lados y, a los 3 segundos, vuelve solo a lo que estaba haciendo.
+- **Dice qué le pasa y qué hacer**, igual que la app: «Con error» con el error concreto, «Levantado» o «Volcado», «Sin conexión» con el último dato, y dos diagnósticos que el robot no da como error: el Landroid **«Error al cargar»** (en la base sin cargar) y **«Parado por atasco»** (parado fuera de la base sin ningún error), y el McCulloch **«Parado en el jardín»**.
+- Textos en español e inglés (con Home Assistant en gallego, catalán o euskera salen en español).
 - Cada robot enseña solo sus botones: el McCulloch "1 h", "3 h", "aparcar hasta el próximo turno" y "volver al horario"; el Landroid "cortar solo los bordes".
 
 **Foto propia:** guarda una imagen PNG o WebP con fondo transparente y el morro mirando a la izquierda en `/config/www/robot.webp` y añade `image: /local/robot.webp`. Así no se pierde al actualizar.

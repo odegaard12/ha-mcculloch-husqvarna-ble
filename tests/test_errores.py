@@ -39,6 +39,23 @@ def test_traducciones_mismas_claves_e_ingles_limpio():
             assert en[k] == st[k], k
 
 
+def test_tarjeta_textos_es_y_en_con_las_mismas_claves():
+    """La tarjeta tiene sus textos en español e inglés: una clave que falte en uno saldría como «undefined» en pantalla."""
+    import re
+
+    js = (CC / "www" / "mcculloch-rob-card.js").read_text(encoding="utf-8")
+    bloque = js[js.index("const T = {"): js.index("const ICON")]
+    es_txt, en_txt = bloque.split("  en: {")
+    claves = lambda b: set(re.findall(r"\b(\w+):\s*'", b))  # noqa: E731
+    es, en = claves(es_txt.split("es: {", 1)[1]), claves(en_txt)
+    assert es == en, (es ^ en)
+    # todos los estados que puede enseñar la etiqueta y los avisos del Landroid y del McCulloch
+    for k in ("mowing", "homing", "leaving", "charging", "docked", "paused", "idle", "offline", "error", "lifted", "upside",
+              "chargeFail", "chargeFailMsg", "stuck", "stuckMsg", "gardenStop", "gardenStopMsg", "liftedMsg", "upsideMsg",
+              "errHintMc", "errHintLd", "lastReading"):
+        assert k in es, k
+
+
 def test_avisos_informativos_no_son_averia():
     """Ajustes restaurados, calibración hecha, cambio de conexión...: el robot los guarda como «error» pero no encienden
     «Avería» (ni la tarjeta en rojo ni un aviso al móvil)."""

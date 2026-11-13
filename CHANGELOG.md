@@ -2,6 +2,23 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.39 · La tarjeta de Home Assistant dice lo mismo que la app
+
+_Revisión de la tarjeta: textos, estados y diagnósticos._
+
+#### Tarjeta
+- **Mismo vocabulario que la app**: «Con error» (no «Avería»), «Sin conexión» (no «Fuera de alcance») y el botón «Base» (no «A la base»).
+- **Diagnósticos que el robot no da como error**, igual que la app: el Landroid **«Error al cargar»** (en la base sin cargar; «falta el cable» estando ahí es que no hace contacto) y **«Parado por atasco»** (parado fuera de la base sin ningún error), y el McCulloch **«Parado en el jardín»**, con qué hacer en cada caso. Los dos últimos salen en ámbar, no en rojo.
+- **Qué hacer**, no solo qué pasa: «Levantado. Déjalo en el césped y sigue solo», «Volcado. Dale la vuelta y confírmalo en el robot», y tras cada error concreto cómo confirmarlo.
+- **Sin conexión**: el robot conectado pero sin leer aún el estado (`unknown`) también cuenta como sin conexión; si «Última conexión» no tiene dato sale al menos «Último dato: hace 5 horas»; y el aviso del McCulloch dice que puede estar lejos **o sin batería**.
+- **Idiomas**: con Home Assistant en gallego, catalán o euskera la tarjeta sale en español (antes, en inglés).
+- Accesibilidad: el aviso se anuncia a los lectores de pantalla (`role="status"`).
+
+#### Repo
+- Un test comprueba que los textos de la tarjeta en español y en inglés tienen las mismas claves y que están todos los estados.
+- README: la tarjeta cuenta lo que hace ahora, y capturas nuevas (con una imagen de los diagnósticos).
+- Revisado el historial completo del repo (63 commits): sin datos personales ni secretos.
+
 ## v0.3.38 · Textos coherentes, avisos informativos fuera de «Avería» y una plantilla de HA que no funcionaba
 
 _Revisión de textos y de la tarjeta, las traducciones y la plantilla de avisos de Home Assistant._

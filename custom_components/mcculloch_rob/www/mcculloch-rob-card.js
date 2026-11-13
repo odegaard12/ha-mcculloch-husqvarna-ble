@@ -7,11 +7,16 @@ const VER = new URL(import.meta.url).search;  // ?v=<versión>: HA sirve www con
 const T = {
   es: {
     mowing: 'Cortando', homing: 'Volviendo a la base', leaving: 'Saliendo de la base', charging: 'Cargando',
-    docked: 'En la base', paused: 'En pausa', idle: 'Parado', offline: 'Fuera de alcance', error: 'Avería',
-    lifted: 'Levantado', upside: 'Volcado', start: 'Cortar', pause: 'Pausa', dock: 'A la base',
+    docked: 'En la base', paused: 'En pausa', idle: 'Parado', offline: 'Sin conexión', error: 'Con error',
+    lifted: 'Levantado', upside: 'Volcado', start: 'Cortar', pause: 'Pausa', dock: 'Base',
+    chargeFail: 'Error al cargar', chargeFailMsg: 'Está en la base pero no carga. Colócalo recto y limpia con un paño los contactos de la base y los del robot.',
+    stuck: 'Parado por atasco', stuckMsg: 'Lleva varios minutos parado fuera de la base y sin ningún error: lo más probable es que esté atascado. Ve a verlo.',
+    gardenStop: 'Parado en el jardín', gardenStopMsg: 'Se ha parado en el jardín y espera que alguien lo atienda.',
+    liftedMsg: 'Déjalo en el césped y sigue solo.', upsideMsg: 'Dale la vuelta y confírmalo en el robot.',
+    errHintMc: 'Revisa el robot y confírmalo en su teclado.', errHintLd: 'Revísalo y pulsa OK en el robot.',
     mow1: 'Cortar 1 h', mow3: 'Cortar 3 h', parkNext: 'Aparcar hasta el próximo turno', resume: 'Volver al horario', edgecut: 'Cortar solo los bordes',
-    next: 'Próximo corte', today: 'hoy', tomorrow: 'mañana', none: 'sin programación', battery: 'Batería', lastData: 'último dato', lastSeen: 'Última conexión',
-    offlineMsg: 'El robot no está al alcance del Bluetooth. Se reconecta solo al volver cerca del receptor.',
+    next: 'Próximo corte', today: 'hoy', tomorrow: 'mañana', none: 'sin programación', battery: 'Batería', lastData: 'último dato', lastSeen: 'Última conexión', lastReading: 'Último dato',
+    offlineMsg: 'El robot no responde por Bluetooth: está lejos del receptor o se ha quedado sin batería. Se reconecta solo en cuanto vuelva a responder.',
     offlineLd: 'No llega a la nube de Worx (sin Wi-Fi o apagado). Se reconecta solo.',
     rain: 'Llueve: espera a que se seque el césped', noLink: 'Sin conexión', noneOff: 'el horario se verá al conectar',
     pick: 'Robot (entidad lawn_mower)', name: 'Nombre que se ve (opcional)', noEntity: 'No encuentro la entidad',
@@ -21,11 +26,16 @@ const T = {
   },
   en: {
     mowing: 'Mowing', homing: 'Going home', leaving: 'Leaving the dock', charging: 'Charging',
-    docked: 'Docked', paused: 'Paused', idle: 'Stopped', offline: 'Out of range', error: 'Error',
+    docked: 'Docked', paused: 'Paused', idle: 'Stopped', offline: 'Offline', error: 'Error',
     lifted: 'Lifted', upside: 'Upside down', start: 'Mow', pause: 'Pause', dock: 'Dock',
+    chargeFail: 'Charging error', chargeFailMsg: 'It is on the dock but not charging. Straighten it and wipe the contacts on the dock and on the mower.',
+    stuck: 'Stopped, probably stuck', stuckMsg: 'It has been stopped away from the dock for several minutes with no error: it is probably stuck. Go and check it.',
+    gardenStop: 'Stopped in the garden', gardenStopMsg: 'It stopped in the garden and is waiting for someone.',
+    liftedMsg: 'Put it back on the lawn and it carries on.', upsideMsg: 'Turn it over and confirm on the mower.',
+    errHintMc: 'Check the mower and confirm on its keypad.', errHintLd: 'Check it and press OK on the mower.',
     mow1: 'Mow 1 h', mow3: 'Mow 3 h', parkNext: 'Park until next run', resume: 'Resume schedule', edgecut: 'Cut edges only',
-    next: 'Next run', today: 'today', tomorrow: 'tomorrow', none: 'no schedule', battery: 'Battery', lastData: 'last known', lastSeen: 'Last seen',
-    offlineMsg: 'The mower is out of Bluetooth range. It reconnects by itself when it comes back near the receiver.',
+    next: 'Next run', today: 'today', tomorrow: 'tomorrow', none: 'no schedule', battery: 'Battery', lastData: 'last known', lastSeen: 'Last seen', lastReading: 'Last reading',
+    offlineMsg: 'The mower is not answering over Bluetooth: it is out of range or its battery is flat. It reconnects by itself as soon as it answers.',
     offlineLd: 'It cannot reach the Worx cloud (no Wi-Fi or switched off). It reconnects by itself.',
     rain: 'Raining: waiting for the lawn to dry', noLink: 'Offline', noneOff: 'schedule shows up once connected',
     pick: 'Mower (lawn_mower entity)', name: 'Display name (optional)', noEntity: 'Entity not found',
@@ -184,7 +194,7 @@ const HTML = `
   </div>
   <div class="body">
     <div class="title"><b id="name"></b><span id="next"></span></div>
-    <div id="alert"></div>
+    <div id="alert" role="status" aria-live="polite"></div>
   </div>
   <div class="acts">
     <button class="main" data-a="start"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span></span></button>
@@ -356,11 +366,13 @@ class McCullochRobCard extends HTMLElement {
     this._update();
   }
 
-  _t(k) { const l = (this._hass?.locale?.language || this._hass?.language || 'en').slice(0, 2); return (T[l] || T.en)[k]; }
+  // gallego, catalán y euskera, en español (no en inglés): los textos están en español e inglés
+  _lang() { const l = (this._hass?.locale?.language || this._hass?.language || 'en').slice(0, 2); return ['gl', 'ca', 'eu'].includes(l) ? 'es' : l; }
+  _t(k) { return (T[this._lang()] || T.en)[k]; }
 
   _errText(kind, code) {
     if (!code || ['ninguno', 'none', 'no_error', 'unknown', 'unavailable'].includes(code)) return '';
-    const es = (this._hass?.locale?.language || 'es').startsWith('es');
+    const es = !this._hass?.locale?.language || this._lang() === 'es';
     const tx = es && ERRS ? (ERRS[kind] || {})[code] || (ERRS.mcculloch || {})[code] : null;
     return tx || code.replace(/_/g, ' ').replace(/^./, x => x.toUpperCase());
   }
@@ -460,7 +472,8 @@ class McCullochRobCard extends HTMLElement {
     const on = k => st(k)?.state === 'on', mower = h.states[entity], kind = this._kind(entity);
     const val = k => { const s = st(k)?.state; return s && !['unknown', 'unavailable'].includes(s) ? s : null; };
     const act = val('activity'), state = val('state'), bat = val('battery') == null ? NaN : Number(val('battery'));
-    const offline = !mower || mower.state === 'unavailable';
+    // «unknown» = conectado pero sin leer aún el estado: tampoco se le pueden dar órdenes (la app dice lo mismo)
+    const offline = !mower || ['unavailable', 'unknown'].includes(mower.state);
     const err = val('error');
     const ldErr = kind === 'landroid' && err && !['no_error', 'unknown', 'rain_delay'].includes(err);
     const charging = on('charging');
@@ -468,14 +481,23 @@ class McCullochRobCard extends HTMLElement {
     const upside = on('upside_down') || (kind === 'landroid' && err === 'upside_down');
     const error = on('problem') || state === 'error' || state === 'fatal_error' || mower?.state === 'error' || (ldErr && !lifted && !upside);
     const moving = ['mowing', 'going_out', 'going_home'].includes(act) || (!act && ['mowing', 'edgecut'].includes(mower?.state));
-    const s = offline ? 'offline' : upside ? 'upside' : lifted ? 'lifted' : error ? 'error' : charging ? 'charging'
+    const s0 = offline ? 'offline' : upside ? 'upside' : lifted ? 'lifted' : error ? 'error' : charging ? 'charging'
       : act === 'going_home' || mower?.state === 'returning' ? 'homing' : act === 'going_out' ? 'leaving'
       : moving ? 'mowing' : (on('in_station') || act === 'parked' || act === 'charging' || mower?.state === 'docked') ? 'docked'
       // la integración manda a «paused» también el robot apagado, esperando PIN o parado: eso no es una pausa
       : ['off', 'wait_for_safetypin', 'stopped'].includes(state) || act === 'stopped_in_garden' ? 'idle'
       : state === 'paused' || mower?.state === 'paused' ? 'paused' : 'idle';
     const rain = kind === 'landroid' && (on('rain') || err === 'rain_delay');
-    return {s, bat, charging, offline, err, kind, rain, mower, ids, st};
+    // Landroid: dos situaciones que el robot no da como error y que se ven igual que en la app: en la base sin
+    // cargar («falta el cable» estando ahí es que no hace contacto) y parado fuera de la base sin ningún error
+    const lm = mower?.state, since = Date.now() - new Date(mower?.last_changed).getTime();
+    const chargeFail = kind === 'landroid' && !offline && st('charging')?.state === 'off' && !lifted && !upside && bat < 98
+      && ((lm === 'docked' && since >= 12e4) || (['docked', 'idle'].includes(lm) && err === 'wire_missing'));
+    const stuck = kind === 'landroid' && !offline && !charging && !chargeFail && !lifted && !upside && lm === 'idle' && !ldErr && since >= 18e4;
+    // el McCulloch que se para en el jardín pide que alguien lo atienda (los avisos al móvil ya lo dicen)
+    const msg = chargeFail ? 'chargeFail' : stuck ? 'stuck' : act === 'stopped_in_garden' && s0 === 'idle' ? 'gardenStop' : null;
+    const s = msg === 'chargeFail' ? 'error' : s0;
+    return {s, msg, col: msg === 'stuck' || msg === 'gardenStop' ? '#ff9f0a' : COLOR[s], bat, charging, offline, err, kind, rain, mower, ids, st};
   }
 
   _update() {
@@ -488,7 +510,7 @@ class McCullochRobCard extends HTMLElement {
     const bar = r.getElementById('rbar');
     bar.hidden = robots.length < 2;
     if (robots.length > 1 && !this._renaming) {
-      const key = robots.map(x => { const q = this._status(x.entity); return [x.entity, q.s, q.bat, name(x), x.entity === this._sel].join('|'); }).join(';');
+      const key = robots.map(x => { const q = this._status(x.entity); return [x.entity, q.s, q.msg, q.bat, name(x), x.entity === this._sel].join('|'); }).join(';');
       if (bar.dataset.k !== key) {
         bar.dataset.k = key;
         bar.replaceChildren(...robots.map(x => {
@@ -498,9 +520,9 @@ class McCullochRobCard extends HTMLElement {
           b.innerHTML = `<img class="th" alt=""><span class="rtx"><b></b><small><i></i><span></span></small></span>`
             + (on ? `<span class="pen" data-pen title="${this._t('rename')}"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/></svg></span>` : '');
           b.querySelector('.th').src = `${BASE}${q.kind === 'landroid' ? 'rob3d_landroid' : 'rob3d'}/icono.webp${VER}`;
-          b.querySelector('i').style.setProperty('--c', COLOR[q.s]);
+          b.querySelector('i').style.setProperty('--c', q.col);
           b.querySelector('b').textContent = name(x);
-          const st = q.s === 'offline' && q.kind === 'landroid' ? this._t('noLink') : this._t(q.s);
+          const st = q.msg ? this._t(q.msg) : q.s === 'offline' && q.kind === 'landroid' ? this._t('noLink') : this._t(q.s);
           b.querySelector('small span').textContent = isNaN(q.bat) ? st : `${st} · ${q.bat}%`;
           return b;
         }));
@@ -515,12 +537,15 @@ class McCullochRobCard extends HTMLElement {
       this._wake();  // pone la vista que toca al nuevo estado (y sigue animando si corta)
     }
     const pill = r.getElementById('pill');
-    pill.style.setProperty('--c', COLOR[s]);
+    pill.style.setProperty('--c', q.col);
     pill.firstChild.innerHTML = ICON[s];
-    const label = s === 'offline' && kind === 'landroid' ? this._t('noLink') : this._t(s);
-    // la etiqueta, corta; la avería concreta, en el aviso de abajo
+    const label = q.msg ? this._t(q.msg) : s === 'offline' && kind === 'landroid' ? this._t('noLink') : this._t(s);
+    // la etiqueta, corta; el error concreto, en el aviso de abajo
     let detail = label;
-    if (s === 'error') { const e = this._errText(kind, q.err); if (e) detail = `${label}: ${e}`; }
+    // y qué hacer: igual que el aviso de la app
+    if (s === 'error' && !q.msg) { const e = this._errText(kind, q.err); detail = `${e ? `${label}: ${e}` : label}. ${this._t(kind === 'landroid' ? 'errHintLd' : 'errHintMc')}`; }
+    if (s === 'lifted') detail = `${label}. ${this._t('liftedMsg')}`;
+    if (s === 'upside') detail = `${label}. ${this._t('upsideMsg')}`;
     if (pill.lastChild.textContent !== label) {
       pill.lastChild.textContent = label;
       pill.classList.remove('bump'); void pill.offsetWidth; pill.classList.add('bump');
@@ -566,14 +591,18 @@ class McCullochRobCard extends HTMLElement {
     // fuera de alcance: cuándo se supo de él por última vez (sensor siempre disponible)
     // sin la entidad (nombre mal escrito o integración quitada) no es un problema de Bluetooth ni de la nube
     let offTxt = !mower ? `${this._t('noEntity')}: ${this._sel}` : this._t(kind === 'landroid' ? 'offlineLd' : 'offlineMsg');
-    const seen = new Date(q.st('last_seen')?.state);
+    let seen = new Date(q.st('last_seen')?.state), seenKey = 'lastSeen';
+    // «Última conexión» sin dato (HA recién arrancado): al menos la última lectura, como hace la app
+    if (offline && mower && isNaN(seen) && q.st('battery')?.last_updated) { seen = new Date(q.st('battery').last_updated); seenKey = 'lastReading'; }
     if (offline && !isNaN(seen)) {
       const mins = (seen - Date.now()) / 6e4;
       const rtf = new Intl.RelativeTimeFormat(h.locale?.language || 'es', {numeric: 'auto'});
       const rel = Math.abs(mins) < 120 ? rtf.format(Math.round(mins), 'minute') : Math.abs(mins) < 2880 ? rtf.format(Math.round(mins / 60), 'hour') : rtf.format(Math.round(mins / 1440), 'day');
-      offTxt = `${this._t('lastSeen')}: ${rel}. ${offTxt}`;
+      offTxt = `${this._t(seenKey)}: ${rel}. ${offTxt}`;
     }
-    const [alCls, alTxt] = offline ? ['alert warn', offTxt] : ['upside', 'lifted', 'error'].includes(s) ? ['alert', detail]
+    // rojo solo para lo que de verdad es un fallo; atascado o parado en el jardín piden atención, en ámbar
+    const [alCls, alTxt] = offline ? ['alert warn', offTxt] : q.msg ? [q.msg === 'chargeFail' ? 'alert' : 'alert warn', this._t(q.msg + 'Msg')]
+      : ['upside', 'lifted', 'error'].includes(s) ? ['alert', detail]
       : q.rain ? ['alert info', this._t('rain')] : ['', ''];
     const alEl = r.getElementById('alert');
     // el texto viene de un sensor: siempre como texto, nunca como HTML
@@ -621,7 +650,7 @@ class McCullochRobCardEditor extends HTMLElement {
     if (!this._form) {
       this._form = document.createElement('ha-form');
       this._form.computeLabel = s => {
-        const l = (this._hass.locale?.language || 'en').slice(0, 2), t = T[l] || T.en;
+        const l0 = (this._hass.locale?.language || 'en').slice(0, 2), l = ['gl', 'ca', 'eu'].includes(l0) ? 'es' : l0, t = T[l] || T.en;
         return {entity: t.pick, name: t.name, entity_2: t.pick2, name_2: t.name2, image: t.image}[s.name];
       };
       this._form.schema = [
