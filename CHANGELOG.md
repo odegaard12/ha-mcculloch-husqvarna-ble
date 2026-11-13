@@ -2,6 +2,18 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.37 · Los avisos abren su robot
+
+#### Avisos al móvil
+- **Al tocar un aviso se abre la app en el robot del aviso**, no en el que se estuviera mirando: con la app cerrada (`?r=<robot>`) y con la app ya abierta (el service worker le dice cuál). Un robot desconocido se ignora.
+
+#### Repo
+- README al día: avisos (abren su robot, «no carga», sin repetir al cambiar de servidor), horario con franjas que pasan de medianoche, horas de la semana en horas y minutos y tres problemas típicos nuevos (McCulloch sin batería por no cargar, «Error al cargar» del Landroid y horas a 0 si el *recorder* de HA no guarda esas entidades).
+- Revisión del repo: sin archivos sobrantes, sin secretos ni IPs privadas, finales de línea correctos.
+
+#### Comprobado
+- Recorrido de las 4 pestañas de los dos robots en 4 anchos (320, 390, 768 y 1280 px) sin desbordes, en modo oscuro, y 50 controles pulsados sin ningún error de JavaScript.
+
 ## v0.3.36 · Franjas que cruzan la medianoche, órdenes de otras webs y app sin red
 
 #### App

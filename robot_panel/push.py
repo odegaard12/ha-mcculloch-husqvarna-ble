@@ -362,7 +362,7 @@ def setup_push(app: web.Application, here: Path, ha: str, token: str, robots: li
         # avisa la Pi que tiene la IP virtual; la otra lo apunta igual (las dos ven lo mismo), para no repetirlo
         # ni saltarse el tope si le toca tomar el relevo
         vip = await asyncio.get_running_loop().run_in_executor(None, holds_vip)
-        if not vip or await send({"title": info().get(rid, {}).get("name") or "Mis robots", "body": text, "tag": cid, "url": "./"}, robot=rid):
+        if not vip or await send({"title": info().get(rid, {}).get("name") or "Mis robots", "body": text, "tag": cid, "url": f"./?r={rid}"}, robot=rid):
             for k in [k for k, t in last.items() if k.count(":") > 1 and now - t > 86400]:
                 del last[k]  # las claves por avería no se acumulan
             last[key] = now

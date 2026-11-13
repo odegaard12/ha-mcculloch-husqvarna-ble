@@ -1,7 +1,7 @@
 // Service worker de «Mi robot»: guarda la carcasa de la app para que abra al instante y
 // sin red; los datos (api/) van siempre a la red y nunca se sirven de caché.
 // Rutas relativas al ámbito del worker: funciona en la raíz (Pi) y bajo el ingress de HA.
-const CACHE = 'mi-robot-v34';
+const CACHE = 'mi-robot-v35';
 // las vistas del robot (animaciones) también: sin red, un robot que no se ha mirado antes no se quedaba sin dibujo
 const vistas = (dir, vFrames, vBase) => [
   ...Array.from({length: 24}, (_, k) => `static/${dir}/turn_${String(k).padStart(2, '0')}.webp?v=${vFrames}`),
@@ -34,10 +34,11 @@ self.addEventListener('push', e => {
 // Al tocar el aviso: si la app ya está abierta, se trae al frente; si no, se abre
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  const url = new URL(e.notification.data?.url || './', self.registration.scope).href;
+  const url = new URL(e.notification.data?.url || './', self.registration.scope);
   e.waitUntil(clients.matchAll({type: 'window', includeUncontrolled: true}).then(cs => {
-    for (const c of cs) if (c.url.startsWith(self.registration.scope)) return c.focus();
-    return clients.openWindow(url);
+    // con la app abierta se trae al frente y se le dice qué robot es el del aviso (abre ese, no el que se veía)
+    for (const c of cs) if (c.url.startsWith(self.registration.scope)) { c.postMessage({robot: url.searchParams.get('r')}); return c.focus(); }
+    return clients.openWindow(url.href);
   }));
 });
 

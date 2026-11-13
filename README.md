@@ -125,7 +125,7 @@ El servidor guarda el token de HA y nunca lo envía al navegador; solo deja dar 
 ## La app
 
 - **Inicio:** el robot en 3D según lo que hace (cortando cruza el césped y gira al final de cada pasada; volviendo a la base se queda a medio entrar; cargando, levantado, volcado...), batería, próximo corte y órdenes.
-- **Horario**, **Datos** (actividad y batería de 24 h, horas cortadas por día, averías, todo lo que da el robot) y **Ajustes**.
+- **Horario** (también las franjas que pasan de medianoche), **Datos** (actividad y batería de 24 h, horas cortadas por día de la última semana en horas y minutos, paradas por error, todo lo que da el robot) y **Ajustes**.
 - Se instala en la pantalla de inicio, **se actualiza sola** cuando hay versión nueva y se puede **tirar hacia abajo** para refrescar.
 - Sin cobertura enseña **los últimos datos** y desde cuándo, nunca "sin programación".
 - Cada robot tiene su color (amarillo el McCulloch, naranja el Landroid) y su icono: nunca se mezcla lo de uno con lo del otro.
@@ -152,7 +152,10 @@ Formato `prefijo:nombre:tipo`, separados por comas. El prefijo es el id de su `l
 **Desde la app** (recomendado): *Ajustes → Avisos en este móvil → Activar avisos*.
 - Avisa por notificación push de averías (con el texto en español), vuelco, robot levantado, parado en el jardín, 1 o 3 días sin conexión y cuando vuelve a conectarse, con el nombre de cada robot.
 - No consulta nada periódicamente: se suscribe a los cambios de Home Assistant.
-- Cada aviso sale como mucho una vez cada 6 h, nunca más de 6 al día, y el de "sin conexión" una sola vez por desconexión.
+- **Al tocar un aviso se abre la app en el robot del aviso**, no en el que mirabas antes.
+- El Landroid en la base con "falta el cable" avisa de que **no carga** (contactos sucios o mal alineados), que es lo que significa casi siempre estando ahí.
+- Cada aviso sale como mucho una vez cada 6 h (una avería distinta no queda callada por la anterior), nunca más de 6 al día, y el de "sin conexión" una sola vez por desconexión.
+- Con dos servidores avisa solo el que tiene la IP virtual; el otro lo apunta igual para no repetirlo si toma el relevo.
 - En iPhone hace falta iOS 16.4 o posterior y abrir la app desde el icono de la pantalla de inicio.
 
 **Desde Home Assistant** (alternativa), con la plantilla de automatización lista para importar:
@@ -193,6 +196,9 @@ python tools/blender/to_web.py salida custom_components/mcculloch_rob/www/rob3d_
 - **No aparece el robot:** comprueba que lo ves en *Ajustes → Bluetooth → Anuncios*. Si usas herramientas que se suscriben a los anuncios del proxy, recarga la entrada de ESPHome: el proxy solo los manda a un cliente.
 - **Pide PIN o rechaza la conexión:** vuelve a poner el robot en modo emparejamiento y añade la integración otra vez.
 - **El Landroid sale "sin conexión":** no llega a la nube de Worx (Wi-Fi). La app y la tarjeta enseñan sus últimos datos hasta que vuelva.
+- **El McCulloch sale "sin conexión" aunque está junto al receptor:** si la base no le da carga se queda sin batería y se apaga, y apagado no responde por Bluetooth. Comprueba que la base tiene luz y que llegan los 28 V a sus contactos.
+- **El Landroid en la base dice "Error al cargar" o "falta el cable":** no hace contacto con la carga. Colócalo recto y limpia con un paño los contactos de la base y los del robot.
+- **Las horas de la semana no cuadran:** la gráfica de 7 días y "Cortado en 7 días" salen del historial de Home Assistant (*recorder*); si lo tienes recortado o desactivado para esas entidades, saldrán a 0.
 
 ## Aviso
 

@@ -720,6 +720,16 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
 let P = 'robot_cortacesped', KIND = 'mcculloch', ROBOTS = [{id: P, name: 'Mi robot', kind: 'mcculloch'}];
 // arranca ya con el último robot visto (y su tipo): sin un instante con la pantalla del otro
 try { const p = localStorage.getItem('robot'), k = localStorage.getItem('robotKind'); if (p && /^[a-z0-9_]+$/.test(p)) { P = p; KIND = k === 'landroid' ? 'landroid' : 'mcculloch'; } } catch(e) {}
+// abierta desde un aviso (?r=<robot>): ese robot, no el último que se veía (su tipo sale de la lista guardada, si la hay)
+try {
+  const q = new URLSearchParams(location.search).get('r');
+  if (q && /^[a-z0-9_]+$/.test(q)) {
+    P = q; localStorage.setItem('robot', q);
+    const c = (JSON.parse(localStorage.getItem('robots') || '[]') || []).find(x => x && x.id === q);
+    if (c) { KIND = c.kind === 'landroid' ? 'landroid' : 'mcculloch'; localStorage.setItem('robotKind', KIND); }
+    history.replaceState(null, '', location.pathname);
+  }
+} catch(e) {}
 document.body.dataset.kind = KIND;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -1775,6 +1785,10 @@ $('#install').onclick = async () => { if (!deferred) return; deferred.prompt(); 
 if (!isSecureContext) $('#installtxt').innerHTML = 'Para instalarla como app de verdad hay que abrirla por <b>https</b> (por ejemplo, con tu dominio o un túnel de Cloudflare). Desde aquí: menú del navegador → «Añadir a pantalla de inicio».';
 else if (/iphone|ipad/i.test(navigator.userAgent)) $('#installtxt').textContent = 'En iPhone: botón Compartir → «Añadir a pantalla de inicio».';
 if ('serviceWorker' in navigator && isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
+// tocar un aviso con la app ya abierta: el service worker avisa de qué robot era
+if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => {
+  const r = e.data && e.data.robot; if (r && r !== P && ROBOTS.some(x => x.id === r)) pickRobot(r);
+});
 $('#logout').onclick = async () => { await fetch('api/logout', {method:'POST'}); try { localStorage.removeItem('ultimaLectura'); } catch(e) {} showLock(); };
 
 (async () => {
