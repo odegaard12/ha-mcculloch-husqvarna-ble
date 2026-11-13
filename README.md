@@ -220,10 +220,12 @@ GPL-3.0, la misma que AutoMower-BLE.
 - Bluetooth integration (`mcculloch_rob`), no cloud: 98 protocol commands, schedule editing, mow/park for N hours, ~50 entities. An extended alternative to the core *Husqvarna Automower BLE* integration.
 - Lovelace card (`custom:mcculloch-rob-card`) for one or two mowers. The second one can be a Worx Landroid from the Landroid Cloud integration. It has custom Blender 3D models you can spin with your finger.
 - Installable web app (HA add-on, Docker or plain Python):
-  - push notifications;
+  - push notifications (tapping one opens the mower it is about);
   - a name and a password per mower;
+  - schedule editor (including slots that cross midnight) and history charts: 24 h activity and battery, and hours mown and error stops per day over the last 7 days;
   - last known data when out of range;
-  - auto-update.
+  - dark mode, auto-update.
+- Plain-language diagnostics, in the card and in the app, with what to do about each: *Charging error* (docked but not charging), *Stopped, probably stuck*, *Stopped in the garden*, lifted, upside down, offline.
 - All 161 error codes translated to Spanish.
 
 Install via HACS as a custom repository. For Bluetooth you need a proxy **close to the mower** (≈ –60 dBm; an ESP32-WROOM-32U with an external antenna is recommended), and the mower must be in pairing mode the first time.
