@@ -2,6 +2,14 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.40 · La tarjeta en columnas estrechas
+
+#### Tarjeta
+- **Columnas estrechas** (paneles de varias columnas, móvil en horizontal, vista de sección pequeña): con menos de ~340 px los dos robots de la barra se apilan uno encima de otro (antes se partían los nombres a mitad de palabra: «McCul·loch»), y con menos de ~300 px las tres órdenes pierden el icono y el margen (antes «Base» se salía de la tarjeta). Probado a 240, 300 y 700 px de ancho.
+
+#### Código
+- Comentario en `entity.py` que explica por qué los nombres de las entidades van en español fijo (de ellos sale el id del que dependen la app, la tarjeta y los avisos).
+
 ## v0.3.39 · La tarjeta de Home Assistant dice lo mismo que la app
 
 _Revisión de la tarjeta: textos, estados y diagnósticos._

@@ -63,7 +63,7 @@ const errsReady = fetch(BASE + 'errores_es.json' + VER).then(r => r.json()).then
 
 const CSS = `
 :host{display:block}
-ha-card{overflow:hidden}
+ha-card{display:block;overflow:hidden;container-type:inline-size}
 .rbar{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 10px 8px}
 .rbar[hidden]{display:none}
 /* cada robot con su foto y su color de marca: el elegido, relleno; el otro, solo con el borde */
@@ -75,6 +75,8 @@ ha-card{overflow:hidden}
 .rbar .th{width:38px;height:28px;flex:none;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(0,0,0,.3))}
 .rbar .rtx{display:flex;flex-direction:column;min-width:0;flex:1}
 .rbar b{overflow-wrap:anywhere}
+/* columna estrecha (menos de ~340 px): los dos robots uno encima del otro; lado a lado partían «McCul·loch» a mitad de palabra */
+@container (max-width:340px){.rbar{grid-template-columns:1fr}.rbar b{overflow-wrap:break-word}}
 .rbar small{display:flex;align-items:center;gap:5px;opacity:.75;font-weight:550;font-size:11.5px}
 .rbar button.on small{opacity:.8}
 /* lápiz como insignia en la esquina: el nombre y el estado usan todo el ancho y no se parten */
@@ -174,6 +176,8 @@ ha-card{overflow:hidden}
 .acts button.main{background:var(--accent,#ffc20e);color:#111}
 .acts button:disabled,.chips button:disabled{opacity:.45;cursor:default}
 .acts svg{width:18px;height:18px}
+/* muy estrecha (menos de ~300 px): sin iconos en las tres órdenes y con menos margen; con el icono, «Base» se salía de la tarjeta */
+@container (max-width:300px){.acts{padding:12px 10px 8px;gap:6px}.acts button{min-width:0;font-size:13px}.acts svg{display:none}}
 .chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 14px}
 .chips button{font-size:12.5px;padding:7px 11px;border-radius:99px}
 .chips button[hidden]{display:none}
