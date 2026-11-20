@@ -116,7 +116,7 @@ body.stale .hero .nowb,body.stale .batchip,body.stale #alerts,body.stale .view:n
 .sstate.bump{animation:pillin .4s cubic-bezier(.2,.8,.2,1)}
 @keyframes pillin{from{opacity:0;transform:translateY(-5px) scale(.97)}}
 .sstate{transition:border-color .4s}
-@media (prefers-reduced-motion:reduce){.view.on,.sstate.bump,.app.swap .hero{animation:none}}
+@media (prefers-reduced-motion:reduce){.view.on,.sstate.bump,.app.swap .hero,.app.swap .view.on,.sheet .panel{animation:none}}
 /* el 3D se gira con el dedo (el desplazamiento vertical sigue siendo de la página) */
 .scene{touch-action:pan-y;cursor:grab}
 .scene.grab{cursor:grabbing}
@@ -151,8 +151,7 @@ nav.tabs button.on{color:var(--brand-ink);background:var(--brand);font-weight:70
   nav.tabs button svg{width:20px;height:20px}
   .app{padding-bottom:40px}
 }
-.view{display:none}.view.on{display:block;animation:fade .25s ease}
-@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.view{display:none}.view.on{display:block}
 .cols{display:grid;gap:14px}
 @media (min-width:900px){.cols{grid-template-columns:1.1fr 1fr;align-items:start}}
 .stack > * + *{margin-top:14px}
@@ -186,7 +185,6 @@ nav.tabs button.on{color:var(--brand-ink);background:var(--brand);font-weight:70
 .sstate{position:absolute;left:12px;top:10px;display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;padding:6px 12px;border-radius:18px;max-width:calc(100% - 24px);line-height:1.25;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:#fff}
 .sstate{z-index:5}  /* sin borde de color: en una píldora redonda se dibujaba como una media luna torcida; el color ya va en el icono */
 .sstate svg{width:16px;height:16px;flex:none;fill:none;stroke:var(--c,#ffc20e);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
-@keyframes beat{70%{box-shadow:0 0 0 8px transparent}}
 .scene .hint{position:absolute;right:12px;top:10px;font-size:11px;opacity:.75;background:rgba(255,255,255,.1);padding:3px 8px;border-radius:99px}
 .hero .body{padding:2px 18px 16px;display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center}
 .ring{position:relative;width:92px;height:92px}
@@ -491,8 +489,8 @@ details.all td:last-child{text-align:right;font-weight:560;overflow-wrap:anywher
 .stage.lifted .bot .shadow{transform:translateY(46px) scale(.6);opacity:.4}
 @keyframes float{50%{transform:translateX(-50%) translateY(-8px) rotate(2deg)}}
 .stage.upside .glow{opacity:1;background:radial-gradient(closest-side,rgba(255,59,48,.55),transparent)}
-.stage.hit .bot{animation:shake .12s linear 10}
-@keyframes shake{25%{transform:translateX(calc(-50% - 4px))}75%{transform:translateX(calc(-50% + 4px))}}
+.stage.hit .bot{animation:hitshake .12s linear 10}
+@keyframes hitshake{25%{transform:translateX(calc(-50% - 4px))}75%{transform:translateX(calc(-50% + 4px))}}
 /* sin conexión: la hierba se queda verde; solo el robot pasa a gris (opaco, no transparente) */
 .stage.offline .bot{filter:grayscale(1) brightness(.85) contrast(.9)}
 @media (prefers-reduced-motion:reduce){.stage *{animation:none!important}}
@@ -507,6 +505,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
 .pins i.f{background:var(--brand);border-color:var(--brand)}
 .pins.shake{animation:shake .35s}
 @keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+@media (prefers-reduced-motion:reduce){.pins.shake,.lkpins.shake{animation:none}}  /* después de sus reglas: antes de ellas perdía */
 .pad{display:grid;grid-template-columns:repeat(3,72px);gap:14px}
 .pad button{width:72px;height:72px;border-radius:50%;border:0;background:rgba(255,255,255,.1);color:#fff;font-size:26px;font-weight:600;cursor:pointer}
 .pad button:active{background:var(--brand);color:#111}
