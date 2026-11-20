@@ -2,6 +2,13 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.41 · Animaciones: sin saltos y respetando «reducir movimiento»
+
+#### App
+- **El robot ya no salta de lado al chocar**: había dos animaciones con el mismo nombre (`shake`) y la del PIN pisaba a la del robot, que se movía medio ancho en vez de temblar. Ahora cada una tiene la suya.
+- **«Reducir movimiento» ahora sí se respeta al cambiar de pestaña**: una segunda animación de entrada (`fade`) ganaba a la regla y la pestaña seguía deslizándose. Se queda una sola, y la regla cubre también el cambio de robot, la hoja inferior y el temblor del PIN.
+- Quitada una animación que no usaba nada.
+
 ## v0.3.40 · La tarjeta en columnas estrechas
 
 #### Tarjeta
