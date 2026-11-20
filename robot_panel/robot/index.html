@@ -116,7 +116,7 @@ body.stale .hero .nowb,body.stale .batchip,body.stale #alerts,body.stale .view:n
 .sstate.bump{animation:pillin .4s cubic-bezier(.2,.8,.2,1)}
 @keyframes pillin{from{opacity:0;transform:translateY(-5px) scale(.97)}}
 .sstate{transition:border-color .4s}
-@media (prefers-reduced-motion:reduce){.view.on,.sstate.bump,.app.swap .hero,.app.swap .view.on,.sheet .panel,.pins.shake,.lkpins.shake{animation:none}}
+@media (prefers-reduced-motion:reduce){.view.on,.sstate.bump,.app.swap .hero,.app.swap .view.on,.sheet .panel{animation:none}}
 /* el 3D se gira con el dedo (el desplazamiento vertical sigue siendo de la página) */
 .scene{touch-action:pan-y;cursor:grab}
 .scene.grab{cursor:grabbing}
@@ -505,6 +505,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
 .pins i.f{background:var(--brand);border-color:var(--brand)}
 .pins.shake{animation:shake .35s}
 @keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+@media (prefers-reduced-motion:reduce){.pins.shake,.lkpins.shake{animation:none}}  /* después de sus reglas: antes de ellas perdía */
 .pad{display:grid;grid-template-columns:repeat(3,72px);gap:14px}
 .pad button{width:72px;height:72px;border-radius:50%;border:0;background:rgba(255,255,255,.1);color:#fff;font-size:26px;font-weight:600;cursor:pointer}
 .pad button:active{background:var(--brand);color:#111}

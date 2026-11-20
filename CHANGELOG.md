@@ -2,6 +2,11 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.42 · «Reducir movimiento» también en el temblor del PIN
+
+#### App
+- **El temblor de la pantalla de PIN respeta «reducir movimiento»**: en la v0.3.41 la regla estaba escrita antes que la animación y perdía. Comprobado en un navegador real con la preferencia activada: pestañas, hoja inferior, robot y PIN ya no se animan.
+
 ## v0.3.41 · Animaciones: sin saltos y respetando «reducir movimiento»
 
 #### App
