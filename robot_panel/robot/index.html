@@ -228,6 +228,21 @@ button:disabled{opacity:.5;cursor:wait}
 .card h3:first-of-type{margin-top:0}
 .alert{border-radius:16px;padding:12px 14px;font-weight:560;background:var(--bad-soft);color:var(--bad);display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .alert + .alert{margin-top:10px}
+.hl{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line)}
+.hl:first-child{border-top:0}
+.hl i{flex:none;width:10px;height:10px;border-radius:50%;margin-top:6px;background:var(--ok)}
+.hl.warn i{background:var(--warn)}.hl.bad i{background:var(--bad)}.hl.info i{background:var(--info)}
+.hl small{display:block;color:var(--muted);font-weight:500}
+#reportview{position:fixed;inset:0;z-index:90;background:#fff;color:#17191a;overflow:auto;padding:16px}
+#reportview[hidden]{display:none}
+#reportview .rptbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+#rptbody{max-width:760px;margin:0 auto}
+#rptbody h1{font-size:22px;margin:0 0 2px}#rptbody h2{font-size:16px;margin:18px 0 6px;color:#1f4e79}
+#rptbody table{width:100%;border-collapse:collapse;font-size:14px}
+#rptbody td,#rptbody th{border:1px solid #cdd6df;padding:5px 8px;text-align:left;vertical-align:top}
+#rptbody th{background:#1f4e79;color:#fff}
+#rptbody .sub{color:#5a6570;font-size:13px;margin:0 0 10px}
+@media print{body>*:not(#reportview){display:none!important}#reportview{position:static;overflow:visible;padding:0}#reportview .rptbar{display:none}}
 .alert[hidden]{display:none}  /* el display:flex de arriba le ganaba a «hidden» */
 #ldpend{display:block;margin-bottom:12px}#ldpend[hidden]{display:none}
 .alert.warn{background:var(--warn-soft);color:var(--warn)}.alert.info{background:var(--info-soft);color:var(--info)}
@@ -650,6 +665,10 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
   <section class="view" id="v-datos">
     <div class="cols">
       <div class="stack">
+        <div class="card mc-only" id="healthcard">
+          <h2>Salud del robot <button class="chip" id="rptopen" style="margin-left:auto">Informe</button></h2>
+          <div id="health"></div>
+        </div>
         <div class="card">
           <h2>Actividad · últimas 24 h</h2>
           <div class="tl" id="tl"></div><div class="tlh"><span>-24 h</span><span>-18</span><span>-12</span><span>-6</span><span>ahora</span></div>
@@ -711,6 +730,10 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
 
   <footer id="foot"></footer>
 </div>
+<section id="reportview" hidden>
+  <div class="rptbar"><button class="btn" id="rptprint">Guardar como PDF / imprimir</button><button class="btn ghost" id="rptclose">Cerrar</button></div>
+  <div id="rptbody"></div>
+</section>
 <div class="toast" id="toast"></div>
 <div class="ptr" id="ptr">↓ Suelta para actualizar</div>
 
@@ -1630,8 +1653,58 @@ function renderDatos(){
   const total = st('sensor','ultimo_aviso')?.attributes?.total;
   $('#msgcount').textContent = total ? total + ' en la memoria' : '';
   $('#msgs').innerHTML = msgs.length ? msgs.map(x => `<div class="msg"><span class="dot s${x.gravedad}"></span><div><b>${esc(errText(x.texto))}</b><br><small>${fmtDate(x.fecha)} · código ${x.codigo}</small></div></div>`).join('') : '<div class="empty">Sin avisos.</div>';
+  renderHealth();
   renderAll();
 }
+
+/* ---------- salud del robot e informe (McCulloch) ---------- */
+const durMin = m => m >= 1440 ? Math.round(m / 1440) + ' d' : m >= 90 ? Math.round(m / 60) + ' h' : Math.round(m) + ' min';
+function healthItems(){
+  const it = [], add = (lv, t, d) => it.push({lv, t, d});
+  if (val('sensor','estado') == null) return [{lv: 'warn', t: 'Sin conexión', d: 'No hay datos nuevos hasta que el robot responda por Bluetooth.'}];
+  if (on('binary_sensor','averia')) add('bad', 'Avería: ' + errText(val('sensor','error')), 'Revisa el robot y confírmalo en su teclado.');
+  else add('ok', 'Sin averías', 'Ningún error activo.');
+  if (on('switch','modo_garaje')) add('warn', 'Modo garaje activado', 'Se queda aparcado y no sale a cortar. Se quita en Ajustes.');
+  const clock = val('sensor','reloj_del_robot');
+  if (clock) {
+    const dm = (new Date(st('sensor','reloj_del_robot').last_updated) - new Date(clock)) / 60000;
+    if (Math.abs(dm) > 5) add('warn', 'Reloj del robot ' + (dm > 0 ? 'atrasado ' : 'adelantado ') + durMin(Math.abs(dm)), 'El horario corre a la hora equivocada. Ajustes → Reloj del robot → Poner en hora.');
+    else add('ok', 'Reloj en hora', '');
+  }
+  const cyc = num('sensor','ciclos_de_carga');
+  if (cyc >= 1500) add('warn', cyc.toLocaleString('es-ES') + ' ciclos de carga', 'Muchos para una batería de litio: si dura poco cortando, es la primera sospecha.');
+  else if (cyc) add('ok', cyc.toLocaleString('es-ES') + ' ciclos de carga', 'Desgaste normal de batería.');
+  const run = num('sensor','tiempo_total_en_marcha'), seek = num('sensor','tiempo_total_buscando_la_base');
+  if (run > 0 && seek / run > 0.05) add('warn', 'Pasa el ' + Math.round(seek / run * 100) + ' % del tiempo buscando la base', 'Revisa el cable guía y que la base esté plana y con 2 m libres delante.');
+  if (num('sensor','tiempo_total_cortando') > 100 && num('sensor','uso_de_las_cuchillas') === 0) add('info', 'Cuchillas a 0 h', 'El contador está a cero: se reseteó o no se lee. Cambia las cuchillas si hace tiempo.');
+  const av = st('sensor','ultimo_aviso')?.attributes?.avisos || [];
+  if (av.length) { const d = (Date.now() - new Date(av[0].fecha)) / 864e5; add(d < 14 ? 'warn' : 'ok', 'Último aviso: ' + errText(av[0].texto), 'Hace ' + Math.round(d) + ' días.'); }
+  if (!on('binary_sensor','cargando') && on('binary_sensor','en_la_base') && num('sensor','bateria') < 90) add('bad', 'En la base y sin cargar con ' + num('sensor','bateria') + ' %', 'Posible fallo de la base o de los contactos.');
+  return it;
+}
+function renderHealth(){
+  if (KIND === 'landroid') return;
+  $('#health').innerHTML = healthItems().map(x => `<div class="hl ${x.lv}"><i></i><div><b>${esc(x.t)}</b>${x.d ? `<small>${esc(x.d)}</small>` : ''}</div></div>`).join('');
+}
+function buildReport(){
+  const tb = (head, rows) => `<table>${head ? `<tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr>` : ''}${rows.filter(r => r[1] != null && r[1] !== '').map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table>`;
+  const n = k => val('sensor', k), hh = t => t == null ? null : Math.round(Number(t)).toLocaleString('es-ES') + ' h';
+  const mm = x => x >= 1440 ? '24:00' : String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0');
+  const tareas = st('sensor','programacion_tareas')?.attributes?.tareas || [];
+  const sched = tareas.map(t => [`${mm(t.start_time_in_minutes)} a ${mm(t.start_time_in_minutes + t.duration_in_minutes)}`, DAYS.map((d, i) => t['on_' + d] ? DLONG[i] : null).filter(Boolean).join(', ')]);
+  const av = st('sensor','ultimo_aviso')?.attributes?.avisos || [];
+  const lvl = {ok: 'Bien', warn: 'Vigilar', bad: 'Fallo', info: 'Nota'};
+  return `<h1>${esc($('#rname').textContent)}</h1><p class="sub">Informe del ${new Date().toLocaleString('es-ES')} · datos leídos por ${esc(LINK || 'Bluetooth')}</p>`
+    + `<h2>Resumen</h2>` + tb(['', 'Qué', 'Detalle'], healthItems().map(x => [lvl[x.lv], x.t, x.d]).map(r => [r[0], r[1], r[2] || '–']))
+    + `<h2>Ahora mismo</h2>` + tb(null, [['Estado', STATE[n('estado')] || n('estado')], ['Actividad', ACTIVITY[n('actividad')] || n('actividad')], ['Batería', n('bateria') != null ? n('bateria') + ' %' : null], ['En la base', val('binary_sensor','en_la_base') != null ? (on('binary_sensor','en_la_base') ? 'sí' : 'no') : null], ['Cargando', val('binary_sensor','cargando') != null ? (on('binary_sensor','cargando') ? 'sí' : 'no') : null], ['Modo garaje', val('switch','modo_garaje') != null ? (on('switch','modo_garaje') ? 'activado' : 'apagado') : null]])
+    + `<h2>Uso acumulado</h2>` + tb(null, [['En marcha', hh(n('tiempo_total_en_marcha'))], ['Cortando', hh(n('tiempo_total_cortando'))], ['Cargando', hh(n('tiempo_total_cargando'))], ['Buscando la base', hh(n('tiempo_total_buscando_la_base'))], ['Ciclos de carga', n('ciclos_de_carga')], ['Choques', n('choques')], ['Cuchillas desde el último cambio', hh(n('uso_de_las_cuchillas'))]])
+    + `<h2>Horario guardado en el robot</h2>` + (sched.length ? tb(['Horas', 'Días'], sched) : '<p>Sin franjas.</p>')
+    + `<h2>Últimos avisos (${av.length} de ${st('sensor','ultimo_aviso')?.attributes?.total || '?'})</h2>` + (av.length ? tb(['Fecha', 'Aviso'], av.map(x => [fmtDate(x.fecha), errText(x.texto)])) : '<p>Sin avisos.</p>')
+    + `<h2>Ficha</h2>` + tb(null, [['Modelo', 'McCulloch ROB S800'], ['Nº de serie', n('numero_de_serie')], ['Software', n('version_software')], ['Firmware', n('firmware_aplicacion')], ['Reloj del robot', n('reloj_del_robot') ? fmtDate(n('reloj_del_robot')) : null]]);
+}
+$('#rptopen').onclick = () => { $('#rptbody').innerHTML = buildReport(); $('#reportview').hidden = false; };
+$('#rptclose').onclick = () => { $('#reportview').hidden = true; };
+$('#rptprint').onclick = () => window.print();
 
 /* ---------- ajustes ---------- */
 const IC = {

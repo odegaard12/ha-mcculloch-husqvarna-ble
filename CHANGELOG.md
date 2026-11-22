@@ -2,6 +2,11 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.43 · Salud del robot e informe
+
+- Datos: tarjeta «Salud del robot» con avisos automáticos (modo garaje, reloj desfasado, ciclos de carga, tiempo buscando la base, cuchillas a cero, avería, base sin cargar).
+- Botón «Informe»: resumen imprimible con todos los datos; se guarda como PDF desde el propio móvil.
+
 ## v0.3.42 · «Reducir movimiento» también en el temblor del PIN
 
 #### App
