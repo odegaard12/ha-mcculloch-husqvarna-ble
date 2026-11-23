@@ -30,6 +30,10 @@ async def main():
     assert _due("landroid:averia", True, 120) and _due("robot_cortacesped:volcado", True, 30)
     assert not _due("landroid:averia", False, 120)
     assert _due("landroid:sin_conexion_1", True, 0.5) and not _due("landroid:sin_conexion_1", True, 3600)
+    # receptor Bluetooth: solo sus sensores, nunca botones ni otras entidades; sin prefijo, nada
+    st = [{"entity_id": e} for e in ("sensor.rx_senal_wifi", "binary_sensor.rx_estado", "button.rx_reiniciar", "sensor.rxotro_x", "sensor.otra")]
+    assert [s["entity_id"] for s in server.proxy_states(st, "rx")] == ["sensor.rx_senal_wifi", "binary_sensor.rx_estado"]
+    assert server.proxy_states(st, "") == []
     async with TestClient(TestServer(server.make_app())) as c:
         r = await c.post("/api/servicio", json={})
         assert r.status == 401, "sin sesión no se entra"

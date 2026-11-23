@@ -2,6 +2,15 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.44 · Receptor Bluetooth a la vista
+
+#### App
+- **Se sabe qué falla cuando el robot no responde**: el receptor Bluetooth (ESP32) sin wifi, o el receptor bien y el robot lejos o sin batería. El aviso, «Salud del robot», el informe y la ficha del robot enseñan su señal wifi y cuánto lleva encendido.
+- **Último contacto** con el robot en el aviso de sin conexión y en «Salud del robot» («hace 2 h»).
+
+#### Servidor
+- Nueva opción `PROXY_PREFIX`: deja leer los sensores del receptor (solo `sensor` y `binary_sensor`, nunca órdenes) y solo si el McCulloch está desbloqueado en ese móvil. Prueba nueva.
+
 ## v0.3.43 · Salud del robot e informe
 
 - Datos: tarjeta «Salud del robot» con avisos automáticos (modo garaje, reloj desfasado, ciclos de carga, tiempo buscando la base, cuchillas a cero, avería, base sin cargar).

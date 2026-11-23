@@ -1237,6 +1237,13 @@ function runningNow(tasks){
 // McCulloch (Bluetooth): estado, avisos y horario tal como los da la integración propia
 // sin dato, NaN (Number(null) daría 0 % y parecería batería vacía)
 const num = (dom, key) => { const v = val(dom, key); return v == null ? NaN : Number(v); };
+// receptor Bluetooth (ESP32) del McCulloch, si el servidor lo enseña (PROXY_PREFIX): solo lectura
+const rxSt = k => { const r = (ROBOTS.find(x => x.id === P) || {}).proxy; return r && /^[a-z0-9_]+$/.test(r) ? states[`sensor.${r}_${k}`] : undefined; };
+function rxInfo(){
+  const w = rxSt('senal_wifi'); if (!w) return null;
+  const off = ['unavailable', 'unknown'].includes(w.state), up = rxSt('tiempo_encendido');
+  return {off, dbm: off ? null : Math.round(Number(w.state)), since: w.last_changed, up: up && !['unavailable', 'unknown'].includes(up.state) ? Number(up.state) : null};
+}
 function readMcCulloch(){
   const bat = num('sensor','bateria'), charging = on('binary_sensor','cargando');
   const s = val('sensor','estado'), a = val('sensor','actividad'), m = val('sensor','modo');
@@ -1249,8 +1256,11 @@ function readMcCulloch(){
   const cmin = Number(val('sensor','carga_restante'));
   flags.chargeMin = cmin > 0 ? Math.round(cmin) : null;
 
-  const al = [];
-  if (offline && st('lawn_mower')) al.push(`<div class="alert warn">El robot no responde por Bluetooth: está lejos del receptor o se ha quedado sin batería (sin base que cargue, se apaga). Se reconecta solo en cuanto vuelva a responder.</div>`);
+  const al = [], rx = rxInfo();
+  // con el receptor a la vista se sabe cuál de los dos falla: el ESP32 sin wifi o el robot fuera de alcance
+  if (offline && st('lawn_mower')) al.push(`<div class="alert warn">${rx && rx.off
+    ? `El receptor Bluetooth (ESP32) está sin wifi desde ${esc(fmtDate(rx.since))}: sin él no se llega al robot. Mira que esté enchufado y cerca del router.`
+    : `El robot no responde por Bluetooth${rx ? ` (el receptor está bien, wifi ${rx.dbm} dBm)` : ''}${val('sensor','ultima_conexion') ? `, último contacto ${ago(val('sensor','ultima_conexion'))}` : ''}: está lejos del receptor o se ha quedado sin batería (sin base que cargue, se apaga). Se reconecta solo en cuanto vuelva a responder.`}</div>`);
   if (on('binary_sensor','averia')) al.push(`<div class="alert"><span><b>⚠ ${esc(errText(val('sensor','error')))}</b><br><small>Revisa el robot y confírmalo en su teclado; luego pulsa Cortar o Base.</small></span></div>`);
   if (on('binary_sensor','levantado')) al.push(`<div class="alert warn"><span><b>El robot está levantado</b><br><small>Déjalo en el césped: sigue solo.</small></span></div>`);
   if (on('binary_sensor','volcado')) al.push(`<div class="alert"><span><b>El robot está volcado</b><br><small>Dale la vuelta y confírmalo en su teclado; luego pulsa Cortar o Base.</small></span></div>`);
@@ -1660,8 +1670,16 @@ function renderDatos(){
 /* ---------- salud del robot e informe (McCulloch) ---------- */
 const durMin = m => m >= 1440 ? Math.round(m / 1440) + ' d' : m >= 90 ? Math.round(m / 60) + ' h' : Math.round(m) + ' min';
 function healthItems(){
-  const it = [], add = (lv, t, d) => it.push({lv, t, d});
-  if (val('sensor','estado') == null) return [{lv: 'warn', t: 'Sin conexión', d: 'No hay datos nuevos hasta que el robot responda por Bluetooth.'}];
+  const it = [], add = (lv, t, d) => it.push({lv, t, d}), rx = rxInfo();
+  const rxItem = () => { if (!rx) return;
+    if (rx.off) add('bad', 'Receptor Bluetooth sin wifi', 'Desde ' + fmtDate(rx.since) + '. Sin él no se llega al robot.');
+    else add(rx.dbm < -75 ? 'warn' : 'ok', 'Receptor Bluetooth conectado', 'Wifi ' + rx.dbm + ' dBm' + (rx.up != null ? ' · encendido hace ' + durMin(rx.up / 60) : '')); };
+  if (val('sensor','estado') == null) {
+    const seen = val('sensor','ultima_conexion');
+    add('warn', 'Sin conexión con el robot', (seen ? 'Último contacto ' + ago(seen) + '. ' : '') + 'No hay datos nuevos hasta que responda por Bluetooth.');
+    rxItem(); return it;
+  }
+  rxItem();
   if (on('binary_sensor','averia')) add('bad', 'Avería: ' + errText(val('sensor','error')), 'Revisa el robot y confírmalo en su teclado.');
   else add('ok', 'Sin averías', 'Ningún error activo.');
   if (on('switch','modo_garaje')) add('warn', 'Modo garaje activado', 'Se queda aparcado y no sale a cortar. Se quita en Ajustes.');
@@ -1774,7 +1792,9 @@ function renderRobot(){
       + row('Cuchillas cambiadas', val('sensor','momento_del_reinicio_del_tiempo_de_cuchillas') ? fmtDate(val('sensor','momento_del_reinicio_del_tiempo_de_cuchillas')) : null);
     return;
   }
-  $('#info').innerHTML = row('Modelo', 'McCulloch ROB S800') + row('Conexión', LINK) + row('Nº de serie', val('sensor','numero_de_serie')) + row('Software', val('sensor','version_software'))
+  const rx = rxInfo();
+  $('#info').innerHTML = row('Modelo', 'McCulloch ROB S800') + row('Conexión', LINK)
+    + row('Receptor Bluetooth', rx ? (rx.off ? 'sin wifi desde ' + fmtDate(rx.since) : 'wifi ' + rx.dbm + ' dBm' + (rx.up != null ? ', encendido hace ' + durMin(rx.up / 60) : '')) : null) + row('Nº de serie', val('sensor','numero_de_serie')) + row('Software', val('sensor','version_software'))
     + row('Firmware', val('sensor','firmware_aplicacion')) + row('Reloj del robot', val('sensor','reloj_del_robot') ? fmtDate(val('sensor','reloj_del_robot')) : null)
     + row('Pasar el cable', val('sensor','pasar_el_cable_cm') ? val('sensor','pasar_el_cable_cm') + ' cm' : null)
     + row('Marcha atrás al salir', val('sensor','marcha_atras_al_salir_cm') ? val('sensor','marcha_atras_al_salir_cm') + ' cm' : null)

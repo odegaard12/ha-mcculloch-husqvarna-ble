@@ -11,6 +11,8 @@ Variables (fichero robot_app.env junto a este script):
   ROBOT_PREFIX  prefijo de las entidades del robot (por defecto robot_cortacesped)
   ROBOT_NAME    nombre que se ve en la app (por defecto McCulloch)
   ROBOTS        más robots, p. ej. landroid:Landroid:landroid (prefijo:nombre:tipo, separados por comas)
+  PROXY_PREFIX  prefijo de los sensores del receptor Bluetooth (ESP32) del McCulloch, solo lectura;
+                vacío = la app no lo enseña
 
 Como complemento de HA (ingress) no hace falta nada: el supervisor da la URL y el token.
 """
@@ -46,6 +48,14 @@ def parse_robots() -> list[dict]:
                 and parts[0] not in [r["id"] for r in out]):
             out.append({"id": parts[0], "name": parts[1][:40] or parts[0], "kind": parts[2]})
     return out
+
+
+def proxy_states(data: list[dict], proxy: str) -> list[dict]:
+    """Sensores del receptor Bluetooth (señal, tiempo encendido...): solo sensor/binary_sensor, nunca algo que mande órdenes."""
+    if not proxy:
+        return []
+    return [s for s in data if s["entity_id"].split(".", 1)[0] in ("sensor", "binary_sensor")
+            and s["entity_id"].split(".", 1)[1].startswith(proxy + "_")]
 
 
 def entity_re(ids: list[str]) -> re.Pattern:
@@ -136,6 +146,8 @@ def make_app() -> web.Application:
     kinds = {r["id"]: r["kind"] for r in robots}
     ENTITY_RE = entity_re(ids)
     PREFIX = ids[0]
+    proxy = os.environ.get("PROXY_PREFIX", "").strip()
+    proxy = proxy if re.fullmatch(r"[a-z0-9_]+", proxy) and proxy not in ids else ""
     fails: dict[str, list[float]] = {}
     all_fails: list[float] = []
     # la firma incluye el PIN: al cambiarlo, todas las sesiones anteriores dejan de valer
@@ -323,8 +335,8 @@ def make_app() -> web.Application:
         return web.json_response({"error": "Este robot tiene contraseña: desbloquéalo primero."}, status=423)
 
     async def lista(req):
-        return web.json_response([{**r, "name": rname(r["id"]), "locked": bool(lock_of(r["id"])), "open": is_open(req, r["id"])}
-                                  for r in robots])
+        return web.json_response([{**r, "name": rname(r["id"]), "locked": bool(lock_of(r["id"])), "open": is_open(req, r["id"]),
+                                   **({"proxy": proxy} if proxy and r["id"] == PREFIX else {})} for r in robots])
 
     async def nombre(req):
         body = await body_of(req)
@@ -442,7 +454,9 @@ def make_app() -> web.Application:
             return unreachable(e)
         # solo los robots que esta sesión puede ver: uno con contraseña no enseña nada hasta desbloquearlo
         seen = set(visible(req))
-        return web.json_response([s for s in data if robot_of(s["entity_id"].split(".", 1)[1]) in seen])
+        out = [s for s in data if robot_of(s["entity_id"].split(".", 1)[1]) in seen]
+        # el receptor va con el McCulloch: si ese robot está cerrado, tampoco se ve
+        return web.json_response(out + (proxy_states(data, proxy) if PREFIX in seen else []))
 
     async def salud(req):
         """Para el despliegue y la vigilancia: ¿sirve y llega a HA? Sin PIN y sin datos del robot."""
