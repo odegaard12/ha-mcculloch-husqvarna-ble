@@ -928,7 +928,8 @@ async function pollOnce(){
 addEventListener('online', () => poll());
 document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
 // extra: {value} para un número o {option} para una lista (ajustes del Landroid)
-async function svc(domain, service, entity_id, label, extra = {}){
+// devuelve si salió bien; quiet: sin el «No se pudo» (quien llama prueba otra cosa)
+async function svc(domain, service, entity_id, label, extra = {}, quiet = false){
   const ctl = '.actions button,.chip,.sw input,.srow select,.stp button';
   document.querySelectorAll(ctl).forEach(b => b.disabled = true);
   toast('Hablando con el robot…');
@@ -937,7 +938,8 @@ async function svc(domain, service, entity_id, label, extra = {}){
     if (r.status === 423) afterRobotsChange();  // le han puesto contraseña desde otro móvil
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
     toast(label + ' ✓'); setTimeout(poll, 2500);
-  } catch(e) { if (!locked) toast('No se pudo: ' + e.message); }
+    return true;
+  } catch(e) { if (!locked && !quiet) toast('No se pudo: ' + e.message); return false; }
   finally { document.querySelectorAll(ctl).forEach(b => b.disabled = false); render(); }  // render: vuelve a apagar lo que no tiene conexión
 }
 
@@ -1196,7 +1198,10 @@ document.querySelector('.actions').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
   if (OFFLINE) return toast(KIND === 'landroid' ? 'Sin conexión: el robot no llega a la nube de Worx' : 'Sin conexión: el robot no responde por Bluetooth');
   const LM = `lawn_mower.${P}`;
-  ({start: () => svc('lawn_mower','start_mowing',LM,'Cortando'), pause: () => svc('lawn_mower','pause',LM,'En pausa'), dock: () => svc('lawn_mower','dock',LM,'Volviendo a la base')})[b.dataset.act]();
+  // el McCulloch rechaza a veces «cortar» estando en la base dentro de su horario (StartTrigger: UNKNOWN_ERROR);
+  // «cortar 1 h» (orden manual con duración) sí lo acepta: se prueba esa antes de dar el error
+  const start = async () => { if (!(await svc('lawn_mower','start_mowing',LM,'Cortando', {}, KIND !== 'landroid')) && KIND !== 'landroid' && !locked) durante('cortar', 1); };
+  ({start, pause: () => svc('lawn_mower','pause',LM,'En pausa'), dock: () => svc('lawn_mower','dock',LM,'Volviendo a la base')})[b.dataset.act]();
 };
 document.addEventListener('click', e => {
   // órdenes rápidas apagadas sin conexión: se explica en vez de mandar algo que el robot no va a recibir
@@ -1470,7 +1475,9 @@ function nowText(f, run, nx, unknownSched){
   if (a === 'going_home') return {v: 'Volviendo a la base', d: next, main: 'start', mainLabel: 'Seguir'};  // «Seguir cortando» no cabía en el botón
   // con lluvia no sale: no se dice «en su franja, hasta las 14:00» como si fuera a cortar
   if (f.charging) return {v: 'Cargando en la base', d: f.rain ? 'Llueve: espera a que se seque' : run ? 'Sale a cortar al terminar de cargar' : next, main: 'start', mainLabel: 'Cortar'};
-  if (f.inBase) return {v: 'En la base', d: f.rain ? 'Llueve: espera a que se seque' : run ? 'En su franja, hasta las ' + until : next, main: 'start', mainLabel: 'Cortar'};
+  // en la base dentro de su horario: decir por qué no sale (con SensorControl, el robot decide si el césped lo necesita)
+  const sc = !ld && on('switch', 'sensorcontrol_ritmo_segun_crecimiento');
+  if (f.inBase) return {v: 'En la base', d: f.rain ? 'Llueve: espera a que se seque' : run ? (sc ? `Descansa: SensorControl ve que el césped no lo necesita. Puede salir hasta las ${until}` : `Puede salir a cortar hasta las ${until}`) : next, main: 'start', mainLabel: 'Cortar'};
   if (run) return {v: 'Parado en su franja', d: `Debería cortar hasta las ${until}. ¿Lo has pausado tú?`, main: 'start', mainLabel: 'Seguir'};
   return {v: f.state === 'paused' ? 'En pausa' : 'Parado', d: next, main: 'start', mainLabel: 'Cortar'};
 }
@@ -1489,12 +1496,15 @@ function setActions(main, label){
   setHTML($('.actions'), html);
 }
 // cifras en una línea pequeña; las que no tienen valor no salen
-let mowed24 = null, mowedWeek = null, weekMin = 0, LINK = '';
+let mowed24 = null, mowedWeek = null, known24 = true, knownWeek = true, ctr24 = false, ctrWeek = false, ctrWeekMs = 0, weekMin = 0, LINK = '';
+// «nada» solo si se sabe: con el robot sin conexión la mayor parte del tiempo es «sin datos», no cero;
+// «≈» cuando sale del contador de horas del robot (no se sabe a qué hora cortó, solo cuánto)
+const mowTxt = (ms, known, ctr) => ms >= 6e4 ? (ctr ? '≈ ' : '') + hhmm(ms) : known ? 'nada' : 'sin datos';
 // solo lo cortado: las horas de cuchillas (113 h desde el cambio) al lado se leían como horas de la semana; van en Datos
 function renderFacts(){
   const f = [
-    mowed24 != null ? ['Cortado hoy', mowed24 < 6e4 ? 'nada' : hhmm(mowed24)] : null,
-    mowedWeek != null ? ['Cortado en 7 días', mowedWeek < 6e4 ? 'nada' : hhmm(mowedWeek)] : null,  // lo cortado de verdad, no lo programado
+    mowed24 != null ? ['Cortado hoy', mowTxt(mowed24, known24, ctr24)] : null,
+    mowedWeek != null ? ['Cortado en 7 días', mowTxt(mowedWeek, knownWeek, ctrWeek)] : null,  // lo cortado de verdad, no lo programado
   ].filter(Boolean);
   $('#facts').innerHTML = f.map(([s, b]) => `<span>${s} <b>${esc(b)}</b></span>`).join('');
 }
@@ -1826,17 +1836,33 @@ async function loadWeekMow(){
     const pts = (await hist('&e=actividad&d=7')).map(p => ({t: new Date(p.t).getTime(), v: p.v})).filter(p => p.v && p.v !== 'unknown');
     const days = [];
     // fin = medianoche del día siguiente (no +24 h: el día del cambio de hora tiene 23 o 25)
-    for (let k = 6; k >= 0; k--) { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - k); const e = new Date(d); e.setDate(e.getDate() + 1); days.push({a: d.getTime(), b: e.getTime(), ms: 0, dow: (d.getDay() + 6) % 7, today: k === 0}); }
+    for (let k = 6; k >= 0; k--) { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - k); const e = new Date(d); e.setDate(e.getDate() + 1); days.push({a: d.getTime(), b: Math.min(e.getTime(), Date.now()), ms: 0, known: 0, dow: (d.getDay() + 6) % 7, today: k === 0}); }
     pts.forEach((p, i) => {
-      if (p.v !== 'mowing' && p.v !== 'edgecut') return;
-      const a = p.t, b = i + 1 < pts.length ? pts[i + 1].t : Date.now();
-      days.forEach(d => { d.ms += Math.max(0, Math.min(b, d.b) - Math.max(a, d.a)); });
+      const a = p.t, b = i + 1 < pts.length ? pts[i + 1].t : Date.now(), cut = p.v === 'mowing' || p.v === 'edgecut';
+      days.forEach(d => { const o = Math.max(0, Math.min(b, d.b) - Math.max(a, d.a)); if (cut) d.ms += o; if (p.v !== 'unavailable') d.known += o; });
     });
-    const max = Math.max(36e5, ...days.map(d => d.ms)), tot = days.reduce((s, d) => s + d.ms, 0);
+    // con datos de menos de la mitad del tiempo, cero no es «nada cortado»
+    const len = d => Math.max(1, d.b - d.a);
+    known24 = days[6].known >= len(days[6]) / 2;
+    knownWeek = days.reduce((s, d) => s + d.known, 0) >= days.reduce((s, d) => s + len(d), 0) / 2;
+    ctr24 = ctrWeek = false;
+    // sin historial suficiente (robot sin conexión): lo cortado sale del contador de horas del propio robot,
+    // que sube aunque nadie lo vea; diferencia entre su primer y su último valor conocidos
+    if (KIND !== 'landroid' && (!known24 || !knownWeek)) {
+      try {
+        const c = (await hist('&e=contador&d=7')).map(p => ({t: new Date(p.t).getTime(), v: Number(p.v)})).filter(p => !isNaN(p.v));
+        if (c.length) {
+          const last = c[c.length - 1].v, at = t => { const x = c.filter(p => p.t <= t); return x.length ? x[x.length - 1].v : c[0].v; };
+          if (!knownWeek) { ctrWeekMs = Math.max(0, (last - c[0].v) * 36e5); knownWeek = ctrWeek = true; }
+          if (!known24) { days[6].ms = Math.max(days[6].ms, (last - at(days[6].a)) * 36e5); known24 = ctr24 = true; }
+        }
+      } catch(e) {}
+    }
+    const max = Math.max(36e5, ...days.map(d => d.ms)), tot = Math.max(days.reduce((s, d) => s + d.ms, 0), ctrWeek ? ctrWeekMs : 0);
     $('#wbars').innerHTML = days.map(d => `<div class="${d.today ? 'today' : ''}" title="${hhmm(d.ms)}"><b>${d.ms >= 6e4 ? hhmm(d.ms, true) : ''}</b><i style="height:${Math.round(d.ms / max * 110)}px"></i><span>${d.today ? 'hoy' : 'LMXJVSD'[d.dow]}</span></div>`).join('');
     // «hoy» = el día natural, como la barra «hoy» de la gráfica (con las últimas 24 h, a las 00:05 contaba lo de ayer)
     mowedWeek = tot; mowed24 = days[6].ms; renderFacts();
-    $('#weekmowtot').textContent = hhmm(tot) + (weekMin ? ' de ' + Math.round(weekMin / 60) + ' h' : '');  // corto: no cabía en una línea
+    $('#weekmowtot').textContent = mowTxt(tot, knownWeek, ctrWeek) +(weekMin ? ' de ' + Math.round(weekMin / 60) + ' h' : '');  // corto: no cabía en una línea
   } catch(e) {}
 }
 // paradas por avería cada día de los últimos 7: cuenta cada vez que el robot pasa a un error (no el tiempo que dura)

@@ -653,6 +653,9 @@ def make_app() -> web.Application:
             return locked_resp()
         if req.query.get("e") == "errores":  # avisos de avería: la gráfica de paradas por día
             entity = f"sensor.{rid}_error"
+        elif req.query.get("e") == "contador" and kinds[rid] == "mcculloch":
+            # horas de corte que cuenta el propio robot: suben aunque esté sin conexión, así se sabe lo cortado a ciegas
+            entity = f"sensor.{rid}_tiempo_total_cortando"
         elif req.query.get("e") != "actividad":
             entity = f"sensor.{rid}_bateria"
         elif kinds[rid] == "landroid":  # Landroid no tiene sensor de actividad: su estado sale del cortacésped

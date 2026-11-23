@@ -2,6 +2,17 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.45 · Lo cortado sin conexión, Cortar que no falla y textos claros
+
+#### App
+- **Lo cortado con el robot sin conexión** sale del contador de horas de corte del propio robot, que sube aunque nadie lo vea: «Cortado hoy ≈ 1:47 h». El «≈» indica que se sabe cuánto, no a qué hora.
+- **«sin datos» en vez de «nada»** cuando hay historial de menos de la mitad del tiempo y no hay contador.
+- **Botón Cortar**: el McCulloch rechaza a veces la orden estando en la base dentro de su horario (`StartTrigger: UNKNOWN_ERROR`); la app prueba entonces «cortar 1 h», que sí acepta.
+- **En la base dentro de su horario** dice por qué no sale: «Descansa: SensorControl ve que el césped no lo necesita» o «Puede salir a cortar hasta las 17:30» (antes, «En su franja, hasta las 17:30»).
+
+#### Servidor
+- `/api/historial?e=contador`: historial de las horas de corte del McCulloch.
+
 ## v0.3.44 · Receptor Bluetooth a la vista
 
 #### App
