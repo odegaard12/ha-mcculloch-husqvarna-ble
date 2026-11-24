@@ -107,12 +107,19 @@ SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "no-referrer",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+    # el navegador que ya entró una vez por https no vuelve a probar http (ni deja que se lo cuelen)
+    "Strict-Transport-Security": "max-age=31536000",
 }
 
 COOKIE = "rob_sesion"
-SESSION_DAYS = 180
+SESSION_DAYS = 30  # pasado un mes se vuelve a pedir el PIN: un móvil perdido no queda dentro medio año
 MAX_FAILS, FAIL_WINDOW = 5, 300  # 5 PIN fallidos en 5 min bloquean esa IP 5 min
-GLOBAL_MAX_FAILS, GLOBAL_WINDOW = 20, 3600  # y 20 fallos en una hora, vengan de donde vengan, bloquean a todos
+DAY_MAX_FAILS = 30  # y 30 en un día dejan a esa IP fuera hasta el día siguiente
+# Límite para todos a la vez (por si alguien falsea la IP desde dentro de casa). Con un PIN corto tiene que ser
+# bajo, aunque así un extraño pueda dejar a la familia sin entrar una hora; con 6 cifras o más ya no hace falta.
+GLOBAL_WINDOW = 3600
+def global_max_fails(pin: str) -> int:
+    return 20 if len(pin) < 6 else 500
 
 
 def write_atomic(path: Path, data: bytes) -> None:
@@ -140,6 +147,11 @@ def make_app() -> web.Application:
     supervisor = os.environ.get("SUPERVISOR_TOKEN", "")
     ha = os.environ.get("HA_URL", "http://supervisor/core" if supervisor else "http://homeassistant.local:8123").rstrip("/")
     pin = os.environ.get("APP_PIN", "")
+    # contraseña aparte del PIN (letras, 8 o más): otra forma de entrar, p. ej. desde el ordenador
+    app_pass = os.environ.get("APP_PASS", "")
+    if app_pass and len(app_pass) < 8:
+        LOG.error("APP_PASS tiene menos de 8 caracteres: no se usa")
+        app_pass = ""
     secret = load_secret()
     robots = parse_robots()
     ids = [r["id"] for r in robots]
@@ -151,13 +163,13 @@ def make_app() -> web.Application:
     fails: dict[str, list[float]] = {}
     all_fails: list[float] = []
     # la firma incluye el PIN: al cambiarlo, todas las sesiones anteriores dejan de valer
-    pin_tag = hashlib.sha256(pin.encode()).hexdigest()[:16]
+    pin_tag = hashlib.sha256(f"{pin}\0{app_pass}".encode()).hexdigest()[:16]  # y al cambiar la contraseña
 
     def sign(exp: int) -> str:
         return hmac.new(secret, f"{exp}.{pin_tag}".encode(), hashlib.sha256).hexdigest()
 
     def session_ok(req) -> bool:
-        if not pin:
+        if not pin and not app_pass:
             return True
         try:
             exp, sig = req.cookies.get(COOKIE, "").split(".")
@@ -185,7 +197,7 @@ def make_app() -> web.Application:
         return await handler(req)
 
     async def sesion(req):
-        return web.json_response({"pin": bool(pin), "pin_len": len(pin), "ok": session_ok(req)})
+        return web.json_response({"pin": bool(pin or app_pass), "pin_len": len(pin), "clave": bool(app_pass), "ok": session_ok(req)})
 
     def client_ip(req) -> str:
         return req.headers.get("CF-Connecting-IP") or req.remote or "?"
@@ -194,15 +206,16 @@ def make_app() -> web.Application:
         # CF-Connecting-IP se puede falsear si alguien llega directo al puerto: por eso hay
         # además un límite global que no depende de la IP (frena probar los 10 000 PIN).
         now = time.time()
-        for k in [k for k, v in fails.items() if not v or now - v[-1] > FAIL_WINDOW]:
+        for k in [k for k, v in fails.items() if not v or now - v[-1] > 86400]:
             del fails[k]
         all_fails[:] = [t for t in all_fails if now - t < GLOBAL_WINDOW]
-        recent = [t for t in fails.get(ip, []) if now - t < FAIL_WINDOW]
-        return len(recent) >= MAX_FAILS or len(all_fails) >= GLOBAL_MAX_FAILS
+        mine = fails.get(ip, [])
+        recent = [t for t in mine if now - t < FAIL_WINDOW]
+        return len(recent) >= MAX_FAILS or len(mine) >= DAY_MAX_FAILS or len(all_fails) >= global_max_fails(pin)
 
     def failed(ip: str) -> None:
         now = time.time()
-        fails[ip] = [t for t in fails.get(ip, []) if now - t < FAIL_WINDOW] + [now]
+        fails[ip] = [t for t in fails.get(ip, []) if now - t < 86400] + [now]
         all_fails.append(now)
 
     def secure_cookie(req) -> bool:
@@ -213,7 +226,9 @@ def make_app() -> web.Application:
         if too_many(ip):
             return web.json_response({"error": "Demasiados intentos. Espera unos minutos."}, status=429)
         body = await body_of(req)  # un cuerpo que no es un objeto (p. ej. «[]») no tumba la petición
-        if not pin or not hmac.compare_digest(str(body.get("pin", "")).encode(), pin.encode()):
+        by_pin = bool(pin) and hmac.compare_digest(str(body.get("pin", "")).encode(), pin.encode())
+        by_pass = bool(app_pass) and hmac.compare_digest(str(body.get("clave", "")).encode(), app_pass.encode())
+        if not (by_pin or by_pass):
             failed(ip)
             return web.json_response({"error": "PIN incorrecto"}, status=403)
         fails.pop(ip, None)
@@ -684,6 +699,9 @@ def make_app() -> web.Application:
 
     @web.middleware
     async def no_cache(req, handler):
+        # entrada desde internet por http (Cloudflare lo deja pasar): a https, que el PIN no viaje en claro
+        if req.headers.get("CF-Connecting-IP") and req.headers.get("X-Forwarded-Proto") == "http" and req.method == "GET":
+            raise web.HTTPPermanentRedirect(f"https://{req.host}{req.path_qs}")
         # Cloudflare guarda los estaticos 4 h por defecto: que revalide siempre.
         resp = await handler(req)
         if not req.path.startswith("/api/"):

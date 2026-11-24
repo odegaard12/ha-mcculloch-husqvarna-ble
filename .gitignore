@@ -12,3 +12,9 @@ robot_panel/data/
 .env
 .env.*
 !.env.example
+
+# instrucciones de asistentes: nunca al repo
+CLAUDE.md
+AGENTS.md
+.claude/
+prompts/

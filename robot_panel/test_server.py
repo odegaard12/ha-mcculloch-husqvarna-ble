@@ -61,7 +61,7 @@ async def main():
         r = await c.post("/api/login", json={"pin": "4321"})
         assert r.status == 200
         s = await (await c.get("/api/sesion")).json()
-        assert s == {"pin": True, "pin_len": 4, "ok": True}, s
+        assert s == {"pin": True, "pin_len": 4, "clave": False, "ok": True}, s
         # lista blanca
         bad = [
             {"domain": "switch", "service": "turn_on", "entity_id": "switch.robot_cortacesped,switch.garaje"},
@@ -114,6 +114,38 @@ async def main():
         assert codes[:20] == [403] * 20 and codes[20] == 429, codes
         r = await c3.post("/api/login", json={"pin": "4321"}, headers={"CF-Connecting-IP": "10.9.9.9"})
         assert r.status == 429
+        h = (await c3.get("/")).headers
+        assert h.get("Strict-Transport-Security", "").startswith("max-age="), "falta HSTS"
+        r = await c3.get("/x?a=1", headers={"CF-Connecting-IP": "1.2.3.4", "X-Forwarded-Proto": "http"}, allow_redirects=False)
+        assert r.status == 308 and r.headers["Location"].startswith("https://") and r.headers["Location"].endswith("/x?a=1")
+    # PIN largo: los fallos de un extraño no dejan fuera a los demás; él sí queda fuera
+    os.environ["APP_PIN"] = "12345678"
+    async with TestClient(TestServer(server.make_app())) as c4:
+        codes = [(await c4.post("/api/login", json={"pin": "0"}, headers={"CF-Connecting-IP": f"10.0.1.{i}"})).status for i in range(25)]
+        assert codes == [403] * 25, codes
+        codes = [(await c4.post("/api/login", json={"pin": "0"}, headers={"CF-Connecting-IP": "9.9.9.9"})).status for i in range(6)]
+        assert codes[:5] == [403] * 5 and codes[5] == 429, codes
+        r = await c4.post("/api/login", json={"pin": "12345678"}, headers={"CF-Connecting-IP": "8.8.8.8"})
+        assert r.status == 200
+        exp = int(r.cookies[server.COOKIE].value.split(".")[0]) - __import__("time").time()
+        assert 25 * 86400 < exp <= 30 * 86400, exp
+    # contraseña aparte del PIN: entra con cualquiera de los dos; la de menos de 8 no se usa
+    os.environ["APP_PASS"] = "Cesped-Verde"
+    async with TestClient(TestServer(server.make_app())) as c5:
+        assert (await (await c5.get("/api/sesion")).json())["clave"] is True
+        assert (await c5.post("/api/login", json={"clave": "cesped-verde"})).status == 403
+        assert (await c5.post("/api/login", json={"clave": "Cesped-Verde"})).status == 200
+        assert (await (await c5.get("/api/sesion")).json())["ok"]
+        cookie5 = c5.session.cookie_jar.filter_cookies(c5.make_url("/")).get(server.COOKIE).value
+    os.environ["APP_PASS"] = "corta"
+    async with TestClient(TestServer(server.make_app())) as c6:
+        s = await (await c6.get("/api/sesion")).json()
+        assert s["clave"] is False and not s["ok"]
+        c6.session.cookie_jar.update_cookies({server.COOKIE: cookie5})
+        assert not (await (await c6.get("/api/sesion")).json())["ok"], "cambiar la contraseña cierra las sesiones"
+        assert (await c6.post("/api/login", json={"clave": "corta"})).status == 403
+    del os.environ["APP_PASS"]
+    os.environ["APP_PIN"] = "4321"
     # varios robots: el McCulloch siempre primero; las entradas mal escritas de ROBOTS se ignoran
     os.environ["ROBOTS"] = "landroid:Landroid:landroid, Mal:Nombre:landroid,x:y:otro,robot_cortacesped:Repe:mcculloch"
     async with TestClient(TestServer(server.make_app())) as c4:

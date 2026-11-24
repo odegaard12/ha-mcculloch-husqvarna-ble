@@ -2,6 +2,14 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.46 · Entrada más segura: PIN largo, contraseña y https
+
+#### App
+- **Contraseña aparte del PIN** (`APP_PASS`, 8 caracteres o más): en la pantalla de bloqueo, «Entrar con contraseña». El gestor de contraseñas del navegador la puede guardar. Cambiarla cierra todas las sesiones, igual que el PIN.
+- **Los fallos de un extraño ya no os dejan fuera**: con un PIN de 6 cifras o más, solo se bloquea a quien falla (5 fallos en 5 min, 30 en un día). Con 4 cifras sigue el límite para todos, porque si no se podría adivinar.
+- **Siempre por https**: quien entra por http desde internet pasa a https, y la cabecera HSTS hace que el navegador no vuelva a probar http.
+- **Sesiones de 30 días** (antes 180): un móvil perdido no queda dentro medio año.
+
 ## v0.3.45 · Lo cortado sin conexión, Cortar que no falla y textos claros
 
 #### App

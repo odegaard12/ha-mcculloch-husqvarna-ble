@@ -525,6 +525,12 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
 .pad button{width:72px;height:72px;border-radius:50%;border:0;background:rgba(255,255,255,.1);color:#fff;font-size:26px;font-weight:600;cursor:pointer}
 .pad button:active{background:var(--brand);color:#111}
 .lock .msgpin{min-height:20px;color:#ffb4a8;font-size:14px}
+.lock [hidden]{display:none!important}
+.lock .clave{display:flex;flex-direction:column;gap:12px;width:min(280px,80vw)}
+.lock .clave input{font:inherit;font-size:17px;padding:14px 16px;border-radius:14px;border:2px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);color:#fff}
+.lock .clave input:focus{outline:0;border-color:var(--brand)}
+.lock .clave button{font:inherit;font-weight:700;font-size:16px;padding:14px;border:0;border-radius:14px;background:var(--brand);color:#111;cursor:pointer}
+.lock .lk2{background:none;border:0;color:rgba(255,255,255,.75);font:inherit;font-size:15px;text-decoration:underline;cursor:pointer;padding:8px}
 </style>
 </head>
 <body>
@@ -537,6 +543,12 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
     <button>1</button><button>2</button><button>3</button><button>4</button><button>5</button><button>6</button><button>7</button><button>8</button><button>9</button>
     <span></span><button>0</button><button data-k="del" aria-label="Borrar">⌫</button>
   </div>
+  <form class="clave" id="claveform" hidden autocomplete="on">
+    <input type="text" name="username" value="mi-robot" autocomplete="username" hidden>
+    <input type="password" id="clave" autocomplete="current-password" placeholder="Contraseña" aria-label="Contraseña">
+    <button type="submit">Entrar</button>
+  </form>
+  <button class="lk2" id="lkmode" type="button" hidden>Entrar con contraseña</button>
 </div>
 
 <div class="app">
@@ -858,8 +870,38 @@ async function api(url, opts){
 function showLock(){
   if (locked) return; locked = true; pinBuf = ''; drawPins(); $('#lock').hidden = false;
   // si al arrancar falló /api/sesion, pinLen seguiría en 4 y un PIN de 6 se mandaría a medias (y contaría como fallo)
-  fetch('api/sesion', {cache:'no-store'}).then(r => r.json()).then(s => { if (s.pin_len > 0 && s.pin_len <= 12) { pinLen = s.pin_len; drawPins(); } }).catch(() => {});
+  fetch('api/sesion', {cache:'no-store'}).then(r => r.json()).then(s => { if (s.pin_len > 0 && s.pin_len <= 12) { pinLen = s.pin_len; drawPins(); } lockModes(s); }).catch(() => {});
 }
+// PIN y/o contraseña: si solo hay contraseña sale directamente su casilla; si hay las dos, un enlace cambia de una a otra
+let byPass = false;
+function lockModes(s){
+  const hasPin = s.pin_len > 0, hasPass = !!s.clave;
+  if (!hasPin && hasPass) byPass = true;
+  $('#lkmode').hidden = !(hasPin && hasPass);
+  setLockMode(byPass);
+}
+function setLockMode(p){
+  byPass = p;
+  $('#pins').hidden = $('#pad').hidden = p; $('#claveform').hidden = !p;
+  $('.lock h2').textContent = p ? 'Introduce la contraseña' : 'Introduce el PIN';
+  $('#lkmode').textContent = p ? 'Entrar con PIN' : 'Entrar con contraseña';
+  $('#msgpin').textContent = '';
+  if (p) setTimeout(() => $('#clave').focus(), 50);
+}
+$('#lkmode').onclick = () => setLockMode(!byPass);
+$('#claveform').onsubmit = async e => {
+  e.preventDefault();
+  const v = $('#clave').value; if (!v || pinBusy) return;
+  pinBusy = true;
+  try {
+    const r = await fetch('api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({clave: v})});
+    if (r.ok) { $('#clave').value = ''; locked = false; $('#lock').hidden = true; $('#msgpin').textContent = ''; loadRobots().then(() => { poll(); loadHistory(); }); pushRender().catch(() => {}); return; }
+    const j = await r.json().catch(() => ({}));
+    $('#msgpin').textContent = j.error === 'PIN incorrecto' ? 'Contraseña incorrecta' : (j.error || 'Contraseña incorrecta');
+    $('#clave').select();
+  } catch(err) { $('#msgpin').textContent = 'Sin conexión: vuelve a probar'; }
+  finally { pinBusy = false; }
+};
 function drawPins(){
   const box = $('#pins');
   if (box.children.length !== pinLen) box.innerHTML = '<i></i>'.repeat(pinLen);
@@ -888,7 +930,7 @@ function pinKey(k){
   if (pinBuf.length === pinLen) tryPin();
 }
 $('#pad').onclick = e => { const b = e.target.closest('button'); if (b) pinKey(b.dataset.k || b.textContent); };
-addEventListener('keydown', e => { if (!locked) return; if (/^\d$/.test(e.key)) pinKey(e.key); if (e.key === 'Backspace') pinKey('del'); if (e.key === 'Enter' && pinBuf) tryPin(); });
+addEventListener('keydown', e => { if (!locked || byPass) return; if (/^\d$/.test(e.key)) pinKey(e.key); if (e.key === 'Backspace') pinKey('del'); if (e.key === 'Enter' && pinBuf) tryPin(); });
 
 /* ---------- datos ---------- */
 let states = {};
