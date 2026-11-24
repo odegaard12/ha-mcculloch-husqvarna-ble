@@ -2,6 +2,14 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.47 · Cada aparato entra a su manera
+
+#### App
+- **La pantalla de entrada recuerda cómo entraste la última vez** en ese aparato: el ordenador abre directamente la casilla de la contraseña y el móvil, el teclado del PIN. El enlace de abajo cambia de uno a otro.
+
+#### Consejo
+- Si el robot se conecta por un receptor Bluetooth ESPHome y tras perder alcance no vuelve a conectar («Insufficient authorization»), basta con reiniciar el receptor. Una automatización que pulse su botón «Reiniciar» cuando el robot lleve 15 min sin conexión (y el receptor tenga wifi), como mucho una vez por hora, lo deja resuelto sin tocar nada.
+
 ## v0.3.46 · Entrada más segura: PIN largo, contraseña y https
 
 #### App
