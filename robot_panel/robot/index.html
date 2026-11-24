@@ -876,7 +876,10 @@ function showLock(){
 let byPass = false;
 function lockModes(s){
   const hasPin = s.pin_len > 0, hasPass = !!s.clave;
+  // cada aparato recuerda cómo entró la última vez (el ordenador con contraseña, el móvil con PIN)
+  try { if (hasPin && hasPass) byPass = localStorage.getItem('rob_entrada') === 'clave'; } catch(e) {}
   if (!hasPin && hasPass) byPass = true;
+  if (hasPin && !hasPass) byPass = false;
   $('#lkmode').hidden = !(hasPin && hasPass);
   setLockMode(byPass);
 }
@@ -895,7 +898,7 @@ $('#claveform').onsubmit = async e => {
   pinBusy = true;
   try {
     const r = await fetch('api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({clave: v})});
-    if (r.ok) { $('#clave').value = ''; locked = false; $('#lock').hidden = true; $('#msgpin').textContent = ''; loadRobots().then(() => { poll(); loadHistory(); }); pushRender().catch(() => {}); return; }
+    if (r.ok) { try { localStorage.setItem('rob_entrada', 'clave'); } catch(e) {} $('#clave').value = ''; locked = false; $('#lock').hidden = true; $('#msgpin').textContent = ''; loadRobots().then(() => { poll(); loadHistory(); }); pushRender().catch(() => {}); return; }
     const j = await r.json().catch(() => ({}));
     $('#msgpin').textContent = j.error === 'PIN incorrecto' ? 'Contraseña incorrecta' : (j.error || 'Contraseña incorrecta');
     $('#clave').select();
@@ -913,7 +916,7 @@ async function tryPin(){
   pinBusy = true;
   try {
     const r = await fetch('api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({pin: pinBuf})});
-    if (r.ok) { locked = false; $('#lock').hidden = true; $('#msgpin').textContent = ''; loadRobots().then(() => { poll(); loadHistory(); }); pushRender().catch(() => {}); return; }
+    if (r.ok) { try { localStorage.setItem('rob_entrada', 'pin'); } catch(e) {} locked = false; $('#lock').hidden = true; $('#msgpin').textContent = ''; loadRobots().then(() => { poll(); loadHistory(); }); pushRender().catch(() => {}); return; }
     const j = await r.json().catch(() => ({}));
     $('#msgpin').textContent = j.error || 'PIN incorrecto';
     $('#pins').classList.add('shake'); setTimeout(() => $('#pins').classList.remove('shake'), 400);
