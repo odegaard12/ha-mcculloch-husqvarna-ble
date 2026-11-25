@@ -8,6 +8,7 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
+from homeassistant.components import bluetooth
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -198,8 +199,38 @@ async def async_setup_entry(
     coordinator = entry.runtime_data
     async_add_entities(
         [RobSensor(coordinator, desc) for desc in SENSORS if desc.command in coordinator.supported]
-        + [LastSeenSensor(coordinator)]
+        + [LastSeenSensor(coordinator), BleSignalSensor(coordinator)]
     )
+
+
+class BleSignalSensor(RobEntity, SensorEntity):
+    """Intensidad con la que el receptor oye al robot (el último anuncio Bluetooth). Por debajo de unos −85 dBm la
+    conexión se corta a menudo: sirve para colocar el receptor. Disponible aunque no conecte, que es cuando más importa."""
+
+    _attr_device_class = SensorDeviceClass.SIGNAL_STRENGTH
+    _attr_native_unit_of_measurement = "dBm"
+    _attr_state_class = MEAS
+    _attr_icon = "mdi:bluetooth"
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator, "ble_rssi", "Señal Bluetooth")
+
+    def _info(self):
+        return bluetooth.async_last_service_info(self.hass, self.coordinator.address, connectable=False)
+
+    @property
+    def available(self) -> bool:
+        return self._info() is not None
+
+    @property
+    def native_value(self) -> int | None:
+        info = self._info()
+        return info.rssi if info else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        info = self._info()
+        return {"receptor": info.source} if info else None
 
 
 class LastSeenSensor(RobEntity, SensorEntity):

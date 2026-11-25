@@ -333,6 +333,10 @@ def setup_push(app: web.Application, here: Path, ha: str, token: str, robots: li
                     "parado": (vivo and g("actividad") == "stopped_in_garden", 600, f"{name} se ha parado en el jardín y espera que alguien lo atienda."),
                 }
                 tip = "¿Lejos del receptor o sin batería?"
+                # el receptor se reinicia solo a los 5 min sin conexión: si a las 2 h sigue igual, eso no lo ha arreglado
+                rule["sin_conexion_2h"] = (seen is not None, 7200 - lejos,
+                                           f"📡 {name} lleva 2 h sin conexión y reiniciar el receptor no lo ha arreglado "
+                                           f"(último contacto {cuando}). Mira si está atascado o sin batería, o acerca el receptor.")
             # activos desde el principio; la espera es lo que falta para cumplir el plazo
             rule["sin_conexion_1"] = (seen is not None, 86400 - lejos, f"📡 {name} lleva más de 1 día sin conexión (último contacto {cuando}). {tip}")
             rule["sin_conexion_3"] = (seen is not None, 3 * 86400 - lejos, f"📡 {name} lleva más de 3 días sin conexión (último contacto {cuando}).")

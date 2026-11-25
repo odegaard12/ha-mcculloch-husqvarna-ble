@@ -2,6 +2,20 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.48 · Señal Bluetooth, resumen de la semana y robot que no se queda aparcado
+
+#### Integración
+- **Sensor «Señal Bluetooth»**: con qué fuerza oye el receptor al robot (dBm) y qué receptor es. Sigue disponible aunque el robot no conecte, que es cuando sirve para colocar el receptor.
+
+#### App
+- **Salud del robot** enseña la señal Bluetooth (por debajo de −85 dBm avisa de que se cortará a menudo) y lo que se arregló solo: receptor reiniciado y robot sacado de «aparcado», con la hora de la última vez.
+- **«Aparcado dentro de su horario»**: si al pararlo y mandarlo a casa desde su teclado se queda aparcado hasta nuevo aviso, la app lo dice y tiene el botón «Volver a su horario».
+- **Resumen de la semana**: horas cortadas, paradas por error (cuáles), cortes de conexión de más de 5 min, reinicios del receptor y veces que se sacó de «aparcado».
+- **Aviso a las 2 h sin conexión** (además del de 1 día): solo llega si reiniciar el receptor no lo ha arreglado.
+
+#### Consejo
+- Dos automatizaciones de HA que completan esto: pulsar «Reiniciar» del receptor a los 5 min sin conexión (máx. cada 30 min) y «Volver a la programación» si a los 2 min de empezar su horario sigue aparcado. Si cada una suma 1 a un contador `counter.<robot>_reinicios_receptor` / `counter.<robot>_vueltas_programacion`, la app lo enseña.
+
 ## v0.3.47 · Cada aparato entra a su manera
 
 #### App

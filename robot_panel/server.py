@@ -671,6 +671,9 @@ def make_app() -> web.Application:
         elif req.query.get("e") == "contador" and kinds[rid] == "mcculloch":
             # horas de corte que cuenta el propio robot: suben aunque esté sin conexión, así se sabe lo cortado a ciegas
             entity = f"sensor.{rid}_tiempo_total_cortando"
+        elif req.query.get("e") in ("reinicios", "vueltas") and kinds[rid] == "mcculloch":
+            # contadores de las automatizaciones de HA (receptor reiniciado solo / sacado de «aparcado» en su horario)
+            entity = f"counter.{rid}_" + {"reinicios": "reinicios_receptor", "vueltas": "vueltas_programacion"}[req.query["e"]]
         elif req.query.get("e") != "actividad":
             entity = f"sensor.{rid}_bateria"
         elif kinds[rid] == "landroid":  # Landroid no tiene sensor de actividad: su estado sale del cortacésped

@@ -690,6 +690,10 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
           <h2>Batería · últimas 24 h <span class="muted" id="sparkinfo"></span></h2>
           <svg class="spark" id="spark" viewBox="0 0 300 90" preserveAspectRatio="none"></svg>
         </div>
+        <div class="card mc-only">
+          <h2>Resumen de la semana</h2>
+          <dl class="kv" id="weeksum"></dl>
+        </div>
         <div class="card">
           <h2>Cortado · 7 días <span class="muted" id="weekmowtot"></span></h2>
           <div class="wbars" id="wbars"></div>
@@ -1724,17 +1728,37 @@ function renderDatos(){
 
 /* ---------- salud del robot e informe (McCulloch) ---------- */
 const durMin = m => m >= 1440 ? Math.round(m / 1440) + ' d' : m >= 90 ? Math.round(m / 60) + ' h' : Math.round(m) + ' min';
+// con qué fuerza oye el receptor al robot: por debajo de −85 dBm la conexión se corta a menudo
+function bleItem(add){
+  const b = val('sensor','senal_bluetooth'); if (b == null) return;
+  const d = Math.round(Number(b));
+  if (d < -85) add('bad', 'Señal Bluetooth muy floja (' + d + ' dBm)', 'Se cortará a menudo. Acerca el receptor al robot o saca la antena de la caja.');
+  else if (d < -75) add('warn', 'Señal Bluetooth justa (' + d + ' dBm)', 'Funciona, pero lejos de la base puede cortarse.');
+  else add('ok', 'Señal Bluetooth buena (' + d + ' dBm)', '');
+}
+// lo que hicieron solas las automatizaciones de HA (contadores)
+function autoItems(add){
+  const c = (k, t) => { const s = st('counter', k); const n = s ? Number(s.state) : 0;
+    if (n > 0) add('info', t.replace('%', n), 'La última, ' + fmtDate(s.last_changed) + '.'); };
+  c('reinicios_receptor', 'Receptor reiniciado solo % veces');
+  c('vueltas_programacion', 'Sacado de «aparcado» % veces');
+}
 function healthItems(){
-  const it = [], add = (lv, t, d) => it.push({lv, t, d}), rx = rxInfo();
+  const it = [], add = (lv, t, d, act) => it.push({lv, t, d, act}), rx = rxInfo();
   const rxItem = () => { if (!rx) return;
     if (rx.off) add('bad', 'Receptor Bluetooth sin wifi', 'Desde ' + fmtDate(rx.since) + '. Sin él no se llega al robot.');
     else add(rx.dbm < -75 ? 'warn' : 'ok', 'Receptor Bluetooth conectado', 'Wifi ' + rx.dbm + ' dBm' + (rx.up != null ? ' · encendido hace ' + durMin(rx.up / 60) : '')); };
   if (val('sensor','estado') == null) {
     const seen = val('sensor','ultima_conexion');
     add('warn', 'Sin conexión con el robot', (seen ? 'Último contacto ' + ago(seen) + '. ' : '') + 'No hay datos nuevos hasta que responda por Bluetooth.');
-    rxItem(); return it;
+    rxItem(); bleItem(add); autoItems(add); return it;
   }
   rxItem();
+  bleItem(add);
+  // en su horario («en funcionamiento», sin restricción) pero aparcado: pasa al pararlo y mandarlo a casa desde su teclado
+  if (val('sensor','estado') === 'in_operation' && val('sensor','actividad') === 'parked' && !on('switch','sensorcontrol_ritmo_segun_crecimiento'))
+    add('warn', 'Aparcado dentro de su horario', 'Se quedó aparcado (pasa al mandarlo a casa desde su teclado). Se arregla solo en 2 min, o ahora:', 'resume');
+  autoItems(add);
   if (on('binary_sensor','averia')) add('bad', 'Avería: ' + errText(val('sensor','error')), 'Revisa el robot y confírmalo en su teclado.');
   else add('ok', 'Sin averías', 'Ningún error activo.');
   if (on('switch','modo_garaje')) add('warn', 'Modo garaje activado', 'Se queda aparcado y no sale a cortar. Se quita en Ajustes.');
@@ -1757,8 +1781,9 @@ function healthItems(){
 }
 function renderHealth(){
   if (KIND === 'landroid') return;
-  $('#health').innerHTML = healthItems().map(x => `<div class="hl ${x.lv}"><i></i><div><b>${esc(x.t)}</b>${x.d ? `<small>${esc(x.d)}</small>` : ''}</div></div>`).join('');
+  $('#health').innerHTML = healthItems().map(x => `<div class="hl ${x.lv}"><i></i><div><b>${esc(x.t)}</b>${x.d ? `<small>${esc(x.d)}</small>` : ''}${x.act === 'resume' ? '<button class="chip" data-resume style="margin-top:6px">Volver a su horario</button>' : ''}</div></div>`).join('');
 }
+document.addEventListener('click', e => { if (e.target.closest('[data-resume]')) svc('button', 'press', `button.${P}_volver_a_la_programacion`, 'Vuelve a su horario'); });
 function buildReport(){
   const tb = (head, rows) => `<table>${head ? `<tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr>` : ''}${rows.filter(r => r[1] != null && r[1] !== '').map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table>`;
   const n = k => val('sensor', k), hh = t => t == null ? null : Math.round(Number(t)).toLocaleString('es-ES') + ' h';
@@ -1907,6 +1932,9 @@ async function loadWeekMow(){
     $('#wbars').innerHTML = days.map(d => `<div class="${d.today ? 'today' : ''}" title="${hhmm(d.ms)}"><b>${d.ms >= 6e4 ? hhmm(d.ms, true) : ''}</b><i style="height:${Math.round(d.ms / max * 110)}px"></i><span>${d.today ? 'hoy' : 'LMXJVSD'[d.dow]}</span></div>`).join('');
     // «hoy» = el día natural, como la barra «hoy» de la gráfica (con las últimas 24 h, a las 00:05 contaba lo de ayer)
     mowedWeek = tot; mowed24 = days[6].ms; renderFacts();
+    // cortes de conexión de más de 5 min (los de segundos son ruido del Bluetooth)
+    let drops = 0; pts.forEach((p, i) => { if (p.v === 'unavailable' && (i ? pts[i - 1].v !== 'unavailable' : false) && (i + 1 < pts.length ? pts[i + 1].t : Date.now()) - p.t > 5 * 60e3) drops++; });
+    WS.mow = mowTxt(tot, knownWeek, ctrWeek); WS.drops = drops ? drops + (drops === 1 ? ' vez' : ' veces') : 'ninguno'; renderWeekSum();
     $('#weekmowtot').textContent = mowTxt(tot, knownWeek, ctrWeek) +(weekMin ? ' de ' + Math.round(weekMin / 60) + ' h' : '');  // corto: no cabía en una línea
   } catch(e) {}
 }
@@ -1930,11 +1958,31 @@ async function loadErrors(){
     const max = Math.max(3, ...days.map(d => d.n)), tot = days.reduce((s, d) => s + d.n, 0);
     $('#ebars').innerHTML = days.map(d => `<div class="${d.today ? 'today' : ''}" title="${d.n} paradas"><b>${d.n || ''}</b><i style="height:${d.n ? Math.max(6, Math.round(d.n / max * 80)) : 3}px"></i><span>${d.today ? 'hoy' : 'LMXJVSD'[d.dow]}</span></div>`).join('');
     $('#errtot').textContent = tot ? tot + ' en total' : 'ninguna';
+    WS.err = tot ? tot + ': ' + Object.entries(kinds).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, n]) => errText(k) + (n > 1 ? ' ×' + n : '')).join(', ') : 'ninguna'; renderWeekSum();
     $('#elegend').innerHTML = Object.entries(kinds).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, n]) => `<span>${esc(errText(k))} ×${n}</span>`).join('') || 'Sin paradas por error en estos días.';
   } catch(e) {}
 }
+// resumen de 7 días: lo cortado, las paradas, las caídas de conexión y lo que se arregló solo
+const WS = {};
+function renderWeekSum(){
+  const r = (k, v) => v == null ? '' : `<dt>${k}</dt><dd>${esc(v)}</dd>`;
+  $('#weeksum').innerHTML = r('Cortado', WS.mow) + r('Paradas por error', WS.err) + r('Cortes de conexión', WS.drops)
+    + r('Receptor reiniciado solo', WS.reb) + r('Sacado de «aparcado»', WS.vue) || '<dt>Cargando…</dt><dd></dd>';
+}
+// subidas de un contador en los últimos 7 días (el primer valor es el de arrastre de antes)
+async function weekInc(e){
+  try { const c = (await hist(`&e=${e}&d=7`)).map(p => Number(p.v)).filter(v => !isNaN(v));
+    let n = 0; for (let i = 1; i < c.length; i++) if (c[i] > c[i - 1]) n += c[i] - c[i - 1]; return c.length ? n : null; } catch(e) { return null; }
+}
+async function loadWeekSum(){
+  if (locked || KIND === 'landroid') return;
+  const [reb, vue] = await Promise.all([weekInc('reinicios'), weekInc('vueltas')]);
+  WS.reb = reb == null ? null : reb ? reb + (reb === 1 ? ' vez' : ' veces') : 'ninguna';
+  WS.vue = vue == null ? null : vue ? vue + (vue === 1 ? ' vez' : ' veces') : 'ninguna';
+  renderWeekSum();
+}
 async function loadHistory(){
-  loadActivity(); loadWeekMow(); loadErrors();
+  loadActivity(); loadWeekMow(); loadErrors(); loadWeekSum();
   if (locked) return;
   try {
     const pts = (await hist('')).map(p => ({t: new Date(p.t).getTime(), v: Number(p.v)})).filter(p => !isNaN(p.v));
