@@ -2,6 +2,21 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.51 · Barra flotante, Datos reordenado y el 3D que se recupera solo
+
+#### App
+- **Barra de abajo flotante** (cápsula separada de los bordes): ya no se corta con las esquinas curvas del iPhone ni con la isla en horizontal. Detrás lleva una base del color del fondo, para que lo que se desplaza por debajo no se asome. En el ordenador sigue siendo la barra de arriba.
+- **Datos reordenado**: batería de 24 h, lo cortado y las paradas arriba; después actividad, «Ahora mismo» y el uso acumulado; salud del robot, informe y resumen de la semana abajo.
+- **Botón de avisos a la derecha** de su fila, como el resto de ajustes: «Activar» y, ya activado, un interruptor (con «Enviar prueba» debajo).
+- **El robot 3D se recupera solo**: la app solo lo activa si cargan sus 24 vistas, y si una fallaba (red floja, el servidor reiniciándose un segundo) se quedaba sin 3D hasta cerrar la app y salía la foto de reserva. Ahora reintenta hasta 5 veces sin enseñar nada roto.
+- Quitada la franja fija opaca de arriba: en iOS 26 en modo app se sumaba al degradado que pone el propio sistema.
+- **Fila «Conexión con el robot»** en el resumen semanal (% del tiempo con respuesta).
+- Plantillas del horario con textos cortos (caben dos o tres por fila). Al imprimir el informe ya no sale la base de la barra.
+- **Se quita el aviso de «2 h sin conexión»** que apareció en la v0.3.48: no se manda ningún aviso nuevo al móvil (siguen los de siempre: avería, vuelco, levantado, parado y 1 y 3 días sin conexión).
+
+#### Documentación
+- Capturas nuevas del README (panel, horario, datos y salud) con el diseño de esta versión.
+
 ## v0.3.50 · La señal Bluetooth se recuerda y la API no se cachea
 
 #### Integración

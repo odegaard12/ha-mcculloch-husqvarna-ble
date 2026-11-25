@@ -15,16 +15,16 @@ Tus robots cortacésped en Home Assistant, en una tarjeta y en una app para el m
 > 🇬🇧 *English summary at the bottom.*
 
 <p align="center">
-  <img src="docs/panel.png" alt="App en el móvil: el McCulloch cortando, barra para cambiar al Landroid, batería, próximo corte y órdenes" width="250">
+  <img src="docs/panel.png" alt="App en el móvil: el McCulloch cortando en 3D, batería, hasta cuándo trabaja hoy, órdenes y la barra flotante de abajo" width="250">
   &nbsp;
   <img src="docs/panel_landroid.png" alt="App en el móvil con el Landroid: modelo 3D naranja, sin conexión, últimos datos" width="250">
   &nbsp;
   <img src="docs/bloqueo.png" alt="Robot con contraseña: teclado para desbloquearlo" width="250">
 </p>
 <p align="center">
-  <img src="docs/horario.png" alt="Pestaña Horario: la semana programada de un vistazo y el editor de franjas con plantillas" width="250">
+  <img src="docs/horario.png" alt="Pestaña Horario: la semana programada de un vistazo y el editor de franjas con plantillas cortas" width="250">
   &nbsp;
-  <img src="docs/datos.png" alt="Pestaña Datos: actividad y batería de las últimas 24 horas, lo cortado cada día de la semana y las paradas por error" width="250">
+  <img src="docs/datos.png" alt="Pestaña Datos: batería de las últimas 24 horas arriba, lo cortado cada día de la semana, las paradas por error y la actividad" width="250">
   &nbsp;
   <img src="docs/salud.png" alt="Pestaña Datos: salud del robot (señal Bluetooth del receptor, lo que se arregló solo) y resumen de la semana" width="250">
 </p>

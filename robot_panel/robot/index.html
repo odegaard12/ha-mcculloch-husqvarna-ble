@@ -37,9 +37,10 @@ input,select,textarea{font-size:max(16px,1em)!important}
 button,.chip,.pad button,nav.tabs button{touch-action:manipulation;user-select:none;-webkit-user-select:none}
 body{background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior-y:contain}
 button,input{font:inherit;color:inherit}
-.app{max-width:1120px;margin:0 auto;padding:calc(12px + env(safe-area-inset-top,0px)) 16px calc(80px + env(safe-area-inset-bottom))}
-/* franja opaca detrás de la hora y la batería: sin degradado del iPhone tapando «Mis robots» al bajar */
-body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:30}
+.app{max-width:1120px;margin:0 auto;padding:calc(12px + env(safe-area-inset-top,0px)) 16px calc(92px + env(safe-area-inset-bottom))}
+/* Sin franja fija arriba: iOS 26 en modo app ya pone su propio degradado detrás de la hora, y una franja fija opaca
+   debajo lo duplicaba y lo hacía más marcado. La hora queda sobre el color de fondo de la página. */
+html{background:var(--bg)}
 header.top{display:flex;align-items:center;gap:10px;margin:2px 2px 12px}
 header.top img{width:38px;height:38px;border-radius:11px;object-fit:contain;background:radial-gradient(90% 80% at 50% 35%,#3a3d40,#17191a);padding:2px;transition:opacity .25s}
 header.top h1{font-size:18px;margin:0;font-weight:750;flex:1}
@@ -139,15 +140,22 @@ body.stale .hero .nowb,body.stale .batchip,body.stale #alerts,body.stale .view:n
 .lkmsg{min-height:20px;color:var(--bad);font-size:14px;font-weight:600}
 .lkpins.shake{animation:shake .35s}
 body[data-kind="landroid"] .mc-only,body:not([data-kind="landroid"]) .ld-only{display:none!important}
-nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;justify-content:center;background:var(--nav);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:6px 8px max(6px,calc(env(safe-area-inset-bottom) - 18px))}  /* pegada abajo: solo el hueco de la raya de inicio del iPhone */
+/* barra flotante, separada de los bordes: las esquinas redondeadas del iPhone no la cortan (14 px de lado y la raya de
+   inicio por debajo; con radio 30 queda dentro de la esquina curva, que ronda los 55 px). En horizontal, el lateral
+   respeta además la isla/muesca (safe-area-inset-left/right). */
+nav.tabs{position:fixed;left:max(14px,env(safe-area-inset-left));right:max(14px,env(safe-area-inset-right));bottom:max(10px,calc(env(safe-area-inset-bottom) - 16px));max-width:520px;margin:0 auto;z-index:20;display:flex;justify-content:center;background:var(--nav);backdrop-filter:blur(20px) saturate(1.5);-webkit-backdrop-filter:blur(20px) saturate(1.5);border:1px solid var(--line);border-radius:30px;padding:6px;box-shadow:0 10px 30px rgba(0,0,0,.16),0 1px 3px rgba(0,0,0,.08)}
 nav.tabs .in{display:grid;grid-template-columns:repeat(4,1fr);width:100%;max-width:520px;gap:4px}
-nav.tabs button{border:0;background:none;border-radius:14px;padding:6px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;color:var(--muted);cursor:pointer}
+nav.tabs button{border:0;background:none;border-radius:24px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;color:var(--muted);cursor:pointer}
 nav.tabs button svg{width:24px;height:24px}
+/* base opaca detrás de la barra: lo que se desplaza por debajo (botones, tarjetas) no se asoma entre la barra y el borde */
+body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:calc(max(10px,calc(env(safe-area-inset-bottom) - 16px)) + 48px);background:linear-gradient(to top,var(--bg) calc(100% - 22px),transparent);pointer-events:none;z-index:19}
+body.rlocked::after{display:none}
 nav.tabs button.on{color:var(--brand-ink);background:var(--brand);font-weight:700}
 @media (min-width:900px){
-  nav.tabs{position:sticky;top:0;bottom:auto;border:0;border-bottom:1px solid var(--line);background:var(--bg);padding:6px 0 10px;margin-bottom:12px}
+  body::after{display:none}
+  nav.tabs{position:sticky;top:0;bottom:auto;left:auto;right:auto;max-width:none;margin:0 0 12px;border:0;border-bottom:1px solid var(--line);border-radius:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--bg);padding:6px 0 10px}
   nav.tabs .in{max-width:none;display:flex;gap:8px}
-  nav.tabs button{flex-direction:row;gap:8px;font-size:14px;padding:9px 16px}
+  nav.tabs button{flex-direction:row;gap:8px;font-size:14px;padding:9px 16px;border-radius:14px}
   nav.tabs button svg{width:20px;height:20px}
   .app{padding-bottom:40px}
 }
@@ -170,8 +178,9 @@ nav.tabs button.on{color:var(--brand-ink);background:var(--brand);font-weight:70
 @media (orientation:landscape) and (max-height:520px){
   header.top{margin-bottom:6px}header.top img{width:30px;height:30px}
   .rbar button{width:36px;height:36px}.rbar img{width:30px;height:22px}
-  nav.tabs{padding:3px 8px max(3px,calc(env(safe-area-inset-bottom) - 18px))}
-  nav.tabs button{flex-direction:row;gap:6px;padding:6px 10px;font-size:13px}nav.tabs button svg{width:20px;height:20px}
+  body::after{height:calc(max(8px,calc(env(safe-area-inset-bottom) - 10px)) + 32px)}
+  nav.tabs{padding:3px;bottom:max(8px,calc(env(safe-area-inset-bottom) - 10px));border-radius:26px}
+  nav.tabs button{flex-direction:row;gap:6px;padding:6px 10px;font-size:13px;border-radius:20px}nav.tabs button svg{width:20px;height:20px}
   .app{padding-bottom:calc(60px + env(safe-area-inset-bottom))}
   .hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);grid-template-rows:auto auto 1fr}
   .scene{grid-row:1/4;height:auto;min-height:100%;--sh:190px}
@@ -242,7 +251,7 @@ button:disabled{opacity:.5;cursor:wait}
 #rptbody td,#rptbody th{border:1px solid #cdd6df;padding:5px 8px;text-align:left;vertical-align:top}
 #rptbody th{background:#1f4e79;color:#fff}
 #rptbody .sub{color:#5a6570;font-size:13px;margin:0 0 10px}
-@media print{body>*:not(#reportview){display:none!important}#reportview{position:static;overflow:visible;padding:0}#reportview .rptbar{display:none}}
+@media print{body::after{display:none!important}body>*:not(#reportview){display:none!important}#reportview{position:static;overflow:visible;padding:0}#reportview .rptbar{display:none}}
 .alert[hidden]{display:none}  /* el display:flex de arriba le ganaba a «hidden» */
 #ldpend{display:block;margin-bottom:12px}#ldpend[hidden]{display:none}
 .alert.warn{background:var(--warn-soft);color:var(--warn)}.alert.info{background:var(--info-soft);color:var(--info)}
@@ -333,7 +342,7 @@ details.all table{width:100%;border-collapse:collapse;margin-top:10px;font-size:
 details.all td{padding:7px 4px;border-top:1px solid var(--line);vertical-align:top;overflow-wrap:anywhere}
 details.all td:first-child{width:58%}
 details.all td:last-child{text-align:right;font-weight:560;overflow-wrap:anywhere}
-.toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(16px);background:var(--ink);color:var(--bg);padding:11px 16px;border-radius:14px;opacity:0;transition:.2s;pointer-events:none;max-width:90vw;z-index:30}
+.toast{position:fixed;left:50%;bottom:calc(104px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(16px);background:var(--ink);color:var(--bg);padding:11px 16px;border-radius:14px;opacity:0;transition:.2s;pointer-events:none;max-width:90vw;z-index:30}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .empty{color:var(--muted)}
 .tl{display:flex;height:22px;border-radius:11px;overflow:hidden;background:var(--line)}
@@ -676,37 +685,39 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
   <!-- DATOS -->
   <section class="view" id="v-datos">
     <div class="cols">
+      <!-- primero lo que se mira a diario (batería, cortado, paradas), luego lo crudo y, al final, salud e informe.
+           En el móvil se ve en este orden; en pantalla ancha, columna izquierda y después derecha -->
       <div class="stack">
-        <div class="card mc-only" id="healthcard">
-          <h2>Salud del robot <button class="chip" id="rptopen" style="margin-left:auto">Informe</button></h2>
-          <div id="health"></div>
+        <div class="card">
+          <h2>Batería · últimas 24 h <span class="muted" id="sparkinfo"></span></h2>
+          <svg class="spark" id="spark" viewBox="0 0 300 90" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="card">
+          <h2>Cortado · 7 días <span class="muted" id="weekmowtot"></span></h2>
+          <div class="wbars" id="wbars"></div>
+        </div>
+        <div class="card">
+          <h2>Paradas por error · 7 días <span class="muted" id="errtot"></span></h2>
+          <div class="wbars err" id="ebars"></div>
+          <div class="legend" id="elegend"></div>
         </div>
         <div class="card">
           <h2>Actividad · últimas 24 h</h2>
           <div class="tl" id="tl"></div><div class="tlh"><span>-24 h</span><span>-18</span><span>-12</span><span>-6</span><span>ahora</span></div>
           <div class="legend" id="legend"></div>
         </div>
-        <div class="card">
-          <h2>Batería · últimas 24 h <span class="muted" id="sparkinfo"></span></h2>
-          <svg class="spark" id="spark" viewBox="0 0 300 90" preserveAspectRatio="none"></svg>
-        </div>
+        <div class="card"><h2>Ahora mismo</h2><dl class="kv" id="sensors"></dl></div>
+        <div class="card"><h2>Uso acumulado</h2><div class="grid2" id="stats"></div></div>
+      </div>
+      <div class="stack">
         <div class="card mc-only">
           <h2>Resumen de la semana</h2>
           <dl class="kv" id="weeksum"></dl>
         </div>
-        <div class="card">
-          <h2>Cortado · 7 días <span class="muted" id="weekmowtot"></span></h2>
-          <div class="wbars" id="wbars"></div>
+        <div class="card mc-only" id="healthcard">
+          <h2>Salud del robot <button class="chip" id="rptopen" style="margin-left:auto">Informe</button></h2>
+          <div id="health"></div>
         </div>
-      </div>
-      <div class="stack">
-        <div class="card">
-          <h2>Paradas por error · 7 días <span class="muted" id="errtot"></span></h2>
-          <div class="wbars err" id="ebars"></div>
-          <div class="legend" id="elegend"></div>
-        </div>
-        <div class="card"><h2>Ahora mismo</h2><dl class="kv" id="sensors"></dl></div>
-        <div class="card"><h2>Uso acumulado</h2><div class="grid2" id="stats"></div></div>
         <div class="card"><h2>Avisos <span class="muted" id="msgcount"></span></h2><div id="msgs"></div></div>
         <div class="card"><details class="all"><summary>Todos los datos del robot <span class="muted" id="allcount"></span></summary><table id="all"></table></details></div>
       </div>
@@ -723,8 +734,9 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
           <div class="srow">
             <div class="sic"><svg viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0 1 12 0v6l2 2H4z"/><path d="M10 21h4"/></svg></div>
             <div class="tx"><b>Avisos</b><small>Avería, vuelco, parado o sin conexión</small><small id="pushmsg" style="color:var(--ink)"></small></div>
+            <div id="pushctl"></div>
           </div>
-          <div class="inner" style="padding:0 14px 14px"><div id="pushbox" class="chips"></div></div>
+          <div class="inner" id="pushrow" style="padding:0 14px 14px" hidden><div id="pushbox" class="chips"></div></div>
           <details class="fold"><summary><div class="sic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></svg></div><div class="tx"><b>¿Qué avisa exactamente?</b></div></summary>
             <div class="inner"><p>Te avisa si el robot tiene una avería, se vuelca, se queda levantado o parado, o lleva días sin conexión. No repite el mismo aviso en 6 horas y manda como mucho 6 al día.</p><p>Vale para los robots que ves en este móvil: si uno tiene contraseña, desbloquéalo antes de activarlos.</p></div></details>
         </div>
@@ -799,8 +811,10 @@ const ago = iso => { const s = (Date.now() - new Date(iso)) / 1000; return s < 9
 /* ---------- avisos push de la web app ---------- */
 const b64u8 = s => Uint8Array.from(atob((s + '==='.slice((s.length + 3) % 4)).replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
 async function pushRender(){
-  const box = $('#pushbox'), msg = $('#pushmsg');
+  const box = $('#pushbox'), msg = $('#pushmsg'), ctl = $('#pushctl'), row = $('#pushrow');
   if (!box) return;
+  // el control principal va a la derecha de su fila, como los demás ajustes; «Enviar prueba» debajo, solo si están activados
+  ctl.innerHTML = ''; row.hidden = true;
   const ios = /iPhone|iPad/.test(navigator.userAgent), standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
     box.innerHTML = '';
@@ -811,16 +825,18 @@ async function pushRender(){
   }
   const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription();
   if (sub) {
-    box.innerHTML = '<button class="chip" id="ptest">Enviar prueba</button><button class="chip" id="poff">Desactivar</button>';
-    msg.textContent = 'Avisos activados en este móvil.';
+    ctl.innerHTML = '<label class="sw"><input type="checkbox" id="pswitch" checked aria-label="Avisos en este móvil"><span></span></label>';
+    box.innerHTML = '<button class="chip" id="ptest">Enviar prueba</button>'; row.hidden = false;
+    msg.textContent = 'Activados en este móvil.';
     $('#ptest').onclick = async () => { const r = await api('api/push/test', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({endpoint: sub.endpoint})}); toast(r.ok ? 'Aviso de prueba enviado' : 'No se pudo enviar'); };
-    $('#poff').onclick = async () => { await api('api/push/unsubscribe', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({endpoint: sub.endpoint})}); await sub.unsubscribe(); pushRender(); };
+    $('#pswitch').onchange = async e => { if (e.target.checked) return; await api('api/push/unsubscribe', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({endpoint: sub.endpoint})}); await sub.unsubscribe(); pushRender(); };
   } else if (Notification.permission === 'denied') {
     // bloqueados: el botón no podría ni preguntar, así que solo se dice dónde desbloquearlos
     box.innerHTML = '';
     msg.textContent = 'Los avisos están bloqueados para esta app: actívalos en los ajustes del móvil (Notificaciones) y vuelve aquí.';
   } else {
-    box.innerHTML = '<button class="chip" id="pon" style="background:var(--brand);color:#17191a;border-color:var(--brand);font-weight:700">Activar avisos</button>';
+    ctl.innerHTML = '<button class="chip" id="pon" style="background:var(--brand);color:#17191a;border-color:var(--brand);font-weight:700;flex:none">Activar</button>';
+    box.innerHTML = '';
     msg.textContent = '';
     $('#pon').onclick = async () => {
       try {
@@ -1572,10 +1588,10 @@ function renderWeek(tasks){
 }
 let editing = false, draft = [], original = '', schedLocked = false;
 const TEMPLATES = [
-  ['L–V 9:00–19:00', [{start:'09:00', end:'19:00', days:DAYS.slice(0,5)}]],
-  ['Todos los días 8:00–20:00', [{start:'08:00', end:'20:00', days:[...DAYS]}]],
-  ['Mañanas 9:00–13:00', [{start:'09:00', end:'13:00', days:[...DAYS]}]],
-  ['Fines de semana 10:00–18:00', [{start:'10:00', end:'18:00', days:DAYS.slice(5)}]],
+  ['L–V 9–19', [{start:'09:00', end:'19:00', days:DAYS.slice(0,5)}]],  // textos cortos: caben dos o tres por fila
+  ['Diario 8–20', [{start:'08:00', end:'20:00', days:[...DAYS]}]],
+  ['Mañanas 9–13', [{start:'09:00', end:'13:00', days:[...DAYS]}]],
+  ['Fin de semana 10–18', [{start:'10:00', end:'18:00', days:DAYS.slice(5)}]],
 ];
 $('#templates').innerHTML = TEMPLATES.map(([t], i) => `<button class="chip" data-tpl="${i}">${t}</button>`).join('');
 $('#templates').onclick = e => { const b = e.target.closest('[data-tpl]'); if (!b) return; draft = JSON.parse(JSON.stringify(TEMPLATES[b.dataset.tpl][1])); editing = true; drawEditor(); };
@@ -1942,6 +1958,9 @@ async function loadWeekMow(){
     mowedWeek = tot; mowed24 = days[6].ms; renderFacts();
     // cortes de conexión de más de 5 min (los de segundos son ruido del Bluetooth)
     let drops = 0; pts.forEach((p, i) => { if (p.v === 'unavailable' && (i ? pts[i - 1].v !== 'unavailable' : false) && (i + 1 < pts.length ? pts[i + 1].t : Date.now()) - p.t > 5 * 60e3) drops++; });
+    // tiempo con respuesta del robot sobre el total de la semana (sin historial no se inventa un 0 %)
+    const lenW = days.reduce((s, d) => s + len(d), 0), knW = days.reduce((s, d) => s + d.known, 0);
+    WS.conn = pts.length && lenW ? (Math.min(100, knW / lenW * 100)).toLocaleString('es-ES', {maximumFractionDigits: 1}) + ' % del tiempo' : null;
     WS.mow = mowTxt(tot, knownWeek, ctrWeek); WS.drops = drops ? veces(drops) : 'ninguno'; renderWeekSum();
     $('#weekmowtot').textContent = mowTxt(tot, knownWeek, ctrWeek) +(weekMin ? ' de ' + Math.round(weekMin / 60) + ' h' : '');  // corto: no cabía en una línea
   } catch(e) {}
@@ -1974,7 +1993,7 @@ async function loadErrors(){
 const WS = {};
 function renderWeekSum(){
   const r = (k, v) => v == null ? '' : `<dt>${k}</dt><dd>${esc(v)}</dd>`;
-  $('#weeksum').innerHTML = r('Cortado', WS.mow) + r('Paradas por error', WS.err) + r('Cortes de conexión', WS.drops)
+  $('#weeksum').innerHTML = r('Cortado', WS.mow) + r('Paradas por error', WS.err) + r('Conexión con el robot', WS.conn) + r('Cortes de conexión', WS.drops)
     + r('Receptor reiniciado solo', WS.reb) + r('Sacado de «aparcado»', WS.vue) || '<dt>Cargando…</dt><dd></dd>';
 }
 // subidas de un contador en los últimos 7 días (el primer valor es el de arrastre de antes)
@@ -2200,7 +2219,7 @@ setInterval(loadHistory, 10 * 60 * 1000);
   // Cada tipo de robot tiene su modelo (rob3d = McCulloch, rob3d_landroid = Landroid); si faltan los del
   // Landroid, se usa el del McCulloch teñido de naranja.
   const imgEl = tilt.querySelector('img'), b3 = document.getElementById('body3d'), botEl = stage.querySelector('.bot');
-  let r3d = false, curFrame = -1, FR = [], want = null;
+  let r3d = false, curFrame = -1, FR = [], want = null, tries = 0;
   const showFrame = f => {
     f = ((Math.round(f) % 24) + 24) % 24;
     if (f === curFrame || !FR.length) return;
@@ -2218,10 +2237,15 @@ setInterval(loadHistory, 10 * 60 * 1000);
     const tryDir = i => preload(frames(dirs[i])).then(() => dirs[i]).catch(() => (i + 1 < dirs.length ? tryDir(i + 1) : null));
     tryDir(0).then(dir => {
       if (want !== kind) return;  // ya se cambió de robot
-      if (!dir) {  // sin renders: la foto o el dibujo, solo si es del McCulloch
+      if (!dir) {
+        // Faltó alguna de las 24 vistas (red floja, la Pi reiniciándose un segundo...): se reintenta sola, sin enseñar
+        // nada roto entretanto. Antes se quedaba sin 3D hasta cerrar la app y salía la foto vieja de reserva.
+        if (tries < 5) { tries++; setTimeout(() => { if (want === kind) { want = null; load(kind); } }, 1500 * tries); return; }
+        // sin renders de verdad: la foto o el dibujo, solo si es del McCulloch
         if (kind !== 'landroid') stage.classList.remove('loading');
         return;
       }
+      tries = 0;
       FR = frames(dir); curFrame = -1;
       r3d = true; imgEl.onerror = null; stage.classList.add('r3d'); showFrame(0);
       requestAnimationFrame(() => stage.classList.remove('loading'));
