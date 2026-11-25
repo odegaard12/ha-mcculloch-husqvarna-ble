@@ -5,7 +5,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from time import monotonic
 from typing import Any
 
 from homeassistant.components import bluetooth
@@ -23,6 +24,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import dt as dt_util
 
 from . import RobConfigEntry
@@ -203,9 +205,12 @@ async def async_setup_entry(
     )
 
 
-class BleSignalSensor(RobEntity, SensorEntity):
+class BleSignalSensor(RobEntity, RestoreEntity, SensorEntity):
     """Intensidad con la que el receptor oye al robot (el último anuncio Bluetooth). Por debajo de unos −85 dBm la
-    conexión se corta a menudo: sirve para colocar el receptor. Disponible aunque no conecte, que es cuando más importa."""
+    conexión se corta a menudo: sirve para colocar el receptor.
+
+    Con el robot conectado y en la base apenas se anuncia, así que se recuerda el último valor medido y cuándo
+    (atributo «medido»): nunca sale «no disponible», y se sobrevive a reinicios de HA."""
 
     _attr_device_class = SensorDeviceClass.SIGNAL_STRENGTH
     _attr_native_unit_of_measurement = "dBm"
@@ -214,23 +219,67 @@ class BleSignalSensor(RobEntity, SensorEntity):
 
     def __init__(self, coordinator) -> None:
         super().__init__(coordinator, "ble_rssi", "Señal Bluetooth")
+        self._last: tuple[int, datetime, str | None] | None = None  # (dBm, cuándo, receptor)
+        self._hist: list[tuple[datetime, int]] = []  # una muestra cada ≥10 s, solo las últimas 24 h
+        self._written = 0.0
 
-    def _info(self):
-        return bluetooth.async_last_service_info(self.hass, self.coordinator.address, connectable=False)
+    def _on_advert(self, info, _change) -> None:
+        """Cada anuncio del robot (solo se oye cuando NO está conectado: fuera de la base o al reconectar).
+        Solo escucha: no abre ni cierra ninguna conexión con el robot."""
+        now = dt_util.utcnow()
+        self._last = (info.rssi, now, info.source)
+        if not self._hist or (now - self._hist[-1][0]).total_seconds() >= 10:
+            self._hist.append((now, info.rssi))
+            cut = now - timedelta(hours=24)
+            while self._hist and (self._hist[0][0] < cut or len(self._hist) > 3000):
+                self._hist.pop(0)
+        if monotonic() - self._written >= 30:  # los anuncios llegan varios por segundo: HA no necesita tantos
+            self._written = monotonic()
+            self.async_write_ha_state()
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        try:  # si algo falla aquí, solo se pierde el peor/mejor de 24 h: nunca debe tumbar los demás sensores
+            self.async_on_remove(bluetooth.async_register_callback(
+                self.hass, self._on_advert,
+                bluetooth.BluetoothCallbackMatcher(address=self.coordinator.address, connectable=False),
+                bluetooth.BluetoothScanningMode.PASSIVE))
+        except Exception as err:  # noqa: BLE001
+            LOGGER.warning("Señal Bluetooth: sin escucha de anuncios (%s)", err)
+        old = await self.async_get_last_state()
+        if old and old.state not in ("unknown", "unavailable"):
+            try:
+                self._last = (int(float(old.state)), datetime.fromisoformat(old.attributes["medido"]),
+                              old.attributes.get("receptor"))
+            except (KeyError, ValueError, TypeError):
+                pass
+
+    def _refresh(self) -> None:
+        info = bluetooth.async_last_service_info(self.hass, self.coordinator.address, connectable=False)
+        if info is not None:
+            self._last = (info.rssi, dt_util.utcnow(), info.source)
 
     @property
     def available(self) -> bool:
-        return self._info() is not None
+        self._refresh()
+        return self._last is not None
 
     @property
     def native_value(self) -> int | None:
-        info = self._info()
-        return info.rssi if info else None
+        self._refresh()
+        return self._last[0] if self._last else None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
-        info = self._info()
-        return {"receptor": info.source} if info else None
+        self._refresh()
+        if not self._last:
+            return None
+        attrs: dict[str, Any] = {"medido": self._last[1].isoformat(), "receptor": self._last[2]}
+        cut = dt_util.utcnow() - timedelta(hours=24)
+        vals = [r for t, r in self._hist if t >= cut]
+        if vals:  # peor/mejor de las últimas 24 h: el peor es el rincón del jardín donde más se corta
+            attrs.update(peor_24h=min(vals), mejor_24h=max(vals), muestras_24h=len(vals))
+        return attrs
 
 
 class LastSeenSensor(RobEntity, SensorEntity):

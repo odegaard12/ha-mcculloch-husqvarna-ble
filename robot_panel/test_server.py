@@ -116,6 +116,7 @@ async def main():
         assert r.status == 429
         h = (await c3.get("/")).headers
         assert h.get("Strict-Transport-Security", "").startswith("max-age="), "falta HSTS"
+        assert (await c3.get("/api/sesion")).headers.get("Cache-Control") == "no-store", "la API no debe cachearse"
         r = await c3.get("/x?a=1", headers={"CF-Connecting-IP": "1.2.3.4", "X-Forwarded-Proto": "http"}, allow_redirects=False)
         assert r.status == 308 and r.headers["Location"].startswith("https://") and r.headers["Location"].endswith("/x?a=1")
     # PIN largo: los fallos de un extraño no dejan fuera a los demás; él sí queda fuera

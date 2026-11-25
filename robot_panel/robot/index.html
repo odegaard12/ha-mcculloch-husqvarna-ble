@@ -1731,10 +1731,16 @@ const durMin = m => m >= 1440 ? Math.round(m / 1440) + ' d' : m >= 90 ? Math.rou
 // con qué fuerza oye el receptor al robot: por debajo de −85 dBm la conexión se corta a menudo
 function bleItem(add){
   const b = val('sensor','senal_bluetooth'); if (b == null) return;
-  const d = Math.round(Number(b));
-  if (d < -85) add('bad', 'Señal Bluetooth muy floja (' + d + ' dBm)', 'Se cortará a menudo. Acerca el receptor al robot o saca la antena de la caja.');
-  else if (d < -75) add('warn', 'Señal Bluetooth justa (' + d + ' dBm)', 'Funciona, pero lejos de la base puede cortarse.');
-  else add('ok', 'Señal Bluetooth buena (' + d + ' dBm)', '');
+  const at = st('sensor','senal_bluetooth')?.attributes || {}, m = at.medido;
+  // conectado, el robot no emite nada que se pueda medir (en la base, siempre): el valor es el último medido, y se dice de cuándo.
+  // Lo que cuenta para colocar el receptor es el PEOR rato de las últimas 24 h (el rincón del jardín donde más se corta)
+  const peor = at.peor_24h != null ? Math.min(Number(b), Number(at.peor_24h)) : Number(b), d = Math.round(peor);
+  const hoy = at.peor_24h != null ? ' Últimas 24 h: peor ' + at.peor_24h + ', mejor ' + at.mejor_24h + ' dBm.' : '';
+  const viejo = m && Date.now() - new Date(m) > 15 * 60e3, de = hoy + (viejo ? ' Última medida ' + ago(m) + ' (con el robot conectado no emite nada que medir; se mide al salir a cortar).' : '');
+  const txt = (e, t) => t + ' (' + (at.peor_24h != null ? 'peor ' : '') + d + ' dBm)';
+  if (d < -85) add('bad', txt(0, 'Señal Bluetooth muy floja'), 'Se cortará a menudo. Acerca el receptor al robot o saca la antena de la caja.' + de);
+  else if (d < -75) add('warn', txt(0, 'Señal Bluetooth justa'), 'Funciona, pero lejos de la base puede cortarse.' + de);
+  else add('ok', txt(0, 'Señal Bluetooth buena'), de.trim());
 }
 // lo que hicieron solas las automatizaciones de HA (contadores)
 // (solo lo de las últimas 24 h: lo de la semana ya está en su resumen)

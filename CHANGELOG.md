@@ -2,6 +2,16 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.50 · La señal Bluetooth se recuerda y la API no se cachea
+
+#### Integración
+- **«Señal Bluetooth» ya no sale «no disponible»**: con el robot conectado no emite nada que se pueda medir (en la base, nunca), así que el sensor **recuerda el último valor medido y cuándo** (atributo `medido`) y lo conserva al reiniciar Home Assistant. Escucha cada anuncio del robot (fuera de la base o al reconectar) sin abrir ni cerrar ninguna conexión con él.
+- Atributos nuevos `peor_24h`, `mejor_24h` y `muestras_24h`: el peor valor es el rincón del jardín donde más se corta, que es lo que sirve para colocar el receptor.
+
+#### App
+- **Salud del robot** usa el **peor valor de las últimas 24 h** para avisar de la señal, y dice de cuándo es la última medida cuando el robot lleva rato conectado.
+- Las respuestas de la API llevan `Cache-Control: no-store`: ningún dato del robot queda en cachés del navegador, de Cloudflare ni de un proxy.
+
 ## v0.3.49 · Datos mejor ordenados y la tarjeta avisa de «aparcado»
 
 #### App

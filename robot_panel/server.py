@@ -709,6 +709,8 @@ def make_app() -> web.Application:
         resp = await handler(req)
         if not req.path.startswith("/api/"):
             resp.headers["Cache-Control"] = "no-cache"
+        else:  # nada de datos del robot en cachés (de Cloudflare, del navegador ni de un proxy)
+            resp.headers.setdefault("Cache-Control", "no-store")
         resp.headers.update(SECURITY_HEADERS)
         return resp
 
