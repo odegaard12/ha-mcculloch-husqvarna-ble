@@ -37,7 +37,7 @@ input,select,textarea{font-size:max(16px,1em)!important}
 button,.chip,.pad button,nav.tabs button{touch-action:manipulation;user-select:none;-webkit-user-select:none}
 body{background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior-y:contain}
 button,input{font:inherit;color:inherit}
-.app{max-width:1120px;margin:0 auto;padding:calc(12px + env(safe-area-inset-top,0px)) 16px calc(92px + env(safe-area-inset-bottom))}
+.app{max-width:1120px;margin:0 auto;padding:calc(12px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right)) calc(92px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}  /* en horizontal, a un lado de la isla */
 /* Sin franja fija arriba: iOS 26 en modo app ya pone su propio degradado detrás de la hora, y una franja fija opaca
    debajo lo duplicaba y lo hacía más marcado. La hora queda sobre el color de fondo de la página. */
 html{background:var(--bg)}
@@ -242,7 +242,7 @@ button:disabled{opacity:.5;cursor:wait}
 .hl i{flex:none;width:10px;height:10px;border-radius:50%;margin-top:6px;background:var(--ok)}
 .hl.warn i{background:var(--warn)}.hl.bad i{background:var(--bad)}.hl.info i{background:var(--info)}
 .hl small{display:block;color:var(--muted);font-weight:500}
-#reportview{position:fixed;inset:0;z-index:90;background:#fff;color:#17191a;overflow:auto;padding:16px}
+#reportview{position:fixed;inset:0;z-index:90;background:#fff;color:#17191a;overflow:auto;padding:calc(16px + env(safe-area-inset-top,0px)) calc(16px + env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) calc(16px + env(safe-area-inset-left,0px))}  /* con la hora/isla encima, «Guardar PDF» y «Cerrar» tienen que quedar pulsables */
 #reportview[hidden]{display:none}
 #reportview .rptbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 #rptbody{max-width:760px;margin:0 auto}
@@ -759,7 +759,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
   <footer id="foot"></footer>
 </div>
 <section id="reportview" hidden>
-  <div class="rptbar"><button class="btn" id="rptprint">Guardar como PDF / imprimir</button><button class="btn ghost" id="rptclose">Cerrar</button></div>
+  <div class="rptbar"><button class="btn" id="rptpdf">Guardar PDF</button><button class="btn ghost" id="rptprint">Imprimir</button><button class="btn ghost" id="rptclose">Cerrar</button></div>
   <div id="rptbody"></div>
 </section>
 <div class="toast" id="toast"></div>
@@ -1824,9 +1824,106 @@ function buildReport(){
     + `<h2>Últimos avisos (${av.length} de ${st('sensor','ultimo_aviso')?.attributes?.total || '?'})</h2>` + (av.length ? tb(['Fecha', 'Aviso'], av.map(x => [fmtDate(x.fecha), errText(x.texto)])) : '<p>Sin avisos.</p>')
     + `<h2>Ficha</h2>` + tb(null, [['Modelo', 'McCulloch ROB S800'], ['Nº de serie', n('numero_de_serie')], ['Software', n('version_software')], ['Firmware', n('firmware_aplicacion')], ['Reloj del robot', n('reloj_del_robot') ? fmtDate(n('reloj_del_robot')) : null]]);
 }
+/* ---------- informe en PDF ----------
+   iOS no deja imprimir desde una app web instalada (window.print() no hace nada), así que el PDF se genera aquí mismo,
+   a partir del propio informe en pantalla (los dos dicen siempre lo mismo), y se entrega por la hoja de compartir:
+   Guardar en Archivos, Imprimir, AirDrop... Sin librerías: Helvetica estándar de PDF con codificación WinAnsi. */
+function reportBlocks(){
+  const out = [];
+  $('#rptbody').childNodes.forEach(el => {
+    if (el.nodeType !== 1) return;
+    const t = el.tagName;
+    if (t === 'H1') out.push({k: 'h1', t: el.textContent});
+    else if (t === 'H2') out.push({k: 'h2', t: el.textContent});
+    else if (t === 'P') out.push({k: el.classList.contains('sub') ? 'sub' : 'p', t: el.textContent});
+    else if (t === 'TABLE') out.push({k: 'table', rows: [...el.rows].map(r => ({head: r.cells[0]?.tagName === 'TH', cells: [...r.cells].map(c => c.textContent)}))});
+  });
+  return out;
+}
+function makePdf(blocks){
+  const PW = 595.28, PH = 841.89, M = 42, CW = PW - 2 * M, LH = 11.8, PAD = 3.6;
+  const cv = document.createElement('canvas').getContext('2d');   // Arial mide igual que Helvetica
+  const font = (sz, b) => `${b ? 'bold ' : ''}${sz}px Helvetica, Arial, sans-serif`;
+  const wrap = (txt, w, sz, b) => {
+    cv.font = font(sz, b);
+    const words = [];
+    String(txt).split(/\s+/).filter(Boolean).forEach(wd => {   // una palabra más larga que la línea se parte
+      if (cv.measureText(wd).width <= w) return words.push(wd);
+      let piece = ''; for (const ch of wd) { if (piece && cv.measureText(piece + ch).width > w) { words.push(piece); piece = ch; } else piece += ch; }
+      words.push(piece);
+    });
+    const lines = []; let cur = '';
+    words.forEach(wd => { const s = cur ? cur + ' ' + wd : wd; if (!cur || cv.measureText(s).width <= w) cur = s; else { lines.push(cur); cur = wd; } });
+    lines.push(cur); return lines;
+  };
+  const WIN = {'–': 0x96, '—': 0x97, '‘': 0x91, '’': 0x92, '“': 0x93, '”': 0x94, '•': 0x95, '€': 0x80, '…': 0x85};
+  const REP = {'≈': '~', '→': '->', '←': '<-', '✓': 'ok', '⚠': '!', '≥': '>=', '≤': '<=', ' ': ' '};
+  const enc = s => { let o = ''; for (const ch of String(s)) { if (REP[ch]) { o += REP[ch]; continue; }
+      let c = ch.codePointAt(0); if (WIN[ch]) c = WIN[ch]; else if (c > 255 || (c > 126 && c < 160) || c < 32) c = 63;
+      const g = String.fromCharCode(c); o += g === '(' || g === ')' || g === '\\' ? '\\' + g : g; } return o; };
+  const pages = []; let ops, ty;
+  const np = () => { ops = []; pages.push(ops); ty = M; };
+  const Y = t => (PH - t).toFixed(2);
+  const col = (hex, stroke) => { const n = parseInt(hex.slice(1), 16); return `${(((n >> 16) & 255) / 255).toFixed(3)} ${(((n >> 8) & 255) / 255).toFixed(3)} ${((n & 255) / 255).toFixed(3)} ${stroke ? 'RG' : 'rg'}`; };
+  const text = (s, x, base, sz, b, color) => ops.push(`${col(color || '#17191a')} BT /${b ? 'F2' : 'F1'} ${sz} Tf ${x.toFixed(2)} ${Y(base)} Td (${enc(s)}) Tj ET`);
+  const need = h => { if (ty + h > PH - M - 10) np(); };
+  np();
+  blocks.forEach(b => {
+    if (b.k === 'h1') { need(30); text(b.t, M, ty + 18, 20, true, '#1f4e79'); ty += 28; }
+    else if (b.k === 'sub' || b.k === 'p') {
+      const sz = b.k === 'sub' ? 9.5 : 10, c = b.k === 'sub' ? '#5a6570' : '#17191a';
+      wrap(b.t, CW, sz).forEach(l => { need(LH); text(l, M, ty + 9, sz, false, c); ty += LH; }); ty += 5;
+    }
+    else if (b.k === 'h2') { need(44); ty += 9; text(b.t, M, ty + 11, 12.5, true, '#1f4e79'); ty += 19; }
+    else if (b.k === 'table') {
+      const nc = Math.max(1, ...b.rows.map(r => r.cells.length));
+      const wd = nc === 1 ? [CW] : nc === 2 ? [Math.min(185, CW * .36), CW - Math.min(185, CW * .36)] : nc === 3 ? [46, 170, CW - 216] : Array(nc).fill(CW / nc);
+      b.rows.forEach(r => {
+        const cl = r.cells.map((c, i) => wrap(c, wd[i] - 10, 9.5, r.head)), nl = Math.max(...cl.map(l => l.length)), rh = nl * LH + 2 * PAD;
+        need(rh);
+        let x = M;
+        r.cells.forEach((c, i) => {
+          if (r.head) ops.push(`${col('#1f4e79')} ${x.toFixed(2)} ${Y(ty + rh)} ${wd[i].toFixed(2)} ${rh.toFixed(2)} re f`);
+          ops.push(`${col('#cdd6df', true)} 0.5 w ${x.toFixed(2)} ${Y(ty + rh)} ${wd[i].toFixed(2)} ${rh.toFixed(2)} re S`);
+          cl[i].forEach((l, li) => text(l, x + 5, ty + PAD + 8.6 + li * LH, 9.5, r.head, r.head ? '#ffffff' : '#17191a'));
+          x += wd[i];
+        });
+        ty += rh;
+      });
+      ty += 4;
+    }
+  });
+  pages.forEach((p, i) => { ops = p; text(`Página ${i + 1} de ${pages.length}`, M, PH - 24, 8, false, '#5a6570'); });
+  const objs = [], n = pages.length;
+  objs[1] = '<< /Type /Catalog /Pages 2 0 R >>';
+  objs[2] = `<< /Type /Pages /Kids [${pages.map((_, i) => `${5 + 2 * i} 0 R`).join(' ')}] /Count ${n} >>`;
+  objs[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
+  objs[4] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
+  pages.forEach((p, i) => { const body = p.join('\n');   // todo en un byte por carácter: la longitud es la de la cadena
+    objs[5 + 2 * i] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${6 + 2 * i} 0 R >>`;
+    objs[6 + 2 * i] = `<< /Length ${body.length} >>\nstream\n${body}\nendstream`; });
+  let pdf = '%PDF-1.4\n'; const off = [];
+  for (let i = 1; i < objs.length; i++) { off[i] = pdf.length; pdf += `${i} 0 obj\n${objs[i]}\nendobj\n`; }
+  const xr = pdf.length;
+  pdf += `xref\n0 ${objs.length}\n0000000000 65535 f \n` + off.slice(1).map(o => String(o).padStart(10, '0') + ' 00000 n \n').join('')
+    + `trailer\n<< /Size ${objs.length} /Root 1 0 R >>\nstartxref\n${xr}\n%%EOF\n`;
+  const u8 = new Uint8Array(pdf.length); for (let i = 0; i < pdf.length; i++) u8[i] = pdf.charCodeAt(i) & 255;
+  return u8;
+}
+async function savePdf(){
+  let blob;
+  try { blob = new Blob([makePdf(reportBlocks())], {type: 'application/pdf'}); } catch (e) { toast('No se pudo crear el PDF'); return; }
+  const name = 'informe-robot-' + new Date().toISOString().slice(0, 10) + '.pdf', file = new File([blob], name, {type: 'application/pdf'});
+  try { if (navigator.canShare && navigator.canShare({files: [file]})) { await navigator.share({files: [file], title: 'Informe del robot'}); return; } }
+  catch (e) { if (e && e.name === 'AbortError') return; }   // cerró la hoja de compartir: no es un fallo
+  const url = URL.createObjectURL(blob), a = document.createElement('a');   // ordenador: se descarga
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
 $('#rptopen').onclick = () => { $('#rptbody').innerHTML = buildReport(); $('#reportview').hidden = false; };
 $('#rptclose').onclick = () => { $('#reportview').hidden = true; };
+$('#rptpdf').onclick = savePdf;
 $('#rptprint').onclick = () => window.print();
+if (navigator.standalone) $('#rptprint').style.display = 'none';   // en iPhone, app instalada: imprimir no existe, se hace desde «Guardar PDF»
 
 /* ---------- ajustes ---------- */
 const IC = {

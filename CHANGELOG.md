@@ -2,6 +2,13 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.52 · El informe se guarda en PDF desde el iPhone
+
+#### App
+- **«Guardar PDF» del informe funciona en iPhone**: antes el botón llamaba a la impresión del navegador, que iOS no permite en una app web instalada, y no hacía nada. Ahora la app crea el PDF ella misma (con las mismas tablas que ve el informe en pantalla) y lo abre en la hoja de compartir del móvil: Guardar en Archivos, Imprimir, AirDrop... En el ordenador se descarga. El botón «Imprimir» sigue en el ordenador y se oculta en la app instalada del iPhone.
+- **El informe respeta la isla y la hora**: su barra de botones ya no queda debajo de la parte de arriba del iPhone, donde no se podía pulsar.
+- **En horizontal**, el contenido se aparta de la isla por los lados.
+
 ## v0.3.51 · Barra flotante, Datos reordenado y el 3D que se recupera solo
 
 #### App
