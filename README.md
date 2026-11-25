@@ -25,6 +25,8 @@ Tus robots cortacésped en Home Assistant, en una tarjeta y en una app para el m
   <img src="docs/horario.png" alt="Pestaña Horario: la semana programada de un vistazo y el editor de franjas con plantillas" width="250">
   &nbsp;
   <img src="docs/datos.png" alt="Pestaña Datos: actividad y batería de las últimas 24 horas, lo cortado cada día de la semana y las paradas por error" width="250">
+  &nbsp;
+  <img src="docs/salud.png" alt="Pestaña Datos: salud del robot (señal Bluetooth del receptor, lo que se arregló solo) y resumen de la semana" width="250">
 </p>
 
 <p align="center"><b>Tarjeta de Home Assistant</b>: uno o dos robots, cada uno con su modelo, su color y sus órdenes.</p>

@@ -2,6 +2,19 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.49 · Datos mejor ordenados y la tarjeta avisa de «aparcado»
+
+#### App
+- **Datos en el ordenador**: las tarjetas se reparten entre las dos columnas (antes una quedaba larguísima y la otra casi vacía). En el móvil el orden no cambia.
+- **«Receptor reiniciado» y «Sacado de aparcado»** salen en Salud solo si pasó en las últimas 24 h; lo de la semana está en su resumen. Antes salía siempre y repetía lo mismo.
+- Plurales bien: «1 vez», «2 veces» (salía «1 veces»).
+
+#### Tarjeta
+- **«Aparcado en su horario»**: si el McCulloch está en su horario pero se quedó aparcado (pasa al mandarlo a casa desde su teclado), la tarjeta lo dice en naranja y recuerda el botón «Volver al horario». Antes lo enseñaba como «En la base» sin más.
+
+#### Documentación
+- Captura nueva de la Salud del robot y el resumen de la semana en el README.
+
 ## v0.3.48 · Señal Bluetooth, resumen de la semana y robot que no se queda aparcado
 
 #### Integración

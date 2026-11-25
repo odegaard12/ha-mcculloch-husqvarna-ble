@@ -12,6 +12,7 @@ const T = {
     chargeFail: 'Error al cargar', chargeFailMsg: 'Está en la base pero no carga. Colócalo recto y limpia con un paño los contactos de la base y los del robot.',
     stuck: 'Parado por atasco', stuckMsg: 'Lleva varios minutos parado fuera de la base y sin ningún error: lo más probable es que esté atascado. Ve a verlo.',
     gardenStop: 'Parado en el jardín', gardenStopMsg: 'Se ha parado en el jardín y espera que alguien lo atienda.',
+    parkedStay: 'Aparcado en su horario', parkedStayMsg: 'Está en horario pero se quedó aparcado (pasa al mandarlo a casa desde su teclado). Pulsa «Volver al horario».',
     liftedMsg: 'Déjalo en el césped y sigue solo.', upsideMsg: 'Dale la vuelta y confírmalo en el robot.',
     errHintMc: 'Revisa el robot y confírmalo en su teclado.', errHintLd: 'Revísalo y pulsa OK en el robot.',
     mow1: 'Cortar 1 h', mow3: 'Cortar 3 h', parkNext: 'Aparcar hasta el próximo turno', resume: 'Volver al horario', edgecut: 'Cortar solo los bordes',
@@ -31,6 +32,7 @@ const T = {
     chargeFail: 'Charging error', chargeFailMsg: 'It is on the dock but not charging. Straighten it and wipe the contacts on the dock and on the mower.',
     stuck: 'Stopped, probably stuck', stuckMsg: 'It has been stopped away from the dock for several minutes with no error: it is probably stuck. Go and check it.',
     gardenStop: 'Stopped in the garden', gardenStopMsg: 'It stopped in the garden and is waiting for someone.',
+    parkedStay: 'Parked during its schedule', parkedStayMsg: 'It is within its schedule but stayed parked (this happens when sent home from its keypad). Press “Resume schedule”.',
     liftedMsg: 'Put it back on the lawn and it carries on.', upsideMsg: 'Turn it over and confirm on the mower.',
     errHintMc: 'Check the mower and confirm on its keypad.', errHintLd: 'Check it and press OK on the mower.',
     mow1: 'Mow 1 h', mow3: 'Mow 3 h', parkNext: 'Park until next run', resume: 'Resume schedule', edgecut: 'Cut edges only',
@@ -499,9 +501,11 @@ class McCullochRobCard extends HTMLElement {
       && ((lm === 'docked' && since >= 12e4) || (['docked', 'idle'].includes(lm) && err === 'wire_missing'));
     const stuck = kind === 'landroid' && !offline && !charging && !chargeFail && !lifted && !upside && lm === 'idle' && !ldErr && since >= 18e4;
     // el McCulloch que se para en el jardín pide que alguien lo atienda (los avisos al móvil ya lo dicen)
-    const msg = chargeFail ? 'chargeFail' : stuck ? 'stuck' : act === 'stopped_in_garden' && s0 === 'idle' ? 'gardenStop' : null;
+    // McCulloch en horario («en funcionamiento») pero aparcado: pasa al mandarlo a casa desde su teclado
+    const parkedStay = kind !== 'landroid' && !offline && s0 === 'docked' && state === 'in_operation' && act === 'parked';
+    const msg = chargeFail ? 'chargeFail' : stuck ? 'stuck' : act === 'stopped_in_garden' && s0 === 'idle' ? 'gardenStop' : parkedStay ? 'parkedStay' : null;
     const s = msg === 'chargeFail' ? 'error' : s0;
-    return {s, msg, col: msg === 'stuck' || msg === 'gardenStop' ? '#ff9f0a' : COLOR[s], bat, charging, offline, err, kind, rain, mower, ids, st};
+    return {s, msg, col: ['stuck', 'gardenStop', 'parkedStay'].includes(msg) ? '#ff9f0a' : COLOR[s], bat, charging, offline, err, kind, rain, mower, ids, st};
   }
 
   _update() {

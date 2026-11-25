@@ -698,6 +698,8 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
           <h2>Cortado · 7 días <span class="muted" id="weekmowtot"></span></h2>
           <div class="wbars" id="wbars"></div>
         </div>
+      </div>
+      <div class="stack">
         <div class="card">
           <h2>Paradas por error · 7 días <span class="muted" id="errtot"></span></h2>
           <div class="wbars err" id="ebars"></div>
@@ -705,8 +707,6 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
         </div>
         <div class="card"><h2>Ahora mismo</h2><dl class="kv" id="sensors"></dl></div>
         <div class="card"><h2>Uso acumulado</h2><div class="grid2" id="stats"></div></div>
-      </div>
-      <div class="stack">
         <div class="card"><h2>Avisos <span class="muted" id="msgcount"></span></h2><div id="msgs"></div></div>
         <div class="card"><details class="all"><summary>Todos los datos del robot <span class="muted" id="allcount"></span></summary><table id="all"></table></details></div>
       </div>
@@ -1737,11 +1737,13 @@ function bleItem(add){
   else add('ok', 'Señal Bluetooth buena (' + d + ' dBm)', '');
 }
 // lo que hicieron solas las automatizaciones de HA (contadores)
+// (solo lo de las últimas 24 h: lo de la semana ya está en su resumen)
+const veces = n => n + (n === 1 ? ' vez' : ' veces');
 function autoItems(add){
-  const c = (k, t) => { const s = st('counter', k); const n = s ? Number(s.state) : 0;
-    if (n > 0) add('info', t.replace('%', n), 'La última, ' + fmtDate(s.last_changed) + '.'); };
-  c('reinicios_receptor', 'Receptor reiniciado solo % veces');
-  c('vueltas_programacion', 'Sacado de «aparcado» % veces');
+  const c = (k, t) => { const s = st('counter', k); if (!s || !(Number(s.state) > 0)) return;
+    if (Date.now() - new Date(s.last_changed) < 864e5) add('info', t, 'Hoy a las ' + new Date(s.last_changed).toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'}) + '. Total: ' + veces(Number(s.state)) + '.'); };
+  c('reinicios_receptor', 'Receptor reiniciado solo hoy');
+  c('vueltas_programacion', 'Sacado de «aparcado» hoy');
 }
 function healthItems(){
   const it = [], add = (lv, t, d, act) => it.push({lv, t, d, act}), rx = rxInfo();
@@ -1934,7 +1936,7 @@ async function loadWeekMow(){
     mowedWeek = tot; mowed24 = days[6].ms; renderFacts();
     // cortes de conexión de más de 5 min (los de segundos son ruido del Bluetooth)
     let drops = 0; pts.forEach((p, i) => { if (p.v === 'unavailable' && (i ? pts[i - 1].v !== 'unavailable' : false) && (i + 1 < pts.length ? pts[i + 1].t : Date.now()) - p.t > 5 * 60e3) drops++; });
-    WS.mow = mowTxt(tot, knownWeek, ctrWeek); WS.drops = drops ? drops + (drops === 1 ? ' vez' : ' veces') : 'ninguno'; renderWeekSum();
+    WS.mow = mowTxt(tot, knownWeek, ctrWeek); WS.drops = drops ? veces(drops) : 'ninguno'; renderWeekSum();
     $('#weekmowtot').textContent = mowTxt(tot, knownWeek, ctrWeek) +(weekMin ? ' de ' + Math.round(weekMin / 60) + ' h' : '');  // corto: no cabía en una línea
   } catch(e) {}
 }
@@ -1977,8 +1979,8 @@ async function weekInc(e){
 async function loadWeekSum(){
   if (locked || KIND === 'landroid') return;
   const [reb, vue] = await Promise.all([weekInc('reinicios'), weekInc('vueltas')]);
-  WS.reb = reb == null ? null : reb ? reb + (reb === 1 ? ' vez' : ' veces') : 'ninguna';
-  WS.vue = vue == null ? null : vue ? vue + (vue === 1 ? ' vez' : ' veces') : 'ninguna';
+  WS.reb = reb == null ? null : reb ? veces(reb) : 'ninguna';
+  WS.vue = vue == null ? null : vue ? veces(vue) : 'ninguna';
   renderWeekSum();
 }
 async function loadHistory(){
