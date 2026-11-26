@@ -652,6 +652,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:20px}
 
   <!-- HORARIO -->
   <section class="view" id="v-horario">
+    <div class="alert warn" id="stopnote" hidden style="margin-bottom:12px"><b>El robot está parado (STOP).</b> Mientras esté así no acepta cambios desde la app, ni el horario ni los ajustes. Pulsa START en el robot (te pedirá su PIN) y vuelve a intentarlo.</div>
     <div class="cols">
       <div class="card">
         <h2>Programado <span class="muted" id="weekhours"></span></h2>
@@ -878,7 +879,9 @@ const h1 = v => Number(v).toLocaleString('es-ES', {minimumFractionDigits: 1, max
 const hhmm = (ms, corto) => { const m = Math.round(ms / 6e4); if (m < 60) return m + (corto ? 'm' : ' min');
   if (m % 60 === 0) return m / 60 + (corto ? 'h' : ' h');  // horas justas: «24 h», que «24:00 h» parece una hora del día
   const t = Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0'); return corto ? t : t + ' h'; };
-function toast(m){ const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 3200); }
+function toast(m){ const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), Math.max(3200, String(m).length * 55)); }  // los mensajes largos se quedan lo que hace falta para leerlos
+// el robot contesta NOT_ALLOWED a todo lo que llega por Bluetooth mientras está parado con STOP o con alguien en su teclado
+const humanErr = m => /NOT_ALLOWED/.test(m || '') ? 'El robot no acepta cambios ahora: está parado (STOP) o con el teclado en uso. Pulsa START en el robot y vuelve a intentarlo.' : m;
 
 /* ---------- PIN ---------- */
 let pinBuf = '', locked = false, pinLen = 4;  // el servidor dice cuántas cifras tiene el PIN
@@ -1004,7 +1007,7 @@ async function svc(domain, service, entity_id, label, extra = {}, quiet = false)
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
     toast(label + ' ✓'); setTimeout(poll, 2500);
     return true;
-  } catch(e) { if (!locked && !quiet) toast('No se pudo: ' + e.message); return false; }
+  } catch(e) { if (!locked && !quiet) toast('No se pudo: ' + humanErr(e.message)); return false; }
   finally { document.querySelectorAll(ctl).forEach(b => b.disabled = false); render(); }  // render: vuelve a apagar lo que no tiene conexión
 }
 
@@ -1255,7 +1258,7 @@ async function durante(accion, horas){
     if (r.status === 423) afterRobotsChange();
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
     toast((accion === 'cortar' ? 'Cortando ' : 'Aparcado ') + (horas < 1 ? Math.round(horas * 60) + ' min' : horas + ' h') + ' ✓'); setTimeout(poll, 2500);
-  } catch(e) { if (!locked) toast('No se pudo: ' + e.message); }
+  } catch(e) { if (!locked) toast('No se pudo: ' + humanErr(e.message)); }
   finally { document.querySelectorAll('.chip').forEach(b => b.disabled = false); }
 }
 let OFFLINE = false;  // sin conexión: los botones avisan en vez de esperar a que falle la orden
@@ -1529,6 +1532,8 @@ function nowText(f, run, nx, unknownSched){
     : unknownSched || f.offline ? 'El horario se sabrá al conectar' : 'Sin horario: corta cuando se lo mandes';
   const ld = KIND === 'landroid';
   if (f.offline) return {v: 'Sin conexión', d: f.lastSeen ? 'Último dato ' + f.lastSeen : next, main: 'start', mainLabel: 'Cortar'};
+  // parado con el botón STOP: no acepta nada por Bluetooth (ni horario, ni órdenes, ni ajustes) hasta que alguien pulse START en él
+  if (!ld && val('sensor','estado') === 'stopped') return {v: 'Parado (STOP)', d: 'No acepta órdenes desde la app. Pulsa START en el robot, con su PIN', main: 'start', mainLabel: 'Cortar'};
   if (f.upsideDown) return {v: 'Volcado', d: 'Dale la vuelta y confírmalo en el robot', main: 'start', mainLabel: 'Cortar'};
   if (f.lifted) return {v: 'Levantado', d: 'Déjalo en el césped: sigue solo', main: 'start', mainLabel: 'Cortar'};
   // «Con error» y no «Avería»: fuera del cable o levantado no es una avería; debajo, el error concreto
@@ -1659,7 +1664,7 @@ $('#save').onclick = async () => {
     toast('Horario guardado en el robot ✓'); editing = false;
     await poll();
     if (j.tasks) loadEditor(j.tasks);
-  } catch(e) { if (!locked) toast('No se pudo guardar: ' + e.message); drawEditor(); }
+  } catch(e) { if (!locked) toast('No se pudo guardar: ' + humanErr(e.message)); drawEditor(); }
 };
 
 /* ---------- datos ---------- */
@@ -1779,6 +1784,8 @@ function healthItems(){
   }
   rxItem();
   bleItem(add);
+  // parado con el botón STOP: conecta y da datos, pero rechaza (NOT_ALLOWED) cualquier cambio que le llegue por Bluetooth
+  if (val('sensor','estado') === 'stopped') add('warn', 'Robot parado (STOP)', 'No acepta cambios desde la app (horario, ajustes ni órdenes). Pulsa START en el robot, con su PIN, y vuelve a intentarlo.');
   // en su horario («en funcionamiento», sin restricción) pero aparcado: pasa al pararlo y mandarlo a casa desde su teclado
   if (val('sensor','estado') === 'in_operation' && val('sensor','actividad') === 'parked' && !on('switch','sensorcontrol_ritmo_segun_crecimiento'))
     add('warn', 'Aparcado dentro de su horario', 'Se quedó aparcado (pasa al mandarlo a casa desde su teclado). Se arregla solo en 2 min, o ahora:', 'resume');
@@ -1804,6 +1811,7 @@ function healthItems(){
   return it;
 }
 function renderHealth(){
+  const sn = $('#stopnote'); if (sn) sn.hidden = !(KIND !== 'landroid' && val('sensor','estado') === 'stopped');  // aviso fijo en Horario
   if (KIND === 'landroid') return;
   $('#health').innerHTML = healthItems().map(x => `<div class="hl ${x.lv}"><i></i><div><b>${esc(x.t)}</b>${x.d ? `<small>${esc(x.d)}</small>` : ''}${x.act === 'resume' ? '<button class="chip" data-resume style="margin-top:6px">Volver a su horario</button>' : ''}</div></div>`).join('');
 }
@@ -2348,9 +2356,9 @@ setInterval(loadHistory, 10 * 60 * 1000);
       requestAnimationFrame(() => stage.classList.remove('loading'));
       hintOnce();
       stage.classList.toggle('tint', kind === 'landroid' && dir === 'rob3d');
-      document.getElementById('dock3d').src = `static/${dir}/base_side.webp?v=${dir === 'rob3d' ? 2 : 1}`;
+      document.getElementById('dock3d').src = `static/${dir}/base_side.webp?v=${dir === 'rob3d' ? 3 : 1}`;  // 3: cambió la dirección para que ningún móvil se quede con una copia rota guardada (25/11)
       // posición del LED dentro de la imagen de la base (la calcula to_web.py)
-      fetch(`static/${dir}/meta.json?v=${dir === 'rob3d' ? 2 : 1}`).then(r => r.json()).then(m => {
+      fetch(`static/${dir}/meta.json?v=${dir === 'rob3d' ? 3 : 1}`).then(r => r.json()).then(m => {
         const led = document.getElementById('led');
         if (m.led) { led.style.left = m.led[0] + '%'; led.style.top = m.led[1] + '%'; }
       }).catch(() => {});

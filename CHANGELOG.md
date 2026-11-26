@@ -2,6 +2,13 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.53 · Si el robot está parado (STOP), la app lo dice
+
+#### App
+- **Robot parado con el botón STOP**: en ese estado el robot rechaza por Bluetooth todo lo que no sea leer datos (horario, modo, ajustes, órdenes) y Home Assistant lo registra como `NOT_ALLOWED`. La app ahora lo explica: en **Inicio** pone «Parado (STOP)» en vez de «En la base, puede salir a cortar» (que era falso), en **Horario** sale un aviso fijo y en **Salud** una línea, todos con «pulsa START en el robot, con su PIN».
+- **Mensaje de error en claro**: al guardar el horario o mandar una orden, en vez de «StartTaskTransaction returned NOT_ALLOWED» la app dice que el robot no acepta cambios ahora (parado o con el teclado en uso). Los mensajes largos se quedan en pantalla el tiempo necesario para leerlos.
+- La base y el índice del robot 3D cambian de dirección (`?v=3`) para que ningún móvil se quede con una copia dañada guardada.
+
 ## v0.3.52 · El informe se guarda en PDF desde el iPhone
 
 #### App
