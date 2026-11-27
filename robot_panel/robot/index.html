@@ -1348,7 +1348,8 @@ function readMcCulloch(){
     ? `El receptor Bluetooth (ESP32) está sin wifi desde ${esc(fmtDate(rx.since))}: sin él no se llega al robot. Mira que esté enchufado y cerca del router.`
     : `El robot no responde por Bluetooth${rx ? ` (el receptor está bien, wifi ${rx.dbm} dBm)` : ''}${val('sensor','ultima_conexion') ? `, último contacto ${ago(val('sensor','ultima_conexion'))}` : ''}: está lejos del receptor o se ha quedado sin batería (sin base que cargue, se apaga). Se reconecta solo en cuanto vuelva a responder.`}</div>`);
   if (on('binary_sensor','averia')) al.push(`<div class="alert"><span><b>⚠ ${esc(errText(val('sensor','error')))}</b><br><small>Revisa el robot y confírmalo en su teclado; luego pulsa Cortar o Base.</small></span></div>`);
-  if (on('binary_sensor','levantado')) al.push(`<div class="alert warn"><span><b>El robot está levantado</b><br><small>Déjalo en el césped: sigue solo.</small></span></div>`);
+  // levantado CON error (p. ej. carcasa atascada = «sensor de choque»): no sigue solo, hay que confirmarlo en el robot
+  if (on('binary_sensor','levantado') && !on('binary_sensor','averia')) al.push(`<div class="alert warn"><span><b>El robot está levantado</b><br><small>Déjalo en el césped: sigue solo.</small></span></div>`);
   if (on('binary_sensor','volcado')) al.push(`<div class="alert"><span><b>El robot está volcado</b><br><small>Dale la vuelta y confírmalo en su teclado; luego pulsa Cortar o Base.</small></span></div>`);
   const clock = val('sensor','reloj_del_robot');
   // fuera de alcance no se le puede poner en hora: el aviso espera a que vuelva
@@ -1548,7 +1549,7 @@ function nowText(f, run, nx, unknownSched){
   // parado con el botón STOP: no acepta nada por Bluetooth (ni horario, ni órdenes, ni ajustes) hasta que alguien pulse START en él
   if (!ld && val('sensor','estado') === 'stopped') return {v: 'Parado (STOP)', d: 'No acepta órdenes desde la app. Pulsa START en el robot, con su PIN', main: 'start', mainLabel: 'Cortar'};
   if (f.upsideDown) return {v: 'Volcado', d: 'Dale la vuelta y confírmalo en el robot', main: 'start', mainLabel: 'Cortar'};
-  if (f.lifted) return {v: 'Levantado', d: 'Déjalo en el césped: sigue solo', main: 'start', mainLabel: 'Cortar'};
+  if (f.lifted) return {v: 'Levantado', d: f.error ? 'Con error: ponlo en el césped, mira que la carcasa no esté atascada y confírmalo en su teclado (STOP, PIN, START)' : 'Déjalo en el césped: sigue solo', main: 'start', mainLabel: 'Cortar'};
   // «Con error» y no «Avería»: fuera del cable o levantado no es una avería; debajo, el error concreto
   if (f.error) return {v: 'Con error', d: f.errorText && f.errorText !== '—' ? f.errorText : 'Mira el aviso de abajo', main: 'start', mainLabel: 'Cortar'};
   if (f.chargeFail) return {v: 'Error al cargar', d: 'Está en la base pero no carga: revisa los contactos', main: 'start', mainLabel: 'Cortar'};
