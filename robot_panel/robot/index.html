@@ -881,7 +881,15 @@ const hhmm = (ms, corto) => { const m = Math.round(ms / 6e4); if (m < 60) return
   const t = Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0'); return corto ? t : t + ' h'; };
 function toast(m){ const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), Math.max(3200, String(m).length * 55)); }  // los mensajes largos se quedan lo que hace falta para leerlos
 // el robot contesta NOT_ALLOWED a todo lo que llega por Bluetooth mientras está parado con STOP o con alguien en su teclado
-const humanErr = m => /NOT_ALLOWED/.test(m || '') ? 'El robot no acepta cambios ahora: está parado (STOP) o con el teclado en uso. Pulsa START en el robot y vuelve a intentarlo.' : m;
+// el porqué en claro: el robot solo da códigos (NOT_ALLOWED, UNKNOWN_ERROR) y HA textos técnicos de Bluetooth
+const humanErr = m => {
+  m = m || '';
+  let s = ''; try { const v = val('sensor','senal_bluetooth'); if (v && !isNaN(v)) s = ` (señal ${v} dBm${v <= -88 ? ', muy floja' : ''})`; } catch(e) {}
+  if (/NOT_ALLOWED/.test(m)) return 'El robot no acepta cambios ahora: está parado (STOP) o con el teclado en uso. Pulsa START en el robot y vuelve a intentarlo.';
+  if (/UNKNOWN_ERROR/.test(m)) return `El robot recibió la orden pero no arrancó: no dice por qué. Casi siempre es el Bluetooth cortándose a mitad${s}. Espera a que ponga «conectado» y repite.`;
+  if (/cort[óo] la conexi|No se pudo hablar|No conecta|Timeout|timed? ?out|not connected|disconnect/i.test(m)) return `La orden no llegó al robot: se cortó el Bluetooth${s}. Espera a que ponga «conectado» y repite.`;
+  return m;
+};
 
 /* ---------- PIN ---------- */
 let pinBuf = '', locked = false, pinLen = 4;  // el servidor dice cuántas cifras tiene el PIN

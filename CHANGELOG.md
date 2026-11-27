@@ -2,6 +2,11 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## Sin publicar
+
+#### App
+- **Cuando una orden falla, la app dice por qué**, con la señal Bluetooth del momento: «el robot recibió la orden pero no arrancó» (UNKNOWN_ERROR), «la orden no llegó: se cortó el Bluetooth» o «está parado (STOP)», en vez del código del robot.
+
 ## v0.3.54 · «Cortar» sale aunque no sea su horario
 
 #### App
