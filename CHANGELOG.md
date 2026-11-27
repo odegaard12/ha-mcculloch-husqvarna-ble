@@ -2,6 +2,14 @@
 
 Todas las versiones de la integración, la tarjeta y la app. Lo más nuevo, arriba.
 
+## v0.3.54 · «Cortar» sale aunque no sea su horario
+
+#### App
+- **«Cortar» es ahora una orden forzada de 3 h** (la misma que el botón «3 h»): sale aunque esté fuera de su horario. Antes mandaba «reanudar», que el robot acepta pero solo cumple dentro del horario, así que se quedaba en la base mientras la app decía «Cortando ✓».
+- **«Base» con el robot ya en la base** dice «Se queda en la base hasta su próximo turno», no «Volviendo a la base».
+- **Sin conexión de verdad**: si el robot lleva más de 3 min sin dar señal, la app ya lo trata como sin conexión (Home Assistant tarda 1-2 min más en marcarlo), en vez de decir «conectado» y aceptar órdenes que no llegaban.
+- El aviso de «Parado (STOP)» solo sale con el robot conectado.
+
 ## v0.3.53 · Si el robot está parado (STOP), la app lo dice
 
 #### App

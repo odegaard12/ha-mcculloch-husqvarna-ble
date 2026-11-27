@@ -1268,8 +1268,10 @@ document.querySelector('.actions').onclick = e => {
   const LM = `lawn_mower.${P}`;
   // el McCulloch rechaza a veces «cortar» estando en la base dentro de su horario (StartTrigger: UNKNOWN_ERROR);
   // «cortar 1 h» (orden manual con duración) sí lo acepta: se prueba esa antes de dar el error
-  const start = async () => { if (!(await svc('lawn_mower','start_mowing',LM,'Cortando', {}, KIND !== 'landroid')) && KIND !== 'landroid' && !locked) durante('cortar', 1); };
-  ({start, pause: () => svc('lawn_mower','pause',LM,'En pausa'), dock: () => svc('lawn_mower','dock',LM,'Volviendo a la base')})[b.dataset.act]();
+  // McCulloch: «Cortar» = orden forzada de 3 h (sale aunque no sea su horario); start_mowing mandaba «reanudar», que respeta el horario (27/11)
+  const start = () => KIND === 'landroid' ? svc('lawn_mower','start_mowing',LM,'Cortando') : durante('cortar', 3);
+  const enBase = KIND !== 'landroid' && on('binary_sensor','en_la_base');
+  ({start, pause: () => svc('lawn_mower','pause',LM,'En pausa'), dock: () => svc('lawn_mower','dock',LM, enBase ? 'Se queda en la base hasta su próximo turno' : 'Volviendo a la base')})[b.dataset.act]();
 };
 document.addEventListener('click', e => {
   // órdenes rápidas apagadas sin conexión: se explica en vez de mandar algo que el robot no va a recibir
@@ -1321,7 +1323,10 @@ function readMcCulloch(){
   const bat = num('sensor','bateria'), charging = on('binary_sensor','cargando');
   const s = val('sensor','estado'), a = val('sensor','actividad'), m = val('sensor','modo');
   // «unknown» = conectado pero sin leer aún el estado: tampoco se le pueden dar órdenes (la cabecera ya decía «Sin conexión»)
-  const offline = !st('lawn_mower') || ['unavailable', 'unknown'].includes(st('lawn_mower').state);
+  // HA tarda 1-2 min en marcarlo «no disponible» tras perder el Bluetooth: si el último contacto tiene más de 3 min,
+  // ya se trata como sin conexión (si no, la app decía «conectado» y las órdenes no llegaban)
+  const seen0 = val('sensor','ultima_conexion'), viejo = seen0 && Date.now() - new Date(seen0) > 180e3;
+  const offline = !st('lawn_mower') || ['unavailable', 'unknown'].includes(st('lawn_mower').state) || !!viejo;
   const flags = {kind: 'mcculloch', battery: bat, activity: a, state: s, charging, offline,
     lifted: on('binary_sensor','levantado'), upsideDown: on('binary_sensor','volcado'), collision: on('binary_sensor','choque'),
     error: on('binary_sensor','averia') || s === 'error' || s === 'fatal_error', inBase: on('binary_sensor','en_la_base')};
@@ -1811,7 +1816,9 @@ function healthItems(){
   return it;
 }
 function renderHealth(){
-  const sn = $('#stopnote'); if (sn) sn.hidden = !(KIND !== 'landroid' && val('sensor','estado') === 'stopped');  // aviso fijo en Horario
+  // aviso fijo en Horario, solo con el robot CONECTADO: sin conexión HA se queda con el último dato y decía «parado» aunque ya lo hubieran arrancado
+  const lmS = st('lawn_mower'), conectado = lmS && !['unavailable', 'unknown'].includes(lmS.state);
+  const sn = $('#stopnote'); if (sn) sn.hidden = !(KIND !== 'landroid' && conectado && val('sensor','estado') === 'stopped');
   if (KIND === 'landroid') return;
   $('#health').innerHTML = healthItems().map(x => `<div class="hl ${x.lv}"><i></i><div><b>${esc(x.t)}</b>${x.d ? `<small>${esc(x.d)}</small>` : ''}${x.act === 'resume' ? '<button class="chip" data-resume style="margin-top:6px">Volver a su horario</button>' : ''}</div></div>`).join('');
 }
